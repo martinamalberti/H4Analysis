@@ -51,29 +51,37 @@ void FindSmallestInterval(float* ret, TH1F* histo, const float& fraction, const 
   float integralMax = fraction * histo->Integral();
   
   int N = histo -> GetNbinsX();
-  std::vector<float> binCenters(N);
-  std::vector<float> binContents(N);
-  std::vector<float> binIntegrals(N);
+  int M1 = 0;
+  int M2 = 0;
   for(int bin1 = 0; bin1 < N; ++bin1)
+  {
+    if( histo->GetBinContent(bin1+1) > 0. && M1 == 0 ) M1 = bin1-1;
+    if( histo->GetBinContent(bin1+1) > 0. ) M2 = bin1+2;
+  }
+  
+  std::map<int,float> binCenters;
+  std::map<int,float> binContents;
+  std::map<int,float> binIntegrals;
+  for(int bin1 = M1; bin1 < M2; ++bin1)
   {
     binCenters[bin1] = histo->GetBinCenter(bin1+1);
     binContents[bin1] = histo->GetBinContent(bin1+1);
     
-    for(int bin2 = 0; bin2 <= bin1; ++bin2)
+    for(int bin2 = M1; bin2 <= bin1; ++bin2)
       binIntegrals[bin1] += binContents[bin2];
   }
   
   float min = 0.;
   float max = 0.;
   float delta = 999999.;
-  for(int bin1 = 0; bin1 < N; ++bin1)
+  for(int bin1 = M1; bin1 < M2; ++bin1)
   {
-    for(int bin2 = bin1+1; bin2 < N; ++bin2)
+    for(int bin2 = bin1+1; bin2 < M2; ++bin2)
     {
       if( (binIntegrals[bin2]-binIntegrals[bin1]) < integralMax ) continue;
       
-      float tmpMin = histo -> GetBinCenter(bin1);
-      float tmpMax = histo -> GetBinCenter(bin2);
+      float tmpMin = histo -> GetBinCenter(bin1+1);
+      float tmpMax = histo -> GetBinCenter(bin2+1);
       
       if( (tmpMax-tmpMin) < delta )
       {
@@ -105,3 +113,4 @@ void FindSmallestInterval(float* ret, TH1F* histo, const float& fraction, const 
   ret[2] = min;
   ret[3] = max;
 }
+
