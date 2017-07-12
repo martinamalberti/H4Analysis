@@ -34,7 +34,7 @@ int VbiasIndex2;
 
 std::vector<std::string> timeChannels;
 std::vector<std::string> energyChannels;
-std::vector<std::string> mcpChannels;
+std::vector<float> mcpChannels;
 
 /*** tree variables ***/
 struct TreeVars
@@ -43,6 +43,7 @@ struct TreeVars
   float* t_beamY;
   float* t_Vbias;
   float t_NINOthr;
+  float t_angle;
   float* t_ped;
   float* t_amp;
   float* t_dur;
@@ -53,12 +54,11 @@ struct TreeVars
 void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3,
                   TreeVars& treeVars);
 
-bool AcceptEvent(TreeVars treeVars, const int& beamCutType, const float& beamXMin, const float& beamXMax, const float& beamYMin, const float& beamYMax);
+bool AcceptEvent(TreeVars treeVars, const int& beamCutType, const float& beamXMin, const float& beamXMax, const float& beamYMin, const float& beamYMax, const float& angle);
 bool AcceptEventAmp(TreeVars treeVars, const float& ampMin1, const float& ampMax1, const float& ampMin2, const float& ampMax2);
 bool AcceptEventDur(TreeVars treeVars, const float& durMin1, const float& durMax1, const float& durMin2, const float& durMax2);
 bool AcceptEventTh(TreeVars treeVars, const float& thMin, const float& thMax);
 bool AcceptEventVbias(TreeVars treeVars, const float& VbiasMin, const float& VbiasMax);
-bool AcceptEventMCP(TreeVars treeVars, const float& ampMinMCP, const float& ampMaxMCP);
 
 
 
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   
   timeChannels = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
   energyChannels = opts.GetOpt<std::vector<std::string> >("Input.energyChannels");
-  mcpChannels = opts.GetOpt<std::vector<std::string> >("Input.mcpChannels");
+  mcpChannels = opts.GetOpt<std::vector<float> >("Input.mcpChannels");
   VbiasIndex1 = opts.GetOpt<int>("Input.VbiasIndex1");
   VbiasIndex2 = opts.GetOpt<int>("Input.VbiasIndex2");
   int configuration = opts.GetOpt<int>("Input.configuration");
@@ -111,8 +111,6 @@ int main(int argc, char** argv)
     cut_ampMin2[cut_VbiasValues.at(it)] = cut_minAmplitudes2.at(it);
     cut_ampMax2[cut_VbiasValues.at(it)] = cut_maxAmplitudes2.at(it);
   }
-  float cut_ampMinMCP = opts.GetOpt<float>("Cuts.ampMinMCP");
-  float cut_ampMaxMCP = opts.GetOpt<float>("Cuts.ampMaxMCP");
   
   std::vector<float> cut_minDurations1 = opts.GetOpt<std::vector<float> >("Cuts.minDurations1");
   std::vector<float> cut_maxDurations1 = opts.GetOpt<std::vector<float> >("Cuts.maxDurations1");
@@ -136,10 +134,14 @@ int main(int argc, char** argv)
   float cut_beamYMin = opts.GetOpt<float>("Cuts.beamYMin");
   float cut_beamYMax = opts.GetOpt<float>("Cuts.beamYMax");
   
+  float cut_angle = opts.GetOpt<float>("Cuts.angle");
+  
   int rebin = opts.GetOpt<int>("Plots.rebin");
   std::string label1 = opts.GetOpt<std::string>("Plots.label1");
   std::string label2 = opts.GetOpt<std::string>("Plots.label2");
-  
+  std::string label12;
+  if( label1 == label2 ) label12 = label1;
+  else label12 = std::string(Form("%s-%s",label1.c_str(),label2.c_str()));
   
   //------------------------
   // labels and canvas style
@@ -150,7 +152,7 @@ int main(int argc, char** argv)
 
   TLatex* latexLabel1 = new TLatex(0.13,0.97,Form("%s",label1.c_str()));
   TLatex* latexLabel2 = new TLatex(0.13,0.97,Form("%s",label2.c_str()));
-  TLatex* latexLabel12 = new TLatex(0.13,0.97,Form("%s -- %s",label1.c_str(),label2.c_str()));
+  TLatex* latexLabel12 = new TLatex(0.13,0.97,Form("%s",label12.c_str()));
   latexLabel1 -> SetNDC();
   latexLabel1 -> SetTextFont(42);
   latexLabel1 -> SetTextSize(0.03);
@@ -161,10 +163,10 @@ int main(int argc, char** argv)
   latexLabel12 -> SetTextFont(42);
   latexLabel12 -> SetTextSize(0.03);  
   
-  std::string baseDir(Form("/afs/cern.ch/user/a/abenagli/www/TIMING/TBatH4June2017/config%02d%s/",configuration,extra.c_str()));
+  std::string baseDir(Form("/afs/cern.ch/user/a/abenagli/www/TIMING/TBatH4June2017_new/config%02d%s/",configuration,extra.c_str()));
   system(Form("mkdir -p %s",baseDir.c_str()));
   system(Form("cp /afs/cern.ch/user/a/abenagli/public/index.php %s",baseDir.c_str()));
-  std::string plotDir(Form("%s/%s_beamCutType%d/",baseDir.c_str(),label1.c_str(),cut_beamCutType));
+  std::string plotDir(Form("%s/%s_beamCutType%d/",baseDir.c_str(),label12.c_str(),cut_beamCutType));
   system(Form("mkdir %s",plotDir.c_str()));
   system(Form("cp /afs/cern.ch/user/a/abenagli/public/index.php %s",plotDir.c_str()));
   
@@ -195,30 +197,33 @@ int main(int argc, char** argv)
   
   
   //------------------
-  // Define histograms
+  // Define histogram
   TH1F* h_amp1 = new TH1F(Form("h_amp1"),"",1000,0.,1000.);
   TH1F* h_amp2 = new TH1F(Form("h_amp2"),"",1000,0.,1000.);
   TH1F* h_ampRatio = new TH1F(Form("h_ampRatio"),"",1000,0.,3.);
+  TH1F* h_amp1_cut = new TH1F(Form("h_amp1_cut"),"",1000,0.,1000.);
+  TH1F* h_amp2_cut = new TH1F(Form("h_amp2_cut"),"",1000,0.,1000.);
+  TH1F* h_ampRatio_cut = new TH1F(Form("h_ampRatio_cut"),"",1000,0.,3.);
   std::map<std::string,TH1F*> h_amp1_Vbias;
   std::map<std::string,TH1F*> h_amp2_Vbias;
   std::map<std::string,TH1F*> h_ampRatio_Vbias;
-  TProfile* p1_amp1_vs_beam_X = new TProfile("p1_amp1_vs_beam_X","",320,-40.,40.);
-  TProfile* p1_amp1_vs_beam_Y = new TProfile("p1_amp1_vs_beam_Y","",320,-40.,40.);
-  TProfile* p1_amp2_vs_beam_X = new TProfile("p1_amp2_vs_beam_X","",320,-40.,40.);
-  TProfile* p1_amp2_vs_beam_Y = new TProfile("p1_amp2_vs_beam_Y","",320,-40.,40.);
-  TProfile2D* p2_amp1_vs_beam_Y_vs_X = new TProfile2D("p2_amp1_vs_beam_Y_vs_X","",80,-40.,40.,80,-40.,40.);
-  TProfile2D* p2_amp2_vs_beam_Y_vs_X = new TProfile2D("p2_amp2_vs_beam_Y_vs_X","",80,-40.,40.,80,-40.,40.);
+  TProfile* p1_amp1_vs_beam_X = new TProfile("p1_amp1_vs_beam_X","",320,-20.,20.);
+  TProfile* p1_amp1_vs_beam_Y = new TProfile("p1_amp1_vs_beam_Y","",320,-20.,20.);
+  TProfile* p1_amp2_vs_beam_X = new TProfile("p1_amp2_vs_beam_X","",320,-20.,20.);
+  TProfile* p1_amp2_vs_beam_Y = new TProfile("p1_amp2_vs_beam_Y","",320,-20.,20.);
+  TProfile2D* p2_amp1_vs_beam_Y_vs_X = new TProfile2D("p2_amp1_vs_beam_Y_vs_X","",80,-20.,20.,80,-20.,20.);
+  TProfile2D* p2_amp2_vs_beam_Y_vs_X = new TProfile2D("p2_amp2_vs_beam_Y_vs_X","",80,-20.,20.,80,-20.,20.);
   
   std::map<std::string,TH1F*> h_dur1;
   std::map<std::string,TH1F*> h_dur2;
   
   TH1F* h_CTR = new TH1F("h_CTR","",20000,-10.,10.);
-  TH1F* h_CTR_corrRatio = new TH1F("h_CTR_corrRatio","",20000,-10.,10.);
+  TH1F* h_CTR_corr = new TH1F("h_CTR_corr","",20000,-10.,10.);
   std::map<std::string,TH1F*> map_CTR_vs_Vbias_th;
-  std::map<std::string,TH1F*> map_CTR_corrRatio_vs_Vbias_th;
-  std::map<int,TH1F*> map_CTR_corrRatio_vs_amp1;
-  std::map<int,TH1F*> map_CTR_corrRatio_vs_amp2;
-  std::map<int,TH1F*> map_CTR_corrRatio_vs_ampAvg;
+  std::map<std::string,TH1F*> map_CTR_corr_vs_Vbias_th;
+  std::map<int,TH1F*> map_CTR_corr_vs_amp1;
+  std::map<int,TH1F*> map_CTR_corr_vs_amp2;
+  std::map<int,TH1F*> map_CTR_corr_vs_ampAvg;
   
   TProfile* p_CTR_vs_amp1 = new TProfile("p_CTR_vs_amp1","",100,0.,1000.);
   TProfile* p_CTR_vs_amp2 = new TProfile("p_CTR_vs_amp2","",100,0.,1000.);
@@ -226,22 +231,6 @@ int main(int argc, char** argv)
   std::map<std::string,TProfile*> map_CTR_vs_amp1_vs_Vbias_th;
   std::map<std::string,TProfile*> map_CTR_vs_amp2_vs_Vbias_th;
   std::map<std::string,TProfile*> map_CTR_vs_ampRatio_vs_Vbias_th;
-  
-  TH1F* h_ampMCP = new TH1F(Form("h_ampMCP"),"",1000,0.,1000.);
-  
-  TH1F* h_CTR1_MCP = new TH1F("h_CTR1_MCP","",20000,-10.,10.);
-  TH1F* h_CTR2_MCP = new TH1F("h_CTR2_MCP","",20000,-10.,10.);
-  TH1F* h_CTR1_MCP_corr = new TH1F("h_CTR1_MCP_corr","",20000,-10.,10.);
-  TH1F* h_CTR2_MCP_corr = new TH1F("h_CTR2_MCP_corr","",20000,-10.,10.);
-  std::map<std::string,TH1F*> map_CTR1_MCP_vs_Vbias_th;
-  std::map<std::string,TH1F*> map_CTR2_MCP_vs_Vbias_th;
-  std::map<std::string,TH1F*> map_CTR1_MCP_corr_vs_Vbias_th;
-  std::map<std::string,TH1F*> map_CTR2_MCP_corr_vs_Vbias_th;
-  
-  TProfile* p_CTR1_MCP_vs_amp1 = new TProfile("p_CTR1_MCP_vs_amp1","",100,0.,1000.);
-  TProfile* p_CTR2_MCP_vs_amp2 = new TProfile("p_CTR2_MCP_vs_amp2","",100,0.,1000.);
-  std::map<std::string,TProfile*> map_CTR1_MCP_vs_amp1_vs_Vbias_th;
-  std::map<std::string,TProfile*> map_CTR2_MCP_vs_amp2_vs_Vbias_th;
   
   TH2F* h2_beam_Y_vs_X = new TH2F("h2_beam_Y_vs_X","",80,-20.,20.,80,-20.,20.);
   TH2F* h2_beam_Y_vs_X_cut = new TH2F("h2_beam_Y_vs_X_cut","",80,-20.,20.,80,-20.,20.);
@@ -261,7 +250,7 @@ int main(int argc, char** argv)
     if( entry%1000 == 0 ) std::cout << ">>> loop 1/4: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     chain1 -> GetEntry(entry);
     
-    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax) ) continue;
+    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax,cut_angle) ) continue;
     
     h2_beam_Y_vs_X -> Fill(treeVars.t_beamX[0],treeVars.t_beamY[0]);
     
@@ -269,17 +258,16 @@ int main(int argc, char** argv)
     float Vbias2 = treeVars.t_Vbias[VbiasIndex2];
     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(0)]] * 0.25;
     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(1)]] * 0.25;
-    float ampMCP = treeVars.t_amp[(*treeVars.t_channelId)[mcpChannels.at(0)]] * 0.25;
     float dur1 = treeVars.t_dur[(*treeVars.t_channelId)[timeChannels.at(0)]] * 0.2;
     float dur2 = treeVars.t_dur[(*treeVars.t_channelId)[timeChannels.at(1)]] * 0.2;
-    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]];
-    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]];
-    float timeMCP = treeVars.t_time[(*treeVars.t_channelId)[mcpChannels.at(0)]+14];
+    int extraIt1 = 0;
+    int extraIt2 = 0;
+    if( mcpChannels.at(0) == 1 ) extraIt1 = 14;
+    if( mcpChannels.at(1) == 1 ) extraIt2 = 14;
+    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]+extraIt1];
+    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]+extraIt2];
     float CTR = time2 - time1;
-    float CTR1_MCP = timeMCP - time1;
-    float CTR2_MCP = timeMCP - time2;
     
-    if( Vbias1 == 0 ) std::cout << "0!! " << chain1->GetFile()->GetName() << std::endl;
     std::pair<float,float> pair_Vbias(Vbias1,Vbias2);
     std::string label_Vbias = std::string(Form("Vbias%.0fV",Vbias1));
     if( std::find(vec_Vbias.begin(),vec_Vbias.end(),pair_Vbias) == vec_Vbias.end() ) vec_Vbias.push_back(pair_Vbias);
@@ -297,7 +285,6 @@ int main(int argc, char** argv)
 
     h_amp1 -> Fill( amp1 );
     h_amp2 -> Fill( amp2 );
-    h_ampMCP -> Fill( ampMCP );
     p1_amp1_vs_beam_X -> Fill( treeVars.t_beamX[0],amp1 );
     p1_amp1_vs_beam_Y -> Fill( treeVars.t_beamY[0],amp1 );
     p1_amp2_vs_beam_X -> Fill( treeVars.t_beamX[0],amp2 );
@@ -325,19 +312,15 @@ int main(int argc, char** argv)
       std::pair<std::pair<float,float>,float> pair_Vbias_th(pair_Vbias,treeVars.t_NINOthr);
       pairs_Vbias_th.push_back(pair_Vbias_th);
       map_CTR_vs_Vbias_th[label_Vbias_th] = new TH1F(Form("h_CTR_%s",label_Vbias_th.c_str()),"",20000,-10.,10.);
-      map_CTR1_MCP_vs_Vbias_th[label_Vbias_th] = new TH1F(Form("h_CTR1_MCP_%s",label_Vbias_th.c_str()),"",20000,-10.,10.);
-      map_CTR2_MCP_vs_Vbias_th[label_Vbias_th] = new TH1F(Form("h_CTR2_MCP_%s",label_Vbias_th.c_str()),"",20000,-10.,10.);
     }
     map_CTR_vs_Vbias_th[label_Vbias_th] -> Fill( CTR );
     
-    if( AcceptEventMCP(treeVars,cut_ampMinMCP,cut_ampMaxMCP) )
-    {
-      map_CTR1_MCP_vs_Vbias_th[label_Vbias_th] -> Fill( CTR1_MCP );
-      map_CTR2_MCP_vs_Vbias_th[label_Vbias_th] -> Fill( CTR2_MCP );
-    }
-    
     if( !AcceptEventVbias(treeVars,cut_VbiasMin,cut_VbiasMax) ) continue;
     if( !AcceptEventTh(treeVars,cut_NINOthrMin,cut_NINOthrMax) ) continue;
+    
+    h_amp1_cut -> Fill( amp1 );
+    h_amp2_cut -> Fill( amp2 );
+    h_ampRatio_cut -> Fill( amp2/amp1 );
     
     vec_amp1.push_back(amp1);
     vec_amp2.push_back(amp2);
@@ -347,30 +330,47 @@ int main(int argc, char** argv)
   
   
   // define bins for plots vs energy
-  std::cout << "qui1" << std::endl;
   nEventsPerEnergyBin = std::min(nEventsPerEnergyBin,int(vec_amp1.size()));
-  std::cout << "nEventsPerEnergyBin: " << nEventsPerEnergyBin << "   int(vec_amp1.size(): " << int(vec_amp1.size()) << std::endl;
   std::sort(vec_amp1.begin(),vec_amp1.end());
   std::sort(vec_amp2.begin(),vec_amp2.end());
   std::sort(vec_ampAvg.begin(),vec_ampAvg.end());
-  int nBins_vs_amp = int(vec_amp1.size()) / nEventsPerEnergyBin;
-  std::cout << "nBins_vs_amp: " << nBins_vs_amp << std::endl;
-  float* bins_vs_amp1 = new float[nBins_vs_amp+1];
-  float* bins_vs_amp2 = new float[nBins_vs_amp+1];
-  float* bins_vs_ampAvg = new float[nBins_vs_amp+1];
-  for(int it = 0; it < nBins_vs_amp; ++it)
+  int nBins_vs_amp = -1;
+  float* bins_vs_amp1;
+  float* bins_vs_amp2 ;
+  float* bins_vs_ampAvg;
+  if( nEventsPerEnergyBin > 0 )
   {
-    bins_vs_amp1[it]   = vec_amp1[it*nEventsPerEnergyBin];
-    bins_vs_amp2[it]   = vec_amp2[it*nEventsPerEnergyBin];
-    bins_vs_ampAvg[it] = vec_ampAvg[it*nEventsPerEnergyBin];
+    nBins_vs_amp = int(vec_amp1.size()) / nEventsPerEnergyBin;
+    std::cout << "nBins_vs_amp: " << nBins_vs_amp << std::endl;
+    bins_vs_amp1 = new float[nBins_vs_amp+1];
+    bins_vs_amp2 = new float[nBins_vs_amp+1];
+    bins_vs_ampAvg = new float[nBins_vs_amp+1];
+    for(int it = 0; it < nBins_vs_amp; ++it)
+    {
+      bins_vs_amp1[it]   = vec_amp1[it*nEventsPerEnergyBin];
+      bins_vs_amp2[it]   = vec_amp2[it*nEventsPerEnergyBin];
+      bins_vs_ampAvg[it] = vec_ampAvg[it*nEventsPerEnergyBin];
+    }
+    bins_vs_amp1[nBins_vs_amp]   = vec_amp1[nBins_vs_amp*nEventsPerEnergyBin];
+    bins_vs_amp2[nBins_vs_amp]   = vec_amp2[nBins_vs_amp*nEventsPerEnergyBin];
+    bins_vs_ampAvg[nBins_vs_amp] = vec_ampAvg[nBins_vs_amp*nEventsPerEnergyBin];
   }
-  bins_vs_amp1[nBins_vs_amp]   = vec_amp1[nBins_vs_amp*nEventsPerEnergyBin];
-  bins_vs_amp2[nBins_vs_amp]   = vec_amp2[nBins_vs_amp*nEventsPerEnergyBin];
-  bins_vs_ampAvg[nBins_vs_amp] = vec_ampAvg[nBins_vs_amp*nEventsPerEnergyBin];
+  else
+  {
+    nBins_vs_amp = 1;
+    bins_vs_amp1 = new float[nBins_vs_amp+1];
+    bins_vs_amp2 = new float[nBins_vs_amp+1];
+    bins_vs_ampAvg = new float[nBins_vs_amp+1];
+    bins_vs_amp1[0]   = 0.;
+    bins_vs_amp2[0]   = 0.;
+    bins_vs_ampAvg[0] = 0.;
+    bins_vs_amp1[1]   = 1000.;
+    bins_vs_amp2[1]   = 1000.;
+    bins_vs_ampAvg[1] = 1000.;
+  }
   TH1F* h_nEvents_vs_amp1   = new TH1F("h_nEvents_vs_amp1",  "",nBins_vs_amp,bins_vs_amp1);
   TH1F* h_nEvents_vs_amp2   = new TH1F("h_nEvents_vs_amp2",  "",nBins_vs_amp,bins_vs_amp2);
   TH1F* h_nEvents_vs_ampAvg = new TH1F("h_nEvents_vs_ampAvg","",nBins_vs_amp,bins_vs_ampAvg);
-  std::cout << "qui2" << std::endl;
   
   // draw plots
   TCanvas* c1;
@@ -391,7 +391,7 @@ int main(int argc, char** argv)
     c1 -> cd(1);
     gPad -> SetLogy();
     h_amp1_Vbias[label_Vbias] -> GetXaxis() -> SetRangeUser(0.,1000.);
-    h_amp1_Vbias[label_Vbias] -> SetTitle(";max. amplitude (mV); events");
+    h_amp1_Vbias[label_Vbias] -> SetTitle(Form(";%s max. amplitude (mV); events",energyChannels.at(0).c_str()));
     h_amp1_Vbias[label_Vbias] -> Draw();
     TLine* line_cutAmpMin1 = new TLine(cut_ampMin1[Vbias1],0.,cut_ampMin1[Vbias1],1.05*h_amp1_Vbias[label_Vbias]->GetMaximum());
     TLine* line_cutAmpMax1 = new TLine(cut_ampMax1[Vbias1],0.,cut_ampMax1[Vbias1],1.05*h_amp1_Vbias[label_Vbias]->GetMaximum());
@@ -404,7 +404,7 @@ int main(int argc, char** argv)
     c1 -> cd(2);
     gPad -> SetLogy();
     h_amp2_Vbias[label_Vbias] -> GetXaxis() -> SetRangeUser(0.,1000.);
-    h_amp2_Vbias[label_Vbias] -> SetTitle(";max. amplitude (mV); events");
+    h_amp2_Vbias[label_Vbias] -> SetTitle(Form(";%s max. amplitude (mV); events",energyChannels.at(1).c_str()));
     h_amp2_Vbias[label_Vbias] -> Draw();
     TLine* line_cutAmpMin2 = new TLine(cut_ampMin2[Vbias2],0.,cut_ampMin2[Vbias2],1.05*h_amp2_Vbias[label_Vbias]->GetMaximum());
     TLine* line_cutAmpMax2 = new TLine(cut_ampMax2[Vbias2],0.,cut_ampMax2[Vbias2],1.05*h_amp2_Vbias[label_Vbias]->GetMaximum());
@@ -419,7 +419,7 @@ int main(int argc, char** argv)
     c1 -> cd(3);
     gPad -> SetLogy();
     h_dur1[label_Vbias] -> GetXaxis() -> SetRangeUser(0.,200.);
-    h_dur1[label_Vbias] -> SetTitle(";NINO pulse length (ns); events");
+    h_dur1[label_Vbias] -> SetTitle(Form(";%s pulse length (ns); events",timeChannels.at(0).c_str()));
     h_dur1[label_Vbias] -> Draw();
     TLine* line_cutDurMin1 = new TLine(cut_durMin1[Vbias1],0.,cut_durMin1[Vbias1],1.05*h_dur1[label_Vbias]->GetMaximum());
     TLine* line_cutDurMax1 = new TLine(cut_durMax1[Vbias1],0.,cut_durMax1[Vbias1],1.05*h_dur1[label_Vbias]->GetMaximum());
@@ -432,7 +432,7 @@ int main(int argc, char** argv)
     c1 -> cd(4);
     gPad -> SetLogy();
     h_dur2[label_Vbias] -> GetXaxis() -> SetRangeUser(0.,200.);
-    h_dur2[label_Vbias] -> SetTitle(";NINO pulse length (ns); events");
+    h_dur2[label_Vbias] -> SetTitle(Form(";%s pulse length (ns); events",timeChannels.at(1).c_str()));
     h_dur2[label_Vbias] -> Draw();
     TLine* line_cutDurMin2 = new TLine(cut_durMin2[Vbias2],0.,cut_durMin2[Vbias2],1.05*h_dur2[label_Vbias]->GetMaximum());
     TLine* line_cutDurMax2 = new TLine(cut_durMax2[Vbias2],0.,cut_durMax2[Vbias2],1.05*h_dur2[label_Vbias]->GetMaximum());
@@ -450,9 +450,11 @@ int main(int argc, char** argv)
   TCanvas* c1_amp1_beam_X_Y = new TCanvas("c1_amp1_beam_X_Y","amplitude profile",2100,900);
   c1_amp1_beam_X_Y -> Divide(2,1);
   c1_amp1_beam_X_Y -> cd(1);
+  gPad -> SetGridx();
   p1_amp1_vs_beam_X -> SetTitle(";beam X (mm);average amp_{xtal1}");
   p1_amp1_vs_beam_X -> Draw();
   c1_amp1_beam_X_Y -> cd(2);
+  gPad -> SetGridx();
   p1_amp1_vs_beam_Y -> SetTitle(";beam Y (mm);average amp_{xtal1}");
   p1_amp1_vs_beam_Y -> Draw();
   gPad -> Update();
@@ -461,9 +463,11 @@ int main(int argc, char** argv)
   TCanvas* c1_amp2_beam_X_Y = new TCanvas("c1_amp2_beam_X_Y","amplitude profile",2100,900);
   c1_amp2_beam_X_Y -> Divide(2,1);
   c1_amp2_beam_X_Y -> cd(1);
+  gPad -> SetGridx();
   p1_amp2_vs_beam_X -> SetTitle(";beam X (mm);average amp_{xtal2}");
   p1_amp2_vs_beam_X -> Draw();
   c1_amp2_beam_X_Y -> cd(2);
+  gPad -> SetGridx();
   p1_amp2_vs_beam_Y -> SetTitle(";beam Y (mm);average amp_{xtal2}");
   p1_amp2_vs_beam_Y -> Draw();
   gPad -> Update();
@@ -485,21 +489,6 @@ int main(int argc, char** argv)
   p2_amp2_vs_beam_Y_vs_X -> Draw("colz,same");
   gPad -> Update();
   c1_amp_beam_Y_vs_X -> Print(Form("%s/c__%s__amplitudeProfile__config%d.png",plotDir.c_str(),label1.c_str(),configuration));
-
-  
-  TCanvas* c1_ampMCP = new TCanvas("c1_ampMCP","c1_ampMCP",1400,1200);
-  c1_ampMCP -> cd();
-  gPad -> SetLogy();
-  h_ampMCP -> SetTitle(";MCP max amplitude (mV);events");
-  h_ampMCP -> Draw();
-  TLine* line_cutAmpMinMCP = new TLine(cut_ampMinMCP,0.,cut_ampMinMCP,1.05*h_ampMCP->GetMaximum());
-  TLine* line_cutAmpMaxMCP = new TLine(cut_ampMaxMCP,0.,cut_ampMaxMCP,1.05*h_ampMCP->GetMaximum());
-  line_cutAmpMinMCP -> SetLineColor(kRed);
-  line_cutAmpMaxMCP -> SetLineColor(kRed);
-  line_cutAmpMinMCP -> Draw("same");
-  line_cutAmpMaxMCP -> Draw("same");
-  gPad -> Update();
-  c1_ampMCP -> Print(Form("%s/c__%s__ampMCP__config%d.png",plotDir.c_str(),label1.c_str(),configuration));
   
   TCanvas* c1_beam_Y_vs_X = new TCanvas("c1_beam_Y_vs_X","beam profile",2100,900);
   c1_beam_Y_vs_X -> Divide(2,1);
@@ -542,6 +531,7 @@ int main(int argc, char** argv)
   
   std::sort(pairs_Vbias_th.begin(),pairs_Vbias_th.end());
   
+  std::cout << "size: " <<  pairs_Vbias_th.size() << std::endl;
   for(unsigned int it = 0; it < pairs_Vbias_th.size(); ++it)
   {
     float Vbias1 = pairs_Vbias_th.at(it).first.first;
@@ -574,79 +564,32 @@ int main(int argc, char** argv)
     
     map_mean_vs_Vbias_th[label_Vbias_th] = mean;
     
+    std::cout << "label_th: " << label_th << std::endl;
     if( g_mean_vs_Vbias[label_th] == NULL )
     {
+      std::cout << "creating graph vs vbias" << std::endl;
       g_mean_vs_Vbias[label_th] = new TGraph();
       g_CTR_vs_Vbias[label_th] = new TGraph();
     }
     g_mean_vs_Vbias[label_th] -> SetPoint(g_mean_vs_Vbias[label_th]->GetN(),Vbias1,mean);
-    g_CTR_vs_Vbias[label_th] -> SetPoint(g_CTR_vs_Vbias[label_th]->GetN(),Vbias1,effSigma/sqrt(2)*1000.);
-
+    
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+      g_CTR_vs_Vbias[label_th] -> SetPoint(g_CTR_vs_Vbias[label_th]->GetN(),Vbias1,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+    else
+      g_CTR_vs_Vbias[label_th] -> SetPoint(g_CTR_vs_Vbias[label_th]->GetN(),Vbias1,effSigma/sqrt(2)*1000.);
+    
+    std::cout << "label_Vbias: " << label_Vbias << std::endl;
     if( g_mean_vs_th[label_Vbias] == NULL )
     {
+      std::cout << "creating graph vs th" << std::endl;
       g_mean_vs_th[label_Vbias] = new TGraph();
       g_CTR_vs_th[label_Vbias] = new TGraph();
     }
     g_mean_vs_th[label_Vbias] -> SetPoint(g_mean_vs_th[label_Vbias]->GetN(),th,mean);
-    g_CTR_vs_th[label_Vbias] -> SetPoint(g_CTR_vs_th[label_Vbias]->GetN(),th,effSigma/sqrt(2)*1000.);
-    
-    
-    // histo = map_CTR1_MCP_vs_Vbias_th[label_Vbias_th];
-    // FindSmallestInterval(vals,histo,0.68,true); 
-    
-    // mean = vals[0];      
-    // min = vals[2];
-    // max = vals[3];
-    // delta = max-min;
-    // sigma = 0.5*delta;
-    // effSigma = sigma;
-    
-    // map_mean1_MCP_vs_Vbias_th[label_Vbias_th] = mean;
-    
-    // if( g_mean1_MCP_vs_Vbias[label_th] == NULL )
-    // {
-    //   g_mean1_MCP_vs_Vbias[label_th] = new TGraph();
-    //   g_CTR1_MCP_vs_Vbias[label_th] = new TGraph();
-    // }
-    // g_mean1_MCP_vs_Vbias[label_th] -> SetPoint(g_mean1_MCP_vs_Vbias[label_th]->GetN(),Vbias1,mean);
-    // g_CTR1_MCP_vs_Vbias[label_th] -> SetPoint(g_CTR1_MCP_vs_Vbias[label_th]->GetN(),Vbias1,sqrt(effSigma*effSigma-MCPIntrinsic*MCPIntrinsic)*1000.);
-    
-    // if( g_mean1_MCP_vs_th[label_Vbias] == NULL )
-    // {
-    //   g_mean1_MCP_vs_th[label_Vbias] = new TGraph();
-    //   g_CTR1_MCP_vs_th[label_Vbias] = new TGraph();
-    // }
-    // g_mean1_MCP_vs_th[label_Vbias] -> SetPoint(g_mean1_MCP_vs_th[label_Vbias]->GetN(),th,mean);
-    // g_CTR1_MCP_vs_th[label_Vbias] -> SetPoint(g_CTR1_MCP_vs_th[label_Vbias]->GetN(),th,sqrt(effSigma*effSigma-MCPIntrinsic*MCPIntrinsic)*1000.);
-    
-    
-    // histo = map_CTR2_MCP_vs_Vbias_th[label_Vbias_th];
-    // FindSmallestInterval(vals,histo,0.68,true); 
-    
-    // mean = vals[0];      
-    // min = vals[2];
-    // max = vals[3];
-    // delta = max-min;
-    // sigma = 0.5*delta;
-    // effSigma = sigma;
-    
-    // map_mean2_MCP_vs_Vbias_th[label_Vbias_th] = mean;
-    
-    // if( g_mean2_MCP_vs_Vbias[label_th] == NULL )
-    // {
-    //   g_mean2_MCP_vs_Vbias[label_th] = new TGraph();
-    //   g_CTR2_MCP_vs_Vbias[label_th] = new TGraph();
-    // }
-    // g_mean2_MCP_vs_Vbias[label_th] -> SetPoint(g_mean2_MCP_vs_Vbias[label_th]->GetN(),Vbias2,mean);
-    // g_CTR2_MCP_vs_Vbias[label_th] -> SetPoint(g_CTR2_MCP_vs_Vbias[label_th]->GetN(),Vbias2,sqrt(effSigma*effSigma-MCPIntrinsic*MCPIntrinsic)*1000.);
-    
-    // if( g_mean2_MCP_vs_th[label_Vbias] == NULL )
-    // {
-    //   g_mean2_MCP_vs_th[label_Vbias] = new TGraph();
-    //   g_CTR2_MCP_vs_th[label_Vbias] = new TGraph();
-    // }
-    // g_mean2_MCP_vs_th[label_Vbias] -> SetPoint(g_mean2_MCP_vs_th[label_Vbias]->GetN(),th,mean);
-    // g_CTR2_MCP_vs_th[label_Vbias] -> SetPoint(g_CTR2_MCP_vs_th[label_Vbias]->GetN(),th,sqrt(effSigma*effSigma-MCPIntrinsic*MCPIntrinsic)*1000.);
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+      g_CTR_vs_th[label_Vbias] -> SetPoint(g_CTR_vs_th[label_Vbias]->GetN(),th,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+    else
+      g_CTR_vs_th[label_Vbias] -> SetPoint(g_CTR_vs_th[label_Vbias]->GetN(),th,effSigma/sqrt(2)*1000.);
   }
   
   
@@ -660,7 +603,7 @@ int main(int argc, char** argv)
     if( entry%1000 == 0 ) std::cout << ">>> loop 2/4: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     chain1 -> GetEntry(entry);
     
-    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax) ) continue;
+    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax,cut_angle) ) continue;
     
     float Vbias1 = treeVars.t_Vbias[VbiasIndex1];
     float Vbias2 = treeVars.t_Vbias[VbiasIndex2];
@@ -671,12 +614,13 @@ int main(int argc, char** argv)
     
     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(0)]] * 0.25;
     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(1)]] * 0.25;
-    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]];
-    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]];
-    float timeMCP = treeVars.t_time[(*treeVars.t_channelId)[mcpChannels.at(0)]+14];
+    int extraIt1 = 0;
+    int extraIt2 = 0;
+    if( mcpChannels.at(0) == 1 ) extraIt1 = 14;
+    if( mcpChannels.at(1) == 1 ) extraIt2 = 14;
+    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]+extraIt1];
+    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]+extraIt2];
     float CTR = (time2 - time1) - map_mean_vs_Vbias_th[label_Vbias_th] + map_mean_vs_Vbias_th[label_Vbias_th_max];
-    float CTR1_MCP = (timeMCP - time1) - map_mean1_MCP_vs_Vbias_th[label_Vbias_th] + map_mean1_MCP_vs_Vbias_th[label_Vbias_th_max];
-    float CTR2_MCP = (timeMCP - time2) - map_mean2_MCP_vs_Vbias_th[label_Vbias_th] + map_mean2_MCP_vs_Vbias_th[label_Vbias_th_max];
     
     if( !AcceptEventAmp(treeVars,cut_ampMin1[Vbias1],cut_ampMax1[Vbias1],cut_ampMin2[Vbias2],cut_ampMax2[Vbias2]) ) continue;
     if( !AcceptEventDur(treeVars,cut_durMin1[Vbias1],cut_durMax1[Vbias1],cut_durMin2[Vbias2],cut_durMax2[Vbias2]) ) continue;
@@ -694,45 +638,17 @@ int main(int argc, char** argv)
       map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th] -> Fill( amp2/amp1,CTR );
     }
     
-    if( AcceptEventMCP(treeVars,cut_ampMinMCP,cut_ampMaxMCP) && CTR > -5. && CTR < 5. )
-    {
-      if( map_CTR1_MCP_vs_amp1_vs_Vbias_th[label_Vbias_th] == NULL )
-      {
-        map_CTR1_MCP_vs_amp1_vs_Vbias_th[label_Vbias_th] = new TProfile(Form("p_CTR1_MCP_vs_amp1_%s",label_Vbias_th.c_str()),"",100,0.,1000.);
-      }
-      map_CTR1_MCP_vs_amp1_vs_Vbias_th[label_Vbias_th] -> Fill( amp1,CTR1_MCP );
-    }
-    if( AcceptEventMCP(treeVars,cut_ampMinMCP,cut_ampMaxMCP) && CTR > -5. && CTR < 5. )
-    {
-      if( map_CTR2_MCP_vs_amp2_vs_Vbias_th[label_Vbias_th] == NULL )
-      {
-        map_CTR2_MCP_vs_amp2_vs_Vbias_th[label_Vbias_th] = new TProfile(Form("p_CTR2_MCP_vs_amp2_%s",label_Vbias_th.c_str()),"",100,0.,1000.);
-      }
-      map_CTR2_MCP_vs_amp2_vs_Vbias_th[label_Vbias_th] -> Fill( amp2,CTR2_MCP );
-    }
-    
     if( !AcceptEventVbias(treeVars,cut_VbiasMin,cut_VbiasMax) ) continue;
     if( !AcceptEventTh(treeVars,cut_NINOthrMin,cut_NINOthrMax) ) continue;
     
     h_CTR -> Fill( CTR );
     h_ampRatio -> Fill(amp2/amp1);
     
-    if( AcceptEventMCP(treeVars,cut_ampMinMCP,cut_ampMaxMCP) )
-    {
-      h_CTR1_MCP -> Fill( CTR1_MCP );
-      h_CTR2_MCP -> Fill( CTR2_MCP );
-    }
-    
     if( CTR > -5. && CTR < 5. )
     {
       p_CTR_vs_amp1 -> Fill( amp1,CTR );
       p_CTR_vs_amp2 -> Fill( amp2,CTR );
       p_CTR_vs_ampRatio -> Fill( amp2/amp1,CTR );
-    }
-    if( AcceptEventMCP(treeVars,cut_ampMinMCP,cut_ampMaxMCP) && CTR > -5. && CTR < 5. )
-    {
-      p_CTR1_MCP_vs_amp1 -> Fill( amp1,CTR1_MCP );
-      p_CTR2_MCP_vs_amp2 -> Fill( amp2,CTR2_MCP );
     }
   }
   std::cout << std::endl;
@@ -763,7 +679,7 @@ int main(int argc, char** argv)
   h_CTR -> SetLineColor(kRed);
   h_CTR -> GetXaxis() -> SetRangeUser(min,max);
   h_CTR -> Draw("PE");
-  latexLabel1 -> Draw("same");
+  latexLabel12 -> Draw("same");
   
   // gaus fit
   std::string gausName = Form("fitFunc_gaus");
@@ -776,7 +692,13 @@ int main(int argc, char** argv)
   sigma = fitFunc_gaus -> GetParameter(2);
   float sigmaErr = fitFunc_gaus -> GetParError(2);
   
-  TLatex* latex22 = new TLatex(0.16,0.55,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
+  TLatex* latex22;
+  if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    latex22= new TLatex(0.16,0.55,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",
+    sqrt(sigma*sigma - MCPIntrinsic*MCPIntrinsic)*1000.,
+    fabs(sigmaErr*1000)));
+  else
+    latex22= new TLatex(0.16,0.55,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
   latex22 -> SetNDC();
   latex22 -> SetTextFont(42);
   latex22 -> SetTextSize(0.03);
@@ -795,14 +717,25 @@ int main(int argc, char** argv)
   sigmaErr = fitFunc_cb -> GetParError(2);
   fitFunc_cb -> Draw("same");
   
-  TLatex* latex2 = new TLatex(0.16,0.89,Form("eff. #sigma_{single} = %.1f ps",fabs(effSigma*1000)/sqrt(2)));
+  TLatex* latex2;
+  if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    latex2 = new TLatex(0.16,0.89,Form("eff. #sigma_{single} = %.1f ps",
+    sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.));
+  else
+    latex2 = new TLatex(0.16,0.89,Form("eff. #sigma_{single} = %.1f ps",fabs(effSigma*1000)/sqrt(2)));
   latex2 -> SetNDC();
   latex2 -> SetTextFont(42);
   latex2 -> SetTextSize(0.05);
   latex2 -> SetTextColor(kRed);
   latex2 -> Draw("same");
   
-  TLatex* latex21 = new TLatex(0.16,0.40,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
+  TLatex* latex21;
+  if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    latex21 = new TLatex(0.16,0.40,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",
+    sqrt(sigma*sigma - MCPIntrinsic*MCPIntrinsic)*1000.,
+    fabs(sigmaErr*1000)));
+  else
+    latex21 = new TLatex(0.16,0.40,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
   latex21 -> SetNDC();
   latex21 -> SetTextFont(42);
   latex21 -> SetTextSize(0.03);
@@ -812,148 +745,6 @@ int main(int argc, char** argv)
   gPad -> Update();
   
   
-  // //-----------------------
-  // // fit CTR1_MCP histogram
-  // FindSmallestInterval(vals,h_CTR1_MCP,0.68,true); 
-  // h_CTR1_MCP -> Rebin(rebin);
-  
-  // norm = h_CTR1_MCP -> GetMaximum();
-  // mean = vals[0];
-  // min = vals[2];
-  // max = vals[3];
-  // delta = max-min;
-  // sigma = 0.5*delta;
-  // effSigma = sigma;
-  // min = min - 2.*delta;
-  // max = max + 2.*delta;
-
-  // TCanvas* c1_CTR1_MCP = new TCanvas("c1_CTR1_MCP","CTR1_MCP",1400,1200);
-  // h_CTR1_MCP -> SetTitle(";#Deltat = time_{xtal1} #minus time_{MCP} (ns);events");
-  // h_CTR1_MCP -> SetMarkerStyle(24);
-  // h_CTR1_MCP -> SetMarkerColor(kRed);
-  // h_CTR1_MCP -> SetLineColor(kRed);
-  // h_CTR1_MCP -> GetXaxis() -> SetRangeUser(min,max);
-  // h_CTR1_MCP -> Draw("PE");
-  // latexLabel1 -> Draw("same");
-  
-  // // gaus fit
-  // gausName = Form("fitFunc1_gaus_MCP");
-  // fitFunc_gaus = new TF1(gausName.c_str(),"[0]*exp(-1.*(x-[1])*(x-[1])/(2.*[2]*[2]))",mean-sigma,mean+sigma);
-  // fitFunc_gaus -> SetNpx(10000);
-  // fitFunc_gaus -> SetParameters(norm,mean,sigma);
-  // h_CTR1_MCP -> Fit(gausName.c_str(),"QNRSL");
-  // norm = fitFunc_gaus -> GetParameter(0);
-  // mean = fitFunc_gaus -> GetParameter(1);
-  // sigma = fitFunc_gaus -> GetParameter(2);
-  // sigmaErr = fitFunc_gaus -> GetParError(2);
-  
-  // latex22 = new TLatex(0.16,0.55,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
-  // latex22 -> SetNDC();
-  // latex22 -> SetTextFont(42);
-  // latex22 -> SetTextSize(0.03);
-  // latex22 -> SetTextColor(kRed);
-  // latex22 -> Draw("same");
-  
-  // // crystal ball fit
-  // cbName = Form("fitFunc1_cb_MCP");
-  // fitFunc_cb = new TF1(cbName.c_str(),crystalBallLowHigh,mean-4.*sigma,mean+4.*sigma,8);
-  // fitFunc_cb -> SetNpx(10000);
-  // fitFunc_cb -> SetParameters(norm,mean,sigma,1.5,10.,1.5,10.);
-  // h_CTR1_MCP -> Fit(cbName.c_str(),"QNRSL");
-  // norm = fitFunc_cb -> GetParameter(0);
-  // mean = fitFunc_cb -> GetParameter(1);
-  // sigma = fitFunc_cb -> GetParameter(2);
-  // sigmaErr = fitFunc_cb -> GetParError(2);
-  // fitFunc_cb -> Draw("same");
-  
-  // latex2 = new TLatex(0.16,0.89,Form("eff. #sigma_{single} = %.1f ps",fabs(effSigma*1000)/sqrt(2)));
-  // latex2 -> SetNDC();
-  // latex2 -> SetTextFont(42);
-  // latex2 -> SetTextSize(0.05);
-  // latex2 -> SetTextColor(kRed);
-  // latex2 -> Draw("same");
-  
-  // latex21 = new TLatex(0.16,0.40,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
-  // latex21 -> SetNDC();
-  // latex21 -> SetTextFont(42);
-  // latex21 -> SetTextSize(0.03);
-  // latex21 -> SetTextColor(kRed);
-  // latex21 -> Draw("same");
-  
-  // gPad -> Update();
-  
-  
-  // //-----------------------
-  // // fit CTR2_MCP histogram
-  // FindSmallestInterval(vals,h_CTR2_MCP,0.68,true); 
-  // h_CTR2_MCP -> Rebin(rebin);
-  
-  // norm = h_CTR2_MCP -> GetMaximum();
-  // mean = vals[0];
-  // min = vals[2];
-  // max = vals[3];
-  // delta = max-min;
-  // sigma = 0.5*delta;
-  // effSigma = sigma;
-  // min = min - 2.*delta;
-  // max = max + 2.*delta;
-
-  // TCanvas* c1_CTR2_MCP = new TCanvas("c1_CTR2_MCP","CTR2_MCP",1400,1200);
-  // h_CTR2_MCP -> SetTitle(";#Deltat = time_{xtal1} #minus time_{MCP} (ns);events");
-  // h_CTR2_MCP -> SetMarkerStyle(24);
-  // h_CTR2_MCP -> SetMarkerColor(kRed);
-  // h_CTR2_MCP -> SetLineColor(kRed);
-  // h_CTR2_MCP -> GetXaxis() -> SetRangeUser(min,max);
-  // h_CTR2_MCP -> Draw("PE");
-  // latexLabel1 -> Draw("same");
-  
-  // gausName = Form("fitFunc2_gaus_MCP");
-  // fitFunc_gaus = new TF1(gausName.c_str(),"[0]*exp(-1.*(x-[1])*(x-[1])/(2.*[2]*[2]))",mean-sigma,mean+sigma);
-  // fitFunc_gaus -> SetNpx(10000);
-  // fitFunc_gaus -> SetParameters(norm,mean,sigma);
-  // h_CTR2_MCP -> Fit(gausName.c_str(),"QNRSL");
-  // norm = fitFunc_gaus -> GetParameter(0);
-  // mean = fitFunc_gaus -> GetParameter(1);
-  // sigma = fitFunc_gaus -> GetParameter(2);
-  // sigmaErr = fitFunc_gaus -> GetParError(2);
-  
-  // latex22 = new TLatex(0.16,0.55,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
-  // latex22 -> SetNDC();
-  // latex22 -> SetTextFont(42);
-  // latex22 -> SetTextSize(0.03);
-  // latex22 -> SetTextColor(kRed);
-  // latex22 -> Draw("same");
-  
-  // // crystal ball fit
-  // cbName = Form("fitFunc2_cb_MCP");
-  // fitFunc_cb = new TF1(cbName.c_str(),crystalBallLowHigh,mean-4.*sigma,mean+4.*sigma,8);
-  // fitFunc_cb -> SetNpx(10000);
-  // fitFunc_cb -> SetParameters(norm,mean,sigma,1.5,10.,1.5,10.);
-  // h_CTR2_MCP -> Fit(cbName.c_str(),"QNRSL");
-  // norm = fitFunc_cb -> GetParameter(0);
-  // mean = fitFunc_cb -> GetParameter(1);
-  // sigma = fitFunc_cb -> GetParameter(2);
-  // sigmaErr = fitFunc_cb -> GetParError(2);
-  // fitFunc_cb -> Draw("same");
-  
-  // latex2 = new TLatex(0.16,0.89,Form("eff. #sigma_{single} = %.1f ps",fabs(effSigma*1000)/sqrt(2)));
-  // latex2 -> SetNDC();
-  // latex2 -> SetTextFont(42);
-  // latex2 -> SetTextSize(0.05);
-  // latex2 -> SetTextColor(kRed);
-  // latex2 -> Draw("same");
-  
-  // latex21 = new TLatex(0.16,0.40,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
-  // latex21 -> SetNDC();
-  // latex21 -> SetTextFont(42);
-  // latex21 -> SetTextSize(0.03);
-  // latex21 -> SetTextColor(kRed);
-  // latex21 -> Draw("same");
-  
-  // gPad -> Update();
-  
-  
-
   std::map<std::string,TCanvas*> c1_scans;
   for(unsigned int it = 0; it < vec_Vbias.size(); ++it)
   {
@@ -971,7 +762,7 @@ int main(int argc, char** argv)
     g_mean_vs_th[label_Vbias] -> SetMarkerColor(kRed);
     g_mean_vs_th[label_Vbias] -> SetLineColor(kRed);
     g_mean_vs_th[label_Vbias] -> Draw("PL,same");
-    latexLabel1 -> Draw("same");
+    latexLabel12 -> Draw("same");
     c1_scans[label_Vbias] -> cd(2);
     hPad = (TH1F*)( gPad->DrawFrame(0.,20,1100.,150.) );
     hPad -> SetTitle(";NINO th. (mV); eff. #sigma_{single} (ps)");
@@ -982,7 +773,7 @@ int main(int argc, char** argv)
     g_CTR_vs_th[label_Vbias] -> SetMarkerColor(kRed);
     g_CTR_vs_th[label_Vbias] -> SetLineColor(kRed);
     g_CTR_vs_th[label_Vbias] -> Draw("PL,same");
-    latexLabel2 -> Draw("same");    
+    latexLabel12 -> Draw("same");    
     gPad -> Update();
   }
 
@@ -1002,7 +793,7 @@ int main(int argc, char** argv)
     g_mean_vs_Vbias[label_th] -> SetMarkerColor(kRed);
     g_mean_vs_Vbias[label_th] -> SetLineColor(kRed);
     g_mean_vs_Vbias[label_th] -> Draw("PL,same");
-    latexLabel1 -> Draw("same");
+    latexLabel12 -> Draw("same");
     c1_scans[label_th] -> cd(2);
     hPad = (TH1F*)( gPad->DrawFrame(25.,20.,60.,150.) );
     hPad -> SetTitle(";V_{bias} (V); eff. #sigma_{single} (ps)");
@@ -1013,66 +804,48 @@ int main(int argc, char** argv)
     g_CTR_vs_Vbias[label_th] -> SetMarkerColor(kRed);
     g_CTR_vs_Vbias[label_th] -> SetLineColor(kRed);
     g_CTR_vs_Vbias[label_th] -> Draw("PL,same");
-    latexLabel2 -> Draw("same");    
+    latexLabel12 -> Draw("same");    
     gPad -> Update();
   }
   
   
-  
-  //---------------------
-  // time walk correction
-  
-  c1 = new TCanvas("c1_ampCorrection","time walk",2100,900);
-  c1 -> Divide(2,1);
-  c1 -> cd(1);
-  p_CTR_vs_amp1 -> SetMarkerStyle(24);
-  p_CTR_vs_amp1 -> SetMarkerColor(kRed);
-  p_CTR_vs_amp1 -> SetLineColor(kRed);
-  p_CTR_vs_amp1 -> SetTitle(";amplitude_{xtal1 or xtal2};#Deltat = time_{xtal2} #minus time_{xtal1} (ns)");
-  p_CTR_vs_amp1 -> SetMinimum(min-2.*delta);
-  p_CTR_vs_amp1 -> SetMaximum(max+2.*delta);
-  p_CTR_vs_amp1 -> Draw();
-  p_CTR_vs_amp2 -> Draw("same");
-  p_CTR_vs_amp2 -> SetMarkerStyle(21);
-  p_CTR_vs_amp2 -> SetMarkerColor(kBlue);
-  p_CTR_vs_amp2 -> SetLineColor(kBlue);
-  p_CTR_vs_amp2 -> SetTitle(";amplitude_{xtal1 or xtal2};#Deltat = time_{xtal2} #minus time_{xtal1} (ns)");
-  p_CTR_vs_amp2 -> SetMinimum(min-2.*delta);
-  p_CTR_vs_amp2 -> SetMaximum(max+2.*delta);
-  p_CTR_vs_amp2 -> Draw("same");
-  
-  TF1* fitFunc_corr1 = new TF1("fitFunc_corr1","[0]*log([1]*x)+[2]",0.,1000.);
-  fitFunc_corr1 -> SetParameters(0.05,0.0000001,0.);
-  fitFunc_corr1 -> SetLineColor(kRed);
-  p_CTR_vs_amp1 -> Fit("fitFunc_corr1","QNS+","",
-                       h_amp1->GetMean()-4.*h_amp1->GetRMS(),
-                       h_amp1->GetMean()+2.*h_amp1->GetRMS());
-  fitFunc_corr1 -> Draw("same");
-  
-  TF1* fitFunc_corr2 = new TF1("fitFunc_corr2","[0]*log([1]*x)+[2]",0.,1000.);
-  fitFunc_corr2 -> SetParameters(-1.,0.02,0.);
-  fitFunc_corr2 -> SetLineColor(kBlue);
-  p_CTR_vs_amp2 -> Fit("fitFunc_corr2","QNS+","",
-                       h_amp2->GetMean()-2.*h_amp2->GetRMS(),
-                       h_amp2->GetMean()+4.*h_amp2->GetRMS());
-  fitFunc_corr2 -> Draw("same");
-  
-  c1 -> cd(2);
-  p_CTR_vs_ampRatio -> SetTitle(";amplitude_{xtal2} / amplitude_{xtal1};#Deltat = time_{xtal2} #minus time_{xtal1} (ns)");
-  p_CTR_vs_ampRatio -> SetMinimum(min-2.*delta);
-  p_CTR_vs_ampRatio -> SetMaximum(max+2.*delta);
-  p_CTR_vs_ampRatio -> Draw();
-
-  TF1* fitFunc_corrRatio = new TF1("fitFunc_corrRatio","[0]*log([1]*x)+[2]",0.,5.);
-  fitFunc_corrRatio -> SetParameters(-0.2,0.1,0.);
-  p_CTR_vs_ampRatio -> Fit("fitFunc_corrRatio","QNS+","",
-                           h_ampRatio->GetMean()-2.*h_ampRatio->GetRMS(),
-                           h_ampRatio->GetMean()+2.*h_ampRatio->GetRMS());
-  fitFunc_corrRatio -> Draw("same");
-  
   std::map<std::string,TF1*> map_fitFunc_corrRatio_vs_Vbias_th;
+  std::map<std::string,TF1*> map_fitFunc_corrAmp1_vs_Vbias_th;
+  std::map<std::string,TF1*> map_fitFunc_corrAmp2_vs_Vbias_th;
   for(std::map<std::string,TProfile*>::const_iterator mapIt = map_CTR_vs_amp1_vs_Vbias_th.begin(); mapIt != map_CTR_vs_amp1_vs_Vbias_th.end(); ++mapIt)
   {
+    std::cout << ">>> " << mapIt -> first << std::endl;
+    
+    map_fitFunc_corrAmp1_vs_Vbias_th[mapIt->first] = new TF1(Form("fitFunc_corrAmp1_%s",mapIt->first.c_str()),"[0]*log([1]*x)+[2]",0.,1000.);
+    map_fitFunc_corrAmp1_vs_Vbias_th[mapIt->first] -> SetParameters(0.05,0.0000001,0.);
+    map_CTR_vs_amp1_vs_Vbias_th[mapIt->first] -> Fit(Form("fitFunc_corrAmp1_%s",mapIt->first.c_str()),"QNS+","",
+                                                         h_amp1->GetMean()-4.*h_amp1->GetRMS(),
+                                                         h_amp1->GetMean()+2.*h_amp1->GetRMS());
+    c1 = new TCanvas(Form("c1_CTR_vs_amp1_%s",mapIt->first.c_str()),Form("c1_CTR_vs_amp1_%s",mapIt->first.c_str()));
+    if( mcpChannels.at(0)==1)
+      map_CTR_vs_amp1_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{MCP};CTR (ps)");
+    else
+      map_CTR_vs_amp1_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{xtal1};CTR (ps)");
+    map_CTR_vs_amp1_vs_Vbias_th[mapIt->first] -> Draw();    
+    map_fitFunc_corrAmp1_vs_Vbias_th[mapIt->first] -> Draw("same");
+    c1 -> Print(Form("%s/c__%s__amplitudeWalk1__config%d__%s.png",plotDir.c_str(),label1.c_str(),configuration,mapIt->first.c_str()));
+    
+
+    map_fitFunc_corrAmp2_vs_Vbias_th[mapIt->first] = new TF1(Form("fitFunc_corrAmp2_%s",mapIt->first.c_str()),"[0]*log([1]*x)+[2]",0.,1000.);
+    map_fitFunc_corrAmp2_vs_Vbias_th[mapIt->first] -> SetParameters(0.05,0.0000001,0.);
+    map_CTR_vs_amp2_vs_Vbias_th[mapIt->first] -> Fit(Form("fitFunc_corrAmp2_%s",mapIt->first.c_str()),"QNS+","",
+                                                         h_amp2->GetMean()-4.*h_amp2->GetRMS(),
+                                                         h_amp2->GetMean()+2.*h_amp2->GetRMS());
+    c1 = new TCanvas(Form("c1_CTR_vs_amp2_%s",mapIt->first.c_str()),Form("c1_CTR_vs_amp2_%s",mapIt->first.c_str()));
+    if( mcpChannels.at(1)==1)
+      map_CTR_vs_amp2_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{MCP};CTR (ps)");
+    else
+      map_CTR_vs_amp2_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{xtal2};CTR (ps)");
+    map_CTR_vs_amp2_vs_Vbias_th[mapIt->first] -> Draw();    
+    map_fitFunc_corrAmp2_vs_Vbias_th[mapIt->first] -> Draw("same");
+    c1 -> Print(Form("%s/c__%s__amplitudeWalk2__config%d__%s.png",plotDir.c_str(),label1.c_str(),configuration,mapIt->first.c_str()));
+
+
     map_fitFunc_corrRatio_vs_Vbias_th[mapIt->first] = new TF1(Form("fitFunc_corrRatio_%s",mapIt->first.c_str()),"[0]*log([1]*x)+[2]",0.,5.);
     map_fitFunc_corrRatio_vs_Vbias_th[mapIt->first] -> SetParameters(-0.2,0.1,0.);
     map_CTR_vs_ampRatio_vs_Vbias_th[mapIt->first] -> Fit(Form("fitFunc_corrRatio_%s",mapIt->first.c_str()),"QNS+","",
@@ -1080,15 +853,19 @@ int main(int argc, char** argv)
                                                          h_ampRatio->GetMean()+2.*h_ampRatio->GetRMS());
     
     c1 = new TCanvas(Form("c1_CTR_vs_ampRatio_%s",mapIt->first.c_str()),Form("c1_CTR_vs_ampRatio_%s",mapIt->first.c_str()));
-    map_CTR_vs_ampRatio_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{xtal2} / amp_{xtal1};CTR (ps)");
+    if( mcpChannels.at(0) == 1 && mcpChannels.at(1)== 0 )
+      map_CTR_vs_ampRatio_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{xtal2} / amp_{MCP};CTR (ps)");
+    else if( mcpChannels.at(0) == 0 && mcpChannels.at(1)== 1 )
+      map_CTR_vs_ampRatio_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{MCP} / amp_{xtal1};CTR (ps)");
+    else if( mcpChannels.at(0) == 0 && mcpChannels.at(1)== 0 )
+      map_CTR_vs_ampRatio_vs_Vbias_th[mapIt->first] -> SetTitle(";amp_{xtal2} / amp_{xtal1};CTR (ps)");
     map_CTR_vs_ampRatio_vs_Vbias_th[mapIt->first] -> Draw();    
     map_fitFunc_corrRatio_vs_Vbias_th[mapIt->first] -> Draw("same");
     c1 -> Print(Form("%s/c__%s__amplitudeWalk__config%d__%s.png",plotDir.c_str(),label1.c_str(),configuration,mapIt->first.c_str()));
   }
   gPad -> Update();
   
-  
-  
+ 
   //------------------------
   // third loop over events
   if( maxStep < 3) { if( popupPlots ) theApp -> Run(); return 0; }
@@ -1098,7 +875,7 @@ int main(int argc, char** argv)
     if( entry%1000 == 0 ) std::cout << ">>> loop 3/4: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     chain1 -> GetEntry(entry);
 
-    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax) ) continue;
+    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax,cut_angle) ) continue;
     
     float Vbias1 = treeVars.t_Vbias[VbiasIndex1];
     float Vbias2 = treeVars.t_Vbias[VbiasIndex2];
@@ -1109,21 +886,55 @@ int main(int argc, char** argv)
     
     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(0)]] * 0.25;
     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(1)]] * 0.25;
-    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]];
-    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]];
+    int extraIt1 = 0;
+    int extraIt2 = 0;
+    if( mcpChannels.at(0) == 1 ) extraIt1 = 14;
+    if( mcpChannels.at(1) == 1 ) extraIt2 = 14;
+    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]+extraIt1];
+    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]+extraIt2];
     float CTR = (time2 - time1);
-    float CTR_corrRatio = CTR -
-      map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(amp2/amp1) +
-      map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(h_ampRatio->GetMean());
-    
+    float CTR_corr = CTR;
+    //The presence of one MCP modifies the amp walk correction
+      if( mcpChannels.at(0)==1 && mcpChannels.at(1)==0)//Amp Walk correction on the second channel
+      // CTR_corr = CTR -
+      //            map_fitFunc_corrAmp2_vs_Vbias_th[label_Vbias_th]->Eval(amp2) +
+      //            map_fitFunc_corrAmp2_vs_Vbias_th[label_Vbias_th]->Eval(h_amp2_cut->GetMean());
+      CTR_corr = CTR -
+                 map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(amp2)) +
+                 map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp2_cut->GetMean())) -
+                 map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(amp1)) +
+                 map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp1_cut->GetMean()));
+     else if( mcpChannels.at(0)==0 && mcpChannels.at(1)==1)//Amp Walk correction on the first channel
+       // CTR_corr = CTR -
+       //            map_fitFunc_corrAmp1_vs_Vbias_th[label_Vbias_th]->Eval(amp1) +
+       //            map_fitFunc_corrAmp1_vs_Vbias_th[label_Vbias_th]->Eval(h_amp1_cut->GetMean());
+       CTR_corr = CTR -
+         map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(amp1)) +
+         map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp1_cut->GetMean())) -
+         map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(amp2)) +
+         map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp2_cut->GetMean()));
+     else//Or there are 2 MCP either NO MCP
+       if( map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th] != NULL )
+         CTR_corr = CTR -
+                    map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(amp2/amp1) +
+                    map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(h_ampRatio_cut->GetMean());
+       // CTR_corr = CTR -
+       //            map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->FindBin(amp2/amp1)) + 
+       //            map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->FindBin(h_ampRatio_cut->GetMean()));
+       // CTR_corr = CTR -
+       //   map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(amp1)) +
+       //   map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp1_cut->GetMean())) -
+       //   map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(amp2)) +
+       //   map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp2_cut->GetMean()));
+       
     if( !AcceptEventAmp(treeVars,cut_ampMin1[Vbias1],cut_ampMax1[Vbias1],cut_ampMin2[Vbias2],cut_ampMax2[Vbias2]) ) continue;
     if( !AcceptEventDur(treeVars,cut_durMin1[Vbias1],cut_durMax1[Vbias1],cut_durMin2[Vbias2],cut_durMax2[Vbias2]) ) continue;
     
-    if( map_CTR_corrRatio_vs_Vbias_th[label_Vbias_th] == NULL )
+    if( map_CTR_corr_vs_Vbias_th[label_Vbias_th] == NULL )
     {
-      map_CTR_corrRatio_vs_Vbias_th[label_Vbias_th] = new TH1F(Form("h_CTR_corrRatio_%s",label_Vbias_th.c_str()),"",20000,-10.,10.);
+      map_CTR_corr_vs_Vbias_th[label_Vbias_th] = new TH1F(Form("h_CTR_corr_%s",label_Vbias_th.c_str()),"",20000,-10.,10.);
     }
-    map_CTR_corrRatio_vs_Vbias_th[label_Vbias_th] -> Fill( CTR_corrRatio );
+    map_CTR_corr_vs_Vbias_th[label_Vbias_th] -> Fill( CTR_corr );
   }
   std::cout << std::endl;
   
@@ -1132,11 +943,11 @@ int main(int argc, char** argv)
   //------------------------
   // CTR corr threshold scan
   
-  std::map<std::string,float> map_mean_corrRatio_vs_Vbias_th;
-  std::map<std::string,TGraph*> g_mean_corrRatio_vs_Vbias;
-  std::map<std::string,TGraph*> g_CTR_corrRatio_vs_Vbias;
-  std::map<std::string,TGraph*> g_mean_corrRatio_vs_th;
-  std::map<std::string,TGraph*> g_CTR_corrRatio_vs_th;  
+  std::map<std::string,float> map_mean_corr_vs_Vbias_th;
+  std::map<std::string,TGraph*> g_mean_corr_vs_Vbias;
+  std::map<std::string,TGraph*> g_CTR_corr_vs_Vbias;
+  std::map<std::string,TGraph*> g_mean_corr_vs_th;
+  std::map<std::string,TGraph*> g_CTR_corr_vs_th;  
 
   for(unsigned int it = 0; it < pairs_Vbias_th.size(); ++it)
   {
@@ -1147,7 +958,7 @@ int main(int argc, char** argv)
     std::string label_Vbias_th = label_Vbias + "_" + label_th;
     std::cout << label_Vbias_th << std::endl;
     
-    TH1F* histo = map_CTR_corrRatio_vs_Vbias_th[label_Vbias_th];
+    TH1F* histo = map_CTR_corr_vs_Vbias_th[label_Vbias_th];
     float* vals = new float[4];
     FindSmallestInterval(vals,histo,0.68,true); 
     
@@ -1158,24 +969,30 @@ int main(int argc, char** argv)
     float sigma = 0.5*delta;
     float effSigma = sigma;
     
-    map_mean_corrRatio_vs_Vbias_th[label_Vbias_th] = mean;
+    map_mean_corr_vs_Vbias_th[label_Vbias_th] = mean;
     
-    if( g_mean_corrRatio_vs_Vbias[label_th] == NULL )
+    if( g_mean_corr_vs_Vbias[label_th] == NULL )
     {
-      g_mean_corrRatio_vs_Vbias[label_th] = new TGraph();
-      g_CTR_corrRatio_vs_Vbias[label_th] = new TGraph();
+      g_mean_corr_vs_Vbias[label_th] = new TGraph();
+      g_CTR_corr_vs_Vbias[label_th] = new TGraph();
     }
     
-    g_mean_corrRatio_vs_Vbias[label_th] -> SetPoint(g_mean_corrRatio_vs_Vbias[label_th]->GetN(),Vbias1,mean);
-    g_CTR_corrRatio_vs_Vbias[label_th] -> SetPoint(g_CTR_corrRatio_vs_Vbias[label_th]->GetN(),Vbias1,effSigma/sqrt(2)*1000.);
+    g_mean_corr_vs_Vbias[label_th] -> SetPoint(g_mean_corr_vs_Vbias[label_th]->GetN(),Vbias1,mean);
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+      g_CTR_corr_vs_Vbias[label_th] -> SetPoint(g_CTR_corr_vs_Vbias[label_th]->GetN(),Vbias1,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+    else
+      g_CTR_corr_vs_Vbias[label_th] -> SetPoint(g_CTR_corr_vs_Vbias[label_th]->GetN(),Vbias1,effSigma/sqrt(2)*1000.);
     
-    if( g_mean_corrRatio_vs_th[label_Vbias] == NULL )
+    if( g_mean_corr_vs_th[label_Vbias] == NULL )
     {
-      g_mean_corrRatio_vs_th[label_Vbias] = new TGraph();
-      g_CTR_corrRatio_vs_th[label_Vbias] = new TGraph();
+      g_mean_corr_vs_th[label_Vbias] = new TGraph();
+      g_CTR_corr_vs_th[label_Vbias] = new TGraph();
     }
-    g_mean_corrRatio_vs_th[label_Vbias] -> SetPoint(g_mean_corrRatio_vs_th[label_Vbias]->GetN(),th,mean);
-    g_CTR_corrRatio_vs_th[label_Vbias] -> SetPoint(g_CTR_corrRatio_vs_th[label_Vbias]->GetN(),th,effSigma/sqrt(2)*1000.);
+    g_mean_corr_vs_th[label_Vbias] -> SetPoint(g_mean_corr_vs_th[label_Vbias]->GetN(),th,mean);
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+      g_CTR_corr_vs_th[label_Vbias] -> SetPoint(g_CTR_corr_vs_th[label_Vbias]->GetN(),th,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+    else
+      g_CTR_corr_vs_th[label_Vbias] -> SetPoint(g_CTR_corr_vs_th[label_Vbias]->GetN(),th,effSigma/sqrt(2)*1000.);
   }
   
   for(unsigned int it = 0; it < vec_Vbias.size(); ++it)
@@ -1184,15 +1001,15 @@ int main(int argc, char** argv)
     std::string label_Vbias = std::string(Form("Vbias%.0fV",Vbias1));
     
     c1_scans[label_Vbias] -> cd(1);
-    g_mean_corrRatio_vs_th[label_Vbias] -> SetMarkerStyle(21);
-    g_mean_corrRatio_vs_th[label_Vbias] -> SetMarkerColor(kBlue);
-    g_mean_corrRatio_vs_th[label_Vbias] -> SetLineColor(kBlue);
-    g_mean_corrRatio_vs_th[label_Vbias] -> Draw("PL,same");
+    g_mean_corr_vs_th[label_Vbias] -> SetMarkerStyle(21);
+    g_mean_corr_vs_th[label_Vbias] -> SetMarkerColor(kBlue);
+    g_mean_corr_vs_th[label_Vbias] -> SetLineColor(kBlue);
+    g_mean_corr_vs_th[label_Vbias] -> Draw("PL,same");
     c1_scans[label_Vbias] -> cd(2);
-    g_CTR_corrRatio_vs_th[label_Vbias] -> SetMarkerStyle(21);
-    g_CTR_corrRatio_vs_th[label_Vbias] -> SetMarkerColor(kBlue);
-    g_CTR_corrRatio_vs_th[label_Vbias] -> SetLineColor(kBlue);
-    g_CTR_corrRatio_vs_th[label_Vbias] -> Draw("PL,same");
+    g_CTR_corr_vs_th[label_Vbias] -> SetMarkerStyle(21);
+    g_CTR_corr_vs_th[label_Vbias] -> SetMarkerColor(kBlue);
+    g_CTR_corr_vs_th[label_Vbias] -> SetLineColor(kBlue);
+    g_CTR_corr_vs_th[label_Vbias] -> Draw("PL,same");
     
     TLatex* latex3_cuts = new TLatex(0.55,0.89,Form("V_{bias} = %.0fV",Vbias1));
     latex3_cuts -> SetNDC();
@@ -1211,15 +1028,15 @@ int main(int argc, char** argv)
     std::string label_th = std::string(Form("th%.0fmV",th));
     
     c1_scans[label_th] -> cd(1);
-    g_mean_corrRatio_vs_Vbias[label_th] -> SetMarkerStyle(21);
-    g_mean_corrRatio_vs_Vbias[label_th] -> SetMarkerColor(kBlue);
-    g_mean_corrRatio_vs_Vbias[label_th] -> SetLineColor(kBlue);
-    g_mean_corrRatio_vs_Vbias[label_th] -> Draw("PL,same");
+    g_mean_corr_vs_Vbias[label_th] -> SetMarkerStyle(21);
+    g_mean_corr_vs_Vbias[label_th] -> SetMarkerColor(kBlue);
+    g_mean_corr_vs_Vbias[label_th] -> SetLineColor(kBlue);
+    g_mean_corr_vs_Vbias[label_th] -> Draw("PL,same");
     c1_scans[label_th] -> cd(2);
-    g_CTR_corrRatio_vs_Vbias[label_th] -> SetMarkerStyle(21);
-    g_CTR_corrRatio_vs_Vbias[label_th] -> SetMarkerColor(kBlue);
-    g_CTR_corrRatio_vs_Vbias[label_th] -> SetLineColor(kBlue);
-    g_CTR_corrRatio_vs_Vbias[label_th] -> Draw("PL,same");
+    g_CTR_corr_vs_Vbias[label_th] -> SetMarkerStyle(21);
+    g_CTR_corr_vs_Vbias[label_th] -> SetMarkerColor(kBlue);
+    g_CTR_corr_vs_Vbias[label_th] -> SetLineColor(kBlue);
+    g_CTR_corr_vs_Vbias[label_th] -> Draw("PL,same");
     
     TLatex* latex4_cuts = new TLatex(0.55,0.89,Form("NINO th. = %.0fmV",th));
     latex4_cuts -> SetNDC();
@@ -1243,7 +1060,7 @@ int main(int argc, char** argv)
     if( entry%1000 == 0 ) std::cout << ">>> loop 4/4: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     chain1 -> GetEntry(entry);
     
-    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax) ) continue;
+    if( !AcceptEvent(treeVars,cut_beamCutType,cut_beamXMin,cut_beamXMax,cut_beamYMin,cut_beamYMax,cut_angle) ) continue;
     
     float Vbias1 = treeVars.t_Vbias[VbiasIndex1];
     float Vbias2 = treeVars.t_Vbias[VbiasIndex2];
@@ -1254,53 +1071,86 @@ int main(int argc, char** argv)
     
     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(0)]] * 0.25;
     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(1)]] * 0.25;
-    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]];
-    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]];
+    int extraIt1 = 0;
+    int extraIt2 = 0;
+    if( mcpChannels.at(0) == 1 ) extraIt1 = 14;
+    if( mcpChannels.at(1) == 1 ) extraIt2 = 14;
+    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(0)]+extraIt1];
+    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeChannels.at(1)]+extraIt2];
     float CTR = (time2 - time1) - map_mean_vs_Vbias_th[label_Vbias_th] + map_mean_vs_Vbias_th[label_Vbias_th_max];
-    float CTR_corrRatio = CTR -
-      map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(amp2/amp1) +
-      map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(h_ampRatio->GetMean());
-    
+    float CTR_corr = CTR;
+    if( mcpChannels.at(0)==1 && mcpChannels.at(1)==0)//Amp Walk correction on the second channel
+      // CTR_corr = CTR -
+      //            map_fitFunc_corrAmp2_vs_Vbias_th[label_Vbias_th]->Eval(amp2) +
+      //            map_fitFunc_corrAmp2_vs_Vbias_th[label_Vbias_th]->Eval(h_amp2_cut->GetMean());
+      CTR_corr = CTR -
+                 map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(amp2)) +
+                 map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp2_cut->GetMean())) -
+                 map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(amp1)) +
+                 map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp1_cut->GetMean()));
+    else if( mcpChannels.at(0)==0 && mcpChannels.at(1)==1)//Amp Walk correction on the first channel
+      // CTR_corr = CTR -
+      //            map_fitFunc_corrAmp1_vs_Vbias_th[label_Vbias_th]->Eval(amp1) +
+      //            map_fitFunc_corrAmp1_vs_Vbias_th[label_Vbias_th]->Eval(h_amp1_cut->GetMean());
+      CTR_corr = CTR -
+                 map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(amp1)) +
+                 map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp1_cut->GetMean())) -
+                 map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(amp2)) +
+                 map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp2_cut->GetMean()));
+    else//Or there are 2 MCP either NO MCP
+      if( map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th] != NULL )
+        CTR_corr = CTR -
+                   map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(amp2/amp1) +
+                   map_fitFunc_corrRatio_vs_Vbias_th[label_Vbias_th]->Eval(h_ampRatio_cut->GetMean());
+      // CTR_corr = CTR -
+      //            map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->FindBin(amp2/amp1)) + 
+      //            map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_ampRatio_vs_Vbias_th[label_Vbias_th]->FindBin(h_ampRatio_cut->GetMean()));
+       // CTR_corr = CTR -
+       //            map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(amp1)) +
+       //            map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp1_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp1_cut->GetMean())) -
+       //            map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(amp2)) +
+       //            map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->GetBinContent(map_CTR_vs_amp2_vs_Vbias_th[label_Vbias_th]->FindBin(h_amp2_cut->GetMean()));
+       
     if( !AcceptEventAmp(treeVars,cut_ampMin1[Vbias1],cut_ampMax1[Vbias1],cut_ampMin2[Vbias2],cut_ampMax2[Vbias2]) ) continue;
     if( !AcceptEventDur(treeVars,cut_durMin1[Vbias1],cut_durMax1[Vbias1],cut_durMin2[Vbias2],cut_durMax2[Vbias2]) ) continue;
     if( !AcceptEventVbias(treeVars,cut_VbiasMin,cut_VbiasMax) ) continue;
     if( !AcceptEventTh(treeVars,cut_NINOthrMin,cut_NINOthrMax) ) continue;
     
-    h_CTR_corrRatio -> Fill( CTR_corrRatio );
+    h_CTR_corr -> Fill( CTR_corr );
     
     int bin1   = h_nEvents_vs_amp1   -> Fill(amp1);
     int bin2   = h_nEvents_vs_amp2   -> Fill(amp2);
     int binAvg = h_nEvents_vs_ampAvg -> Fill(0.5*(amp1+amp2));
     
-    if( map_CTR_corrRatio_vs_amp1[bin1] == NULL )
-      map_CTR_corrRatio_vs_amp1[bin1] = new TH1F(Form("h_CTR_corrRatio_vsAmp1_%d",bin1),"",20000,-10.,10.);
-    map_CTR_corrRatio_vs_amp1[bin1] -> Fill( CTR_corrRatio );
+    if( map_CTR_corr_vs_amp1[bin1] == NULL )
+      map_CTR_corr_vs_amp1[bin1] = new TH1F(Form("h_CTR_corr_vsAmp1_%d",bin1),"",20000,-10.,10.);
+    map_CTR_corr_vs_amp1[bin1] -> Fill( CTR_corr );
     
-    if( map_CTR_corrRatio_vs_amp2[bin2] == NULL )
-      map_CTR_corrRatio_vs_amp2[bin2] = new TH1F(Form("h_CTR_corrRatio_vs_Amp2_%d",bin2),"",20000,-10.,10.);
-    map_CTR_corrRatio_vs_amp2[bin2] -> Fill( CTR_corrRatio );
+    if( map_CTR_corr_vs_amp2[bin2] == NULL )
+      map_CTR_corr_vs_amp2[bin2] = new TH1F(Form("h_CTR_corr_vs_Amp2_%d",bin2),"",20000,-10.,10.);
+    map_CTR_corr_vs_amp2[bin2] -> Fill( CTR_corr );
     
-    if( map_CTR_corrRatio_vs_ampAvg[binAvg] == NULL )
-      map_CTR_corrRatio_vs_ampAvg[binAvg] = new TH1F(Form("h_CTR_corrRatio_vs_AmpAvg_%d",binAvg),"",20000,-10.,10.);
-    map_CTR_corrRatio_vs_ampAvg[binAvg] -> Fill( CTR_corrRatio );
+    if( map_CTR_corr_vs_ampAvg[binAvg] == NULL )
+      map_CTR_corr_vs_ampAvg[binAvg] = new TH1F(Form("h_CTR_corr_vs_AmpAvg_%d",binAvg),"",20000,-10.,10.);
+    map_CTR_corr_vs_ampAvg[binAvg] -> Fill( CTR_corr );
   }
   std::cout << std::endl;
 
   
   c1_CTR -> cd();
   
-  FindSmallestInterval(vals,h_CTR_corrRatio,0.68,true); 
-  h_CTR_corrRatio -> Rebin(rebin);
-  h_CTR_corrRatio -> SetMarkerStyle(21);
-  h_CTR_corrRatio -> SetMarkerColor(kBlue);
-  h_CTR_corrRatio -> SetLineColor(kBlue);
-  h_CTR -> SetMaximum(1.5*h_CTR_corrRatio->GetMaximum());
-  h_CTR_corrRatio -> Draw("PE,same");
+  FindSmallestInterval(vals,h_CTR_corr,0.68,true); 
+  h_CTR_corr -> Rebin(rebin);
+  h_CTR_corr -> SetMarkerStyle(21);
+  h_CTR_corr -> SetMarkerColor(kBlue);
+  h_CTR_corr -> SetLineColor(kBlue);
+  h_CTR -> SetMaximum(1.5*h_CTR_corr->GetMaximum());
+  h_CTR_corr -> Draw("PE,same");
   
   gPad -> Update();  
   
   
-  norm = h_CTR_corrRatio -> GetMaximum();  
+  norm = h_CTR_corr -> GetMaximum();  
   mean = vals[0];
   min = vals[2];
   max = vals[3];
@@ -1310,21 +1160,27 @@ int main(int argc, char** argv)
   min = min - 2.*delta;
   max = max + 2.*delta;
   
-  h_CTR_corrRatio -> GetXaxis() -> SetRangeUser(min,max);
+  h_CTR_corr -> GetXaxis() -> SetRangeUser(min,max);
   
   // gaus fit
-  gausName = Form("fitFunc_gaus_corrRatio");
-  TF1* fitFunc_gaus_corrRatio = new TF1(gausName.c_str(),"[0]*exp(-1.*(x-[1])*(x-[1])/(2.*[2]*[2]))",mean-sigma,mean+sigma);
-  fitFunc_gaus_corrRatio -> SetNpx(10000);
-  fitFunc_gaus_corrRatio -> SetParameters(norm,mean,sigma);
-  fitFunc_gaus_corrRatio -> SetLineColor(kBlue);
-  h_CTR_corrRatio -> Fit(gausName.c_str(),"QNRSL");
-  norm = fitFunc_gaus_corrRatio -> GetParameter(0);
-  mean = fitFunc_gaus_corrRatio -> GetParameter(1);
-  sigma = fitFunc_gaus_corrRatio -> GetParameter(2);
-  sigmaErr = fitFunc_gaus_corrRatio -> GetParError(2);
+  gausName = Form("fitFunc_gaus_corr");
+  TF1* fitFunc_gaus_corr = new TF1(gausName.c_str(),"[0]*exp(-1.*(x-[1])*(x-[1])/(2.*[2]*[2]))",mean-sigma,mean+sigma);
+  fitFunc_gaus_corr -> SetNpx(10000);
+  fitFunc_gaus_corr -> SetParameters(norm,mean,sigma);
+  fitFunc_gaus_corr -> SetLineColor(kBlue);
+  h_CTR_corr -> Fit(gausName.c_str(),"QNRSL");
+  norm = fitFunc_gaus_corr -> GetParameter(0);
+  mean = fitFunc_gaus_corr -> GetParameter(1);
+  sigma = fitFunc_gaus_corr -> GetParameter(2);
+  sigmaErr = fitFunc_gaus_corr -> GetParError(2);
  
-  TLatex* latex22_corr = new TLatex(0.16,0.50,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
+  TLatex* latex22_corr;
+  if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    latex22_corr = new TLatex(0.16,0.50,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",
+    sqrt(sigma*sigma - MCPIntrinsic*MCPIntrinsic)*1000.,
+    fabs(sigmaErr*1000)));
+  else
+    latex22_corr = new TLatex(0.16,0.50,Form("#sigma_{single}^{gaus} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
   latex22_corr -> SetNDC();
   latex22_corr -> SetTextFont(42);
   latex22_corr -> SetTextSize(0.03);
@@ -1332,27 +1188,38 @@ int main(int argc, char** argv)
   latex22_corr -> Draw("same");
   
   // crystal ball fit
-  cbName = Form("fitFunc_cb_corrRatio");
-  TF1* fitFunc_cb_corrRatio = new TF1(cbName.c_str(),crystalBallLowHigh,mean-4.*sigma,mean+4.*sigma,8);
-  fitFunc_cb_corrRatio -> SetNpx(10000);
-  fitFunc_cb_corrRatio -> SetParameters(norm,mean,sigma,1.5,10.,1.5,10.);
-  fitFunc_cb_corrRatio -> SetLineColor(kBlue);
-  h_CTR_corrRatio -> Fit(cbName.c_str(),"QNRSL");
-  norm = fitFunc_cb_corrRatio -> GetParameter(0);
-  mean = fitFunc_cb_corrRatio -> GetParameter(1);
-  sigma = fitFunc_cb_corrRatio -> GetParameter(2);
-  sigmaErr = fitFunc_cb_corrRatio -> GetParError(2);
+  cbName = Form("fitFunc_cb_corr");
+  TF1* fitFunc_cb_corr = new TF1(cbName.c_str(),crystalBallLowHigh,mean-4.*sigma,mean+4.*sigma,8);
+  fitFunc_cb_corr -> SetNpx(10000);
+  fitFunc_cb_corr -> SetParameters(norm,mean,sigma,1.5,10.,1.5,10.);
+  fitFunc_cb_corr -> SetLineColor(kBlue);
+  h_CTR_corr -> Fit(cbName.c_str(),"QNRSL");
+  norm = fitFunc_cb_corr -> GetParameter(0);
+  mean = fitFunc_cb_corr -> GetParameter(1);
+  sigma = fitFunc_cb_corr -> GetParameter(2);
+  sigmaErr = fitFunc_cb_corr -> GetParError(2);
   
-  fitFunc_cb_corrRatio -> Draw("same");
+  fitFunc_cb_corr -> Draw("same");
   
-  TLatex* latex2_corr = new TLatex(0.16,0.80,Form("eff. #sigma_{single} = %.1f ps",fabs(effSigma*1000)/sqrt(2)));
+  TLatex* latex2_corr;
+  if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    latex2_corr = new TLatex(0.16,0.80,Form("eff. #sigma_{single} = %.1f ps",
+    sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.));
+  else
+    latex2_corr = new TLatex(0.16,0.80,Form("eff. #sigma_{single} = %.1f ps",fabs(effSigma*1000)/sqrt(2)));
   latex2_corr -> SetNDC();
   latex2_corr -> SetTextFont(42);
   latex2_corr -> SetTextSize(0.05);
   latex2_corr -> SetTextColor(kBlue);
   latex2_corr -> Draw("same");
 
-  TLatex* latex21_corr = new TLatex(0.16,0.35,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
+  TLatex* latex21_corr;
+  if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    latex21_corr = new TLatex(0.16,0.35,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",
+    sqrt(sigma*sigma - MCPIntrinsic*MCPIntrinsic)*1000.,
+    fabs(sigmaErr*1000)));
+  else
+    latex21_corr = new TLatex(0.16,0.35,Form("#sigma_{single}^{c.b.} = (%.1f #pm %.1f) ps",fabs(sigma*1000)/sqrt(2),fabs(sigmaErr*1000)/sqrt(2)));
   latex21_corr -> SetNDC();
   latex21_corr -> SetTextFont(42);
   latex21_corr -> SetTextSize(0.03);
@@ -1385,7 +1252,7 @@ int main(int argc, char** argv)
     float binCenter = h_nEvents_vs_amp1->GetBinCenter(bin);
     float binError = binCenter - h_nEvents_vs_amp1->GetBinLowEdge(bin);
     
-    TH1F* histo = map_CTR_corrRatio_vs_amp1[bin];
+    TH1F* histo = map_CTR_corr_vs_amp1[bin];
     float* vals = new float[4];
     FindSmallestInterval(vals,histo,0.68,true); 
     
@@ -1394,9 +1261,17 @@ int main(int argc, char** argv)
     float delta = max-min;
     float sigma = 0.5*delta;
     float effSigma = sigma;
-    
-    g_CTR_vs_amp1 -> SetPoint(g_CTR_vs_amp1->GetN(),binCenter,effSigma/sqrt(2)*1000.);
-    g_CTR_vs_amp1 -> SetPointError(g_CTR_vs_amp1->GetN()-1,binError,effSigma/sqrt(2)*1000./sqrt(nEventsPerEnergyBin));
+
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    {
+      g_CTR_vs_amp1 -> SetPoint(g_CTR_vs_amp1->GetN(),binCenter,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+      g_CTR_vs_amp1 -> SetPointError(g_CTR_vs_amp1->GetN()-1,binError,effSigma*1000./sqrt(nEventsPerEnergyBin));
+    }
+    else
+    {
+      g_CTR_vs_amp1 -> SetPoint(g_CTR_vs_amp1->GetN(),binCenter,effSigma/sqrt(2)*1000.);
+      g_CTR_vs_amp1 -> SetPointError(g_CTR_vs_amp1->GetN()-1,binError,effSigma/sqrt(2)*1000./sqrt(nEventsPerEnergyBin));
+    }
   }
   
   TGraphErrors* g_CTR_vs_amp2 = new TGraphErrors();
@@ -1405,7 +1280,7 @@ int main(int argc, char** argv)
     float binCenter = h_nEvents_vs_amp2->GetBinCenter(bin);
     float binError = binCenter - h_nEvents_vs_amp2->GetBinLowEdge(bin);
     
-    TH1F* histo = map_CTR_corrRatio_vs_amp2[bin];
+    TH1F* histo = map_CTR_corr_vs_amp2[bin];
     float* vals = new float[4];
     FindSmallestInterval(vals,histo,0.68,true); 
     
@@ -1414,9 +1289,17 @@ int main(int argc, char** argv)
     float delta = max-min;
     float sigma = 0.5*delta;
     float effSigma = sigma;
-    
-    g_CTR_vs_amp2 -> SetPoint(g_CTR_vs_amp2->GetN(),binCenter,effSigma/sqrt(2)*1000.);
-    g_CTR_vs_amp2 -> SetPointError(g_CTR_vs_amp2->GetN()-1,binError,effSigma/sqrt(2)*1000./sqrt(nEventsPerEnergyBin));
+
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    {
+      g_CTR_vs_amp2 -> SetPoint(g_CTR_vs_amp2->GetN(),binCenter,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+      g_CTR_vs_amp2 -> SetPointError(g_CTR_vs_amp2->GetN()-1,binError,effSigma*1000./sqrt(nEventsPerEnergyBin));
+    }
+    else
+    {    
+      g_CTR_vs_amp2 -> SetPoint(g_CTR_vs_amp2->GetN(),binCenter,effSigma/sqrt(2)*1000.);
+      g_CTR_vs_amp2 -> SetPointError(g_CTR_vs_amp2->GetN()-1,binError,effSigma/sqrt(2)*1000./sqrt(nEventsPerEnergyBin));
+    }
   }
   
   TGraphErrors* g_CTR_vs_ampAvg = new TGraphErrors();
@@ -1425,7 +1308,7 @@ int main(int argc, char** argv)
     float binCenter = h_nEvents_vs_ampAvg->GetBinCenter(bin);
     float binError = binCenter - h_nEvents_vs_ampAvg->GetBinLowEdge(bin);
     
-    TH1F* histo = map_CTR_corrRatio_vs_ampAvg[bin];
+    TH1F* histo = map_CTR_corr_vs_ampAvg[bin];
     float* vals = new float[4];
     FindSmallestInterval(vals,histo,0.68,true); 
     
@@ -1434,9 +1317,17 @@ int main(int argc, char** argv)
     float delta = max-min;
     float sigma = 0.5*delta;
     float effSigma = sigma;
-    
-    g_CTR_vs_ampAvg -> SetPoint(g_CTR_vs_ampAvg->GetN(),binCenter,effSigma/sqrt(2)*1000.);
-    g_CTR_vs_ampAvg -> SetPointError(g_CTR_vs_ampAvg->GetN()-1,binError,effSigma/sqrt(2)*1000./sqrt(nEventsPerEnergyBin));
+
+    if( (mcpChannels.at(0)==1 && mcpChannels.at(1)==0) || (mcpChannels.at(0)==0 && mcpChannels.at(1)==1))//reference is the MCP
+    {
+      g_CTR_vs_ampAvg -> SetPoint(g_CTR_vs_ampAvg->GetN(),binCenter,sqrt(effSigma*effSigma - MCPIntrinsic*MCPIntrinsic)*1000.);
+      g_CTR_vs_ampAvg -> SetPointError(g_CTR_vs_ampAvg->GetN()-1,binError,effSigma*1000./sqrt(nEventsPerEnergyBin));
+    }
+    else
+    {
+      g_CTR_vs_ampAvg -> SetPoint(g_CTR_vs_ampAvg->GetN(),binCenter,effSigma/sqrt(2)*1000.);
+      g_CTR_vs_ampAvg -> SetPointError(g_CTR_vs_ampAvg->GetN()-1,binError,effSigma/sqrt(2)*1000./sqrt(nEventsPerEnergyBin));
+    }
   }
   
   c1 = new TCanvas("c1_CTR_vs_amp","CTR vs amplitude",2100,900);
@@ -1455,7 +1346,7 @@ int main(int argc, char** argv)
   g_CTR_vs_amp2 -> SetMarkerColor(kBlue);
   g_CTR_vs_amp2 -> SetLineColor(kBlue);
   g_CTR_vs_amp2 -> Draw("P,same");
-  latexLabel1 -> Draw("same");
+  latexLabel12 -> Draw("same");
   c1 -> cd(2);
   hPad = (TH1F*)( gPad->DrawFrame(0.,20.,1000.,80.) );
   hPad -> SetTitle(";0.5 * ( amp_{1} + amp_{2} ) (mV); eff. #sigma_{single} (ps)");
@@ -1466,7 +1357,7 @@ int main(int argc, char** argv)
   g_CTR_vs_ampAvg -> SetMarkerColor(kBlack);
   g_CTR_vs_ampAvg -> SetLineColor(kBlack);
   g_CTR_vs_ampAvg -> Draw("P,same");
-  latexLabel1 -> Draw("same");
+  latexLabel12 -> Draw("same");
     
   gPad -> Update();
   c1 -> Print(Form("%s/c__%s__CTR_vs_amp__config%d__Vbias%.0f-%.0f_th%.0f-%.0f.png",plotDir.c_str(),label1.c_str(),configuration,cut_VbiasMin,cut_VbiasMax,cut_NINOthrMin,cut_NINOthrMax));  
@@ -1479,8 +1370,24 @@ int main(int argc, char** argv)
 
 
 
-bool AcceptEvent(TreeVars treeVars, const int& beamCutType, const float& beamXMin, const float& beamXMax, const float& beamYMin, const float& beamYMax)
+bool AcceptEvent(TreeVars treeVars, const int& beamCutType, const float& beamXMin, const float& beamXMax, const float& beamYMin, const float& beamYMax, const float& angle)
 {
+  if( treeVars.t_beamX[1] >= -15.0 && treeVars.t_beamX[1] < -14.5 ) return false;
+  if( treeVars.t_beamX[1] >=   8.5 && treeVars.t_beamX[1] <   9.5 ) return false;
+  if( treeVars.t_beamY[0] >= -16.0 && treeVars.t_beamY[0] < -15.5 ) return false;
+  if( treeVars.t_beamY[1] >= -16.0 && treeVars.t_beamY[1] < -15.5 ) return false;
+  
+  if( fabs(treeVars.t_beamX[1]-treeVars.t_beamX[0]) > 1. ) return false;
+  if( fabs(treeVars.t_beamY[1]-treeVars.t_beamY[0]) > 1. ) return false;
+  
+  if( treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(0)]]*0.25 < 0 ) return false;
+  if( treeVars.t_amp[(*treeVars.t_channelId)[energyChannels.at(1)]]*0.25 < 0 ) return false;
+  
+  if( angle > -1 )
+  {
+    if( treeVars.t_angle != angle ) return false;
+  }
+  
   if( beamCutType <= 0 ) return true;
   
   bool inside = false;
@@ -1529,13 +1436,6 @@ bool AcceptEventVbias(TreeVars treeVars, const float& VbiasMin, const float& Vbi
   return true;
 }
 
-bool AcceptEventMCP(TreeVars treeVars, const float& ampMinMCP, const float& ampMaxMCP)
-{
-  if( (treeVars.t_amp[(*treeVars.t_channelId)[mcpChannels.at(0)]]*0.25 < ampMinMCP) || (treeVars.t_amp[(*treeVars.t_channelId)[mcpChannels.at(0)]]*0.25 > ampMaxMCP) ) return false;
-  
-  return true;
-}
-
 
 
 void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3,
@@ -1555,6 +1455,7 @@ void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3,
   chain1 -> SetBranchStatus("Vbias1" ,1); chain1 -> SetBranchAddress("Vbias1", &treeVars.t_Vbias[0]);
   chain1 -> SetBranchStatus("Vbias2" ,1); chain1 -> SetBranchAddress("Vbias2", &treeVars.t_Vbias[1]);
   chain1 -> SetBranchStatus("Vbias3" ,1); chain1 -> SetBranchAddress("Vbias3", &treeVars.t_Vbias[2]);
+  chain1 -> SetBranchStatus("angle"  ,1); chain1 -> SetBranchAddress("angle",  &treeVars.t_angle);
   
   //chain2 -> SetBranchStatus("*",0);
   chain2 -> SetBranchStatus("X",1); chain2 -> SetBranchAddress("X",treeVars.t_beamX);
@@ -1572,11 +1473,6 @@ void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3,
   for(unsigned int it = 0; it < energyChannels.size(); ++it)
   {
     std::string channelName = energyChannels.at(it);
-    chain3 -> SetBranchStatus(channelName.c_str(),1); chain3 -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
-  }
-  for(unsigned int it = 0; it < mcpChannels.size(); ++it)
-  {
-    std::string channelName = mcpChannels.at(it);
     chain3 -> SetBranchStatus(channelName.c_str(),1); chain3 -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
   }
 }
