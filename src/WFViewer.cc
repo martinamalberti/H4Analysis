@@ -79,7 +79,7 @@ void WFViewer::SetTree(const char* digi_tree, const char* wf_tree)
 //----------Draw template with parameters taken from fit----------------------------------
 //----------all the events up to *max_entries*,
 //----------wf are shifted accordingly to the time of *ref* channel
-void WFViewer::Draw(string ref, const char* cut, Long64_t max_entries)
+void WFViewer::DrawWF(string ref, const char* cut, Long64_t max_entries)
 {
     //---if a tree hasn't been loaded yet try to get the default one
     if(tree_->GetNbranches() == 0)
@@ -141,7 +141,7 @@ void WFViewer::Draw(string ref, const char* cut, Long64_t max_entries)
 
 //----------Draw template with parameters taken from fit----------------------------------
 //----------only one selected event
-void WFViewer::Draw(unsigned int iEntry, const char* wf_tree)
+void WFViewer::DrawWF(unsigned int iEntry, const char* wf_tree)
 {
     //---if a tree hasn't been loaded yet try to get the default one
     if(tree_->GetNbranches() == 0)

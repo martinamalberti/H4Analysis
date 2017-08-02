@@ -92,7 +92,7 @@ test:
 	@echo "BINS = $(BINS)"
 
 $(BIN)%$(BINSuf): $(PRG)%$(PRGSuf) $(HDRS) $(LIB)$(SONAME)
-	$(CPP) $(CPPFLAGS) $(GLIBS) -L$(LIB) -lH4Analysis -o $@ $<
+	$(CPP) $(CPPFLAGS) $(GLIBS) -L$(LIB) -lH4Analysis -lWFAnalyzer -o $@ $<
 
 $(OBJ)%$(OBJSuf): $(SRC)%$(SRCSuf)
 	$(CXX) -c $(CXXFLAGS) -o $@ $< 

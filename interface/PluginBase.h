@@ -28,7 +28,7 @@ public:
     PluginBase(){};
 
     //---dtor---
-    virtual ~PluginBase(){};    
+    virtual ~PluginBase(){};
 
     //---setters---
     void SetInstanceName(const string& instance){instanceName_=instance;};    

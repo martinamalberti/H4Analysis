@@ -59,8 +59,8 @@ public:
     string       GetChannelName() {return name_;};
     
     //---utils---
-    virtual void Draw(string ref, const char* cut="", Long64_t max_entries=std::numeric_limits<Long64_t>::max());
-    virtual void Draw(unsigned int iEntry, const char* wf_tree="wf");
+    virtual void DrawWF(string ref, const char* cut="", Long64_t max_entries=std::numeric_limits<Long64_t>::max());
+    virtual void DrawWF(unsigned int iEntry, const char* wf_tree="wf");
 
 private:
     string            name_;

@@ -16,6 +16,7 @@
 #include "TMath.h"
 #include "TH1F.h"
 #include "TF1.h"
+#include "TGraphErrors.h"
 
 using namespace std;
 
@@ -35,6 +36,7 @@ struct WFFitResults
     double ampl;
     double time;
     double chi2;
+    TF1* func;
 };      
 
 class WFClass : public TObject
@@ -48,11 +50,24 @@ public:
 
     //---getters---
     inline const vector<double>* GetSamples() {return &samples_;};
-    inline float           GetBaseline() {return baseline_;}
-    inline int             GetNSample() {return samples_.size();};
     inline float           GetTUnit() {return tUnit_;};
+    inline int             GetBWinMin() {return bWinMin_;}
+    inline int             GetBWinMax() {return bWinMax_;}
+    inline float           GetBaseline() {return baseline_;}
+    inline float           GetBaselineRMS() {return bRMS_;}
+    inline int             GetNSample() {return samples_.size();};
+    inline int             GetMaxSample() {return maxSample_;};
+    inline float           GetFitAmpMax() {return fitAmpMax_;};
+    inline float           GetFitTimeMax() {return fitTimeMax_*tUnit_;};
+    inline float           GetLEThr() {return leThr_;};
+    inline float           GetLETime() {return leTime_;};
+    inline float           GetCFFrac() {return cfFrac_;};
+    inline float           GetCFTime() {return cfTime_;};
+    inline TF1*            GetAmpFunc() { return fitMax_; };
+    inline TF1*            GetTimeCFFunc() { return fitCF_; };
+    inline TF1*            GetTimeLEFunc() { return fitLE_; };
     float                  GetAmpMax(int min=-1, int max=-1);
-    WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7);
+    WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7, int fitMode=1);
     pair<float, float>     GetTime(string method, vector<float>& params); 
     pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
     pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
@@ -71,7 +86,7 @@ public:
     WFFitResults           TemplateFit(float offset=0., int lW=0, int hW=0);
     void                   EmulatedWF(WFClass& wf, float rms, float amplitude, float time);
     void                   FFT(WFClass& wf, float tau, int cut);
-    void                   Print();
+    void                   PrintWF();
     //---operators---
     WFClass&               operator=(const WFClass& origin);
     WFClass                operator-(const WFClass& sub);
@@ -97,6 +112,9 @@ protected:
     float          fitAmpMax_;
     float          fitTimeMax_;
     float          fitChi2Max_;
+    TF1*           fitMax_;
+    TF1*           fitCF_;
+    TF1*           fitLE_;
     float          baseline_;
     float          bRMS_;
     int            cfSample_;

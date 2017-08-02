@@ -1,0 +1,382 @@
+#ifndef __DRAW_EVENT__
+#define __DRAW_EVENT__
+
+#include <unistd.h>
+#include <csignal>
+#include <iostream>
+#include <fstream>
+#include <string>
+
+#include "TFile.h"
+#include "TChain.h"
+#include "TCanvas.h"
+#include "TGraphErrors.h"
+#include "TLine.h"
+#include "TApplication.h"
+
+#include "CfgManager/interface/CfgManager.h"
+#include "CfgManager/interface/CfgManagerT.h"
+
+#include "interface/PluginLoader.h"
+#include "interface/RecoTree.h"
+#include "interface/PluginBase.h"
+#include "plugins/WFAnalyzer.h"
+
+#include <netdb.h>
+#include <unistd.h>
+
+bool popupPlots = true;
+
+string getMachineDomain()
+{
+  char hn[254];
+  char *dn;
+  struct hostent *hp;
+
+  gethostname(hn, 254);
+  hp = gethostbyname(hn);
+  dn = strchr(hp->h_name, '.');
+  if ( dn != NULL )
+  {
+    return std::string(++dn);
+  }
+  else
+  {
+    return "";
+  }
+}
+
+//----------Get input files---------------------------------------------------------------
+void ReadInputFiles(CfgManager& opts, TChain* inTree)
+{
+    int nFiles=0;
+    string ls_command;
+    string file;
+    string path=opts.GetOpt<string>("h4reco.path2data");
+    string run=opts.GetOpt<string>("h4reco.run");
+
+    //---Get file list searching in specified path (eos or locally)
+    if(path.find("/eos/cms") != string::npos)
+    {
+	if ( getMachineDomain() != "cern.ch" )
+            ls_command = string("gfal-ls root://eoscms/"+path+run+" | grep 'root' > tmp/"+run+".list");
+	else
+            ls_command = string("ls "+path+run+" | grep 'root' > tmp/"+run+".list");
+    }
+    else if(path.find("srm://") != string::npos)
+        ls_command = string("echo "+path+run+"/`gfal-ls "+path+run+
+                            "` | sed -e 's:^.*\\/cms\\/:root\\:\\/\\/xrootd-cms.infn.it\\/\\/:g' | grep 'root' > tmp/"+run+".list");
+    else
+        ls_command = string("ls "+path+run+" | grep 'root' > tmp/"+run+".list");
+    system(ls_command.c_str());
+    ifstream waveList(string("tmp/"+run+".list").c_str(), ios::in);
+    while(waveList >> file && (opts.GetOpt<int>("h4reco.maxFiles")<0 || nFiles<opts.GetOpt<int>("h4reco.maxFiles")) )
+    {
+        if(path.find("/eos/cms") != string::npos)
+        {
+            if ( getMachineDomain() != "cern.ch" )
+            {
+                std::cout << "+++ Adding file " << ("root://eoscms/"+path+run+"/"+file).c_str() << std::endl;
+                inTree->AddFile(("root://eoscms/"+path+run+"/"+file).c_str());
+            }
+            else
+            {
+                std::cout << "+++ Adding file " << (path+run+"/"+file).c_str() << std::endl;
+                inTree->AddFile((path+run+"/"+file).c_str());
+            }
+        }
+        else if(path.find("srm://") != string::npos)
+        {
+            std::cout << "+++ Adding file " << file << std::endl;
+            inTree->AddFile((file).c_str());
+        }
+        else
+        {
+            std::cout << "+++ Adding file " << (path+run+"/"+file).c_str() << std::endl;
+            inTree->AddFile((path+run+"/"+file).c_str());
+        }
+        ++nFiles;
+    }
+    std::cout << "+++ Added " << nFiles << " files with " << inTree->GetEntries() << " events" << std::endl;
+    return;
+}
+
+//**********MAIN**************************************************************************
+int main(int argc, char* argv[])
+{
+    if(argc < 2)
+    {
+        cout << argv[0] << " cfg file " << "[run] [event]" << endl; 
+        return -1;
+    }
+    
+    //---load options---    
+    CfgManager opts;
+    opts.ParseConfigFile(argv[1]);
+
+    //-----input setup-----    
+    if(argc > 2)
+    {
+        vector<string> run(1, argv[2]);
+        opts.SetOpt("h4reco.run", run);
+    }
+    string run = opts.GetOpt<string>("h4reco.run");
+    if(argc > 3)
+    {
+        vector<string> event(1, argv[3]);
+        opts.SetOpt("h4reco.event", event);
+    }
+    string event = opts.GetOpt<string>("h4reco.event");
+    
+    TChain* inTree = new TChain("H4tree");
+    ReadInputFiles(opts, inTree);
+    H4Tree h4Tree(inTree);
+    
+    //-----output setup-----
+    uint64 index=stoul(run)*1e9;
+    TFile* outROOT = new TFile("drawEvent"+TString(run)+"_"+TString(event)+".root", "RECREATE");
+    outROOT->cd();
+    RecoTree mainTree(&index);
+    
+    //---Get plugin sequence---
+    PluginLoader<PluginBase>* loader;
+    vector<PluginLoader<PluginBase>* > pluginLoaders;
+    map<string, PluginBase*> pluginMap;
+    vector<PluginBase*> pluginSequence;
+    vector<string> pluginList = opts.GetOpt<vector<string> >("h4reco.pluginList");
+    //---plugin creation
+    pluginLoaders.reserve(pluginList.size());
+    for(auto& plugin : pluginList)
+    {
+      cout << ">>> Loading plugin <" << plugin << ">" << endl;
+      //---create loader
+      loader = new PluginLoader<PluginBase>(opts.GetOpt<string>(plugin+".pluginType"));
+      pluginLoaders.push_back(loader);
+      pluginLoaders.back()->Create();
+      //---get instance and put it in the plugin sequence
+      PluginBase* newPlugin = pluginLoaders.back()->CreateInstance();
+      if(newPlugin)
+      {
+        pluginSequence.push_back(newPlugin);
+        pluginSequence.back()->SetInstanceName(plugin);
+        pluginMap[plugin] = pluginSequence.back();
+      }
+      else
+      {
+        cout << ">>> ERROR: plugin type " << opts.GetOpt<string>(plugin+".pluginType") << " is not defined." << endl;
+        return 0;
+      }
+    }
+    
+    //---begin
+    for(auto& plugin : pluginSequence)
+    {
+      //---call Begin() methods and check the return status
+      bool r_status = plugin->Begin(opts, &index);
+      if(!r_status)
+      {
+        cout << ">>> ERROR: plugin returned bad flag from Begin() call: " << plugin->GetInstanceName() << endl;
+        exit(-1);
+      }
+      //---Get plugin shared data
+      for(auto& shared : plugin->GetSharedData("", "TTree", true))
+      {
+        TTree* tree = (TTree*)shared.obj;
+        tree->SetMaxVirtualSize(10000);
+        tree->SetDirectory(outROOT);
+      }
+    }
+    
+    //---interactive plots
+    TApplication* theApp;
+    if( popupPlots )
+      theApp = new TApplication("App", &argc, argv);
+    
+    //---events loop
+    int maxEvents = opts.OptExist("h4reco.maxEvents") ? opts.GetOpt<int>("h4reco.maxEvents") : -1;
+    while(h4Tree.NextEntry() && (index-stoul(run)*1e9<maxEvents || maxEvents==-1))
+    {
+      if(index % 1000 == 0)
+      {
+        cout << ">>> Processed events: " << index-stoul(run)*1e9 << "/"
+             << (maxEvents<0 ? h4Tree.GetEntries() : min(h4Tree.GetEntries(), (uint64)maxEvents))
+             << endl;
+      }
+      
+      //---call ProcessEvent for each plugin and check the return status
+      bool status=true;
+      for(auto& plugin : pluginSequence)
+      {
+        if(status)
+        {
+          status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
+        }
+      }
+      
+      vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");
+      for(auto& channel : channels)
+      {
+        auto shared_data = pluginMap["DigiReco"]->GetSharedData(std::string("DigiReco")+"_"+channel, "", false);
+        WFClass* WF = (WFClass*)shared_data.at(0).obj;
+        
+        float leTime = WF->GetLETime();
+        if( (leTime < 0. || leTime > 200.) && (channel == "NINO4" || channel == "NINO5")) std::cout << "channel: " << channel << "   leTime: " << leTime << "   event: " << index-stoul(run)*1e9 << std::endl;
+      }
+      
+      ++index;
+    }
+    
+    //---events loop
+    cout << ">>> Processing H4DAQ run #" << run << " event # " << event << " <<<" << endl;
+    if( event < h4Tree.GetEntries() )
+    {
+      h4Tree.NextEntry(atoi(event.c_str()));
+      
+      //---call ProcessEvent for each plugin and check the return status
+      bool status=true;
+      for(auto& plugin : pluginSequence)
+      {
+        if(status)
+        {
+          status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
+        }
+      }
+      
+      //---fill the main tree with info variables and increase event counter
+      if(status)
+      {
+        mainTree.time_stamp = h4Tree.evtTimeStart;
+        mainTree.run = h4Tree.runNumber;
+        mainTree.spill = h4Tree.spillNumber;
+        mainTree.event = h4Tree.evtNumber;
+        mainTree.Fill();
+        ++index;
+      }
+      
+      //---draw waveforms
+      vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");
+      for(auto& channel : channels)
+      {
+        TCanvas* c1 = new TCanvas(Form("%s",channel.c_str()),Form("%s",channel.c_str()));
+        c1 -> cd();
+        
+        auto shared_data = pluginMap["DigiReco"]->GetSharedData(std::string("DigiReco")+"_"+channel, "", false);
+        WFClass* WF = (WFClass*)shared_data.at(0).obj;
+        
+        auto analizedWF = WF->GetSamples();
+        float tUnit = WF->GetTUnit();
+        int bWinMin = WF->GetBWinMin();
+        int bWinMax = WF->GetBWinMax();
+        float baseline = WF->GetBaseline();
+        float baselineRMS = WF->GetBaselineRMS();
+        float fitAmpMax = WF->GetFitAmpMax();
+        float fitTimeMax = WF->GetFitTimeMax();
+        float cfFrac = WF->GetCFFrac();
+        float cfTime = WF->GetCFTime();
+        float leThr = WF->GetLEThr();
+        float leTime = WF->GetLETime();
+        TF1* funcAmp = WF->GetAmpFunc();
+        TF1* funcTimeCF = WF->GetTimeCFFunc();
+        TF1* funcTimeLE = WF->GetTimeLEFunc();
+        
+        TGraphErrors* g = new TGraphErrors();
+        for(unsigned int jSample=0; jSample<analizedWF->size(); ++jSample)
+        {
+          g -> SetPoint(jSample,jSample,analizedWF->at(jSample));
+          g -> SetPointError(jSample,0,baselineRMS);
+        }
+        
+        g -> SetTitle(";sample;ADC");
+        g -> SetMarkerStyle(20);
+        g -> SetMarkerSize(0.7);
+        g -> Draw("AL");
+        g -> Draw("P,same");
+        
+        TLine* line_baseline = new TLine(bWinMin,baseline,bWinMax,baseline);
+        line_baseline -> SetLineColor(kRed);
+        line_baseline -> Draw("same");
+        
+        if( funcAmp )
+        {
+          funcAmp -> SetLineColor(kRed);
+          funcAmp -> Draw("same");
+          
+          TLine* line_maxTime = new TLine(fitTimeMax/tUnit,baseline,fitTimeMax/tUnit,baseline+fitAmpMax);
+          line_maxTime -> SetLineColor(kRed);
+          line_maxTime -> SetLineStyle(2);
+          line_maxTime -> Draw("same");
+        }
+        if( funcTimeLE )
+        {
+          funcTimeLE -> SetLineColor(kBlue);
+          funcTimeLE -> Draw("same");
+          
+          TLine* line_thr = new TLine(leTime/tUnit-10.,leThr,leTime/tUnit+10.,leThr);
+          line_thr -> SetLineColor(kBlue);
+          line_thr -> SetLineStyle(2);
+          line_thr -> Draw("same");
+          
+          TLine* line_leTime = new TLine(leTime/tUnit,baseline,leTime/tUnit,baseline+fitAmpMax);
+          line_leTime -> SetLineColor(kBlue);
+          line_leTime -> SetLineStyle(2);
+          line_leTime -> Draw("same");
+        }
+        if( funcTimeCF )
+        {
+          funcTimeCF -> SetLineColor(kBlue);
+          funcTimeCF -> Draw("same");
+          
+          TLine* line_cfFrac = new TLine(cfTime/tUnit-10.,baseline+cfFrac*fitAmpMax,cfTime/tUnit+10.,baseline+cfFrac*fitAmpMax);
+          line_cfFrac -> SetLineColor(kBlue);
+          line_cfFrac -> SetLineStyle(2);
+          line_cfFrac -> Draw("same");
+          
+          TLine* line_cfTime = new TLine(cfTime/tUnit,baseline,cfTime/tUnit,baseline+fitAmpMax);
+          line_cfTime -> SetLineColor(kBlue);
+          line_cfTime -> SetLineStyle(2);
+          line_cfTime -> Draw("same");
+        }
+        
+        gPad -> Update();
+      } 
+    }
+    
+    //---end
+    // for(auto& plugin : pluginSequence)
+    // {
+    //     //---call endjob for each plugin        
+    //     // bool r_status = plugin->End(opts);
+    //     // if(!r_status)
+    //     // {
+    //     //     cout << ">>> ERROR: plugin returned bad flag from End() call: " << plugin->GetInstanceName() << endl;
+    //     //     exit(-1);
+    //     // }
+
+    //     //---get permanent data from each plugin and store them in the out file
+    //     for(auto& shared : plugin->GetSharedData())
+    //     {
+    //         if(shared.obj->IsA()->GetName() == string("TTree"))
+    //         {
+    //             TTree* currentTree = (TTree*)shared.obj;
+    //             outROOT->cd();
+    //             currentTree->BuildIndex("index");
+    //             currentTree->Write(currentTree->GetName(), TObject::kOverwrite);
+    //             mainTree.AddFriend(currentTree->GetName());
+    //         }
+    //         else
+    //         {
+    //             outROOT->cd();
+    //             shared.obj->Write(shared.tag.c_str(), TObject::kOverwrite);
+    //         }
+    //     }
+    // }
+    
+    // for(auto& loader : pluginLoaders)
+    //   loader->Destroy();
+    
+    if( popupPlots ) theApp -> Run();
+    
+    exit(0);
+}    
+
+#endif
