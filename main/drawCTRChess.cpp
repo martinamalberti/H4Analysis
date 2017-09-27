@@ -1,482 +1,462 @@
-#include "interface/CTRUtils.h"
-#include "interface/FitUtils.h"
-#include "interface/SetTDRStyle.h"
+ #include "interface/CTRUtils.h"
+ #include "interface/FitUtils.h"
+ #include "interface/SetTDRStyle.h"
 
-#include "CfgManager/interface/CfgManager.h"
-#include "CfgManager/interface/CfgManagerT.h"
+ #include "CfgManager/interface/CfgManager.h"
+ #include "CfgManager/interface/CfgManagerT.h"
 
-#include <iostream>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <cstdlib>
+ #include <iostream>
+ #include <vector>
+ #include <map>
+ #include <algorithm>
+ #include <cstdlib>
 
-#include "TSystem.h"
-#include "TFile.h"
-#include "TTree.h"
-#include "TChain.h"
-#include "TGraph.h"
-#include "TGraphErrors.h"
-#include "TH1F.h"
-#include "TH2F.h"
-#include "TProfile.h"
-#include "TProfile2D.h"
-#include "TF1.h"
-#include "TCanvas.h"
-#include "TLatex.h"
-#include "TLine.h"
-#include "TBox.h"
-#include "TEllipse.h"
-#include "TApplication.h"
+ #include "TSystem.h"
+ #include "TFile.h"
+ #include "TTree.h"
+ #include "TChain.h"
+ #include "TGraph.h"
+ #include "TGraphErrors.h"
+ #include "TH1F.h"
+ #include "TH2F.h"
+ #include "TProfile.h"
+ #include "TProfile2D.h"
+ #include "TF1.h"
+ #include "TCanvas.h"
+ #include "TLatex.h"
+ #include "TLine.h"
+ #include "TBox.h"
+ #include "TEllipse.h"
+ #include "TApplication.h"
 
-bool popupPlots = false;
+ bool popupPlots = false;
 
 
 
-int main(int argc, char** argv)
-{
-  if( argc < 2 )
-  {
-    std::cerr << ">>>>> drawCTRChess.cpp::usage:   " << argv[0] << " configFileName" << std::endl;
-    return 1;
-  }
-  
-  
-  
-  //----------------------
-  // parse the config file
-  CfgManager opts;
-  opts.ParseConfigFile(argv[1]);
-  
-  std::vector<std::string> inputFiles = opts.GetOpt<std::vector<std::string> >("Input.inputFiles");
-  
-  std::vector<std::string> timeChannels = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
-  std::string timeCh0 = timeChannels.at(0);
-  std::string timeCh1 = timeChannels.at(1);
-  std::vector<std::string> energyChannels = opts.GetOpt<std::vector<std::string> >("Input.energyChannels");
-  std::string enCh0 = energyChannels.at(0);
-  std::string enCh1 = energyChannels.at(1);
-  std::vector<float> isMCP = opts.GetOpt<std::vector<float> >("Input.isMCP");
-  bool isMCP0 = bool(isMCP.at(0));
-  bool isMCP1 = bool(isMCP.at(1));
-  std::string xLabel1_en("SiPM_{1}"); if( isMCP0 ) xLabel1_en = "MCP";
-  std::string xLabel2_en("SiPM_{2}"); if( isMCP1 ) xLabel2_en = "MCP";
-  std::string xLabel1_time("NINO_{1}"); if( isMCP0 ) xLabel1_time = "MCP";
-  std::string xLabel2_time("NINO_{2}"); if( isMCP1 ) xLabel2_time = "MCP";
+ int main(int argc, char** argv)
+ {
+   if( argc < 2 )
+   {
+     std::cerr << ">>>>> drawCTRChess.cpp::usage:   " << argv[0] << " configFileName" << std::endl;
+     return 1;
+   }
 
-  int VbiasIndex1 = opts.GetOpt<int>("Input.VbiasIndex1");
-  int VbiasIndex2 = opts.GetOpt<int>("Input.VbiasIndex2");
-  int configuration = opts.GetOpt<int>("Input.configuration");
-  std::string extra = opts.GetOpt<std::string>("Input.extra");
-  float MCPIntrinsic = opts.GetOpt<float>("Input.MCPIntrinsic");
-  
-  float cut_NINOthr = opts.GetOpt<float>("Cuts.NINOthr");
-  float cut_Vbias = opts.GetOpt<float>("Cuts.Vbias");  
-  
-  float cut_ampMin1 = opts.GetOpt<float>("Cuts.minAmplitude1");
-  float cut_ampMax1 = opts.GetOpt<float>("Cuts.maxAmplitude1");
-  float cut_ampMin2 = opts.GetOpt<float>("Cuts.minAmplitude2");
-  float cut_ampMax2 = opts.GetOpt<float>("Cuts.maxAmplitude2");
-  
-  float cut_durMin1 = opts.GetOpt<float>("Cuts.minDuration1");
-  float cut_durMax1 = opts.GetOpt<float>("Cuts.maxDuration1");
-  float cut_durMin2 = opts.GetOpt<float>("Cuts.minDuration2");
-  float cut_durMax2 = opts.GetOpt<float>("Cuts.maxDuration2");
-  
-  float cut_rangeXMin = opts.GetOpt<float>("Cuts.rangeXMin");
-  float cut_rangeXMax = opts.GetOpt<float>("Cuts.rangeXMax");
-  float cut_rangeYMin = opts.GetOpt<float>("Cuts.rangeYMin");
-  float cut_rangeYMax = opts.GetOpt<float>("Cuts.rangeYMax");
-  
-  float cut_crystalXMin = opts.GetOpt<float>("Cuts.crystalXMin");
-  float cut_crystalXMax = opts.GetOpt<float>("Cuts.crystalXMax");
-  float cut_crystalYMin = opts.GetOpt<float>("Cuts.crystalYMin");
-  float cut_crystalYMax = opts.GetOpt<float>("Cuts.crystalYMax");
-  
-  float cut_MCPX = opts.GetOpt<float>("Cuts.MCPX");
-  float cut_MCPY = opts.GetOpt<float>("Cuts.MCPY");
-  float cut_MCPR = opts.GetOpt<float>("Cuts.MCPR");
-  
-  int nBinsX = opts.GetOpt<int>("Cuts.nBinsX");
-  int nBinsY = opts.GetOpt<int>("Cuts.nBinsY");
-  
-  int rebin = opts.GetOpt<int>("Plots.rebin");
-  std::string label1 = opts.GetOpt<std::string>("Plots.label1");
-  std::string label2 = opts.GetOpt<std::string>("Plots.label2");
-  std::string label12;
-  if( label1 == label2 ) label12 = label1;
-  else label12 = std::string(Form("%s-%s",label1.c_str(),label2.c_str()));
-  
-  
-  //------------------------
-  // labels and canvas style
-  setTDRStyle();
-  gStyle->SetPaintTextFormat("4.1f");
-  gStyle->SetPadLeftMargin(0.10);
-  gStyle->SetPadRightMargin(0.15);
-  
-  TApplication* theApp;
-  if( popupPlots )
-    theApp = new TApplication("App", &argc, argv);
 
-  TLatex* latexLabel1 = new TLatex(0.13,0.97,Form("%s",label1.c_str()));
-  TLatex* latexLabel2 = new TLatex(0.13,0.97,Form("%s",label2.c_str()));
-  TLatex* latexLabel12 = new TLatex(0.13,0.97,Form("%s",label12.c_str()));
-  latexLabel1 -> SetNDC();
-  latexLabel1 -> SetTextFont(42);
-  latexLabel1 -> SetTextSize(0.03);
-  latexLabel2 -> SetNDC();
-  latexLabel2 -> SetTextFont(42);
-  latexLabel2 -> SetTextSize(0.03);
-  latexLabel12 -> SetNDC();
-  latexLabel12 -> SetTextFont(42);
-  latexLabel12 -> SetTextSize(0.03);
-  
-  TLatex* latexLabel_all = new TLatex(0.40,0.90,Form("all events"));
-  latexLabel_all -> SetNDC();
-  latexLabel_all -> SetTextFont(42);
-  latexLabel_all -> SetTextColor(kBlack);
-  latexLabel_all -> SetTextSize(0.04);
-  TLatex* latexLabel_center = new TLatex(0.40,0.85,Form("center selection"));
-  latexLabel_center -> SetNDC();
-  latexLabel_center -> SetTextFont(42);
-  latexLabel_center -> SetTextColor(kRed);
-  latexLabel_center -> SetTextSize(0.04);
-  TLatex* latexLabel_border = new TLatex(0.40,0.80,Form("border selection"));
-  latexLabel_border -> SetNDC();
-  latexLabel_border -> SetTextFont(42);
-  latexLabel_border -> SetTextColor(kBlue);
-  latexLabel_border -> SetTextSize(0.04);
-  
-  TLatex* latexLabel_ysel = new TLatex(0.40,0.85,Form("Y selection"));
-  latexLabel_ysel -> SetNDC();
-  latexLabel_ysel -> SetTextFont(42);
-  latexLabel_ysel -> SetTextColor(kRed);
-  latexLabel_ysel -> SetTextSize(0.04);
-  
-  TLatex* latexLabel_xsel = new TLatex(0.40,0.85,Form("X selection"));
-  latexLabel_xsel -> SetNDC();
-  latexLabel_xsel -> SetTextFont(42);
-  latexLabel_xsel -> SetTextColor(kBlue);
-  latexLabel_xsel -> SetTextSize(0.04);
-  
-  std::string baseDir(Form("/afs/cern.ch/user/a/abenagli/www/TIMING/TBatH4June2017_new2/chess_config%02d%s/",configuration,extra.c_str()));
-  system(Form("mkdir -p %s",baseDir.c_str()));
-  system(Form("cp /afs/cern.ch/user/a/abenagli/public/index.php %s",baseDir.c_str()));
-  std::string plotDir(Form("%s/%s/",baseDir.c_str(),label12.c_str()));
-  system(Form("mkdir %s",plotDir.c_str()));
-  system(Form("cp /afs/cern.ch/user/a/abenagli/public/index.php %s",plotDir.c_str()));
-  
-  
-  //---------------------------
-  // open input files and trees
-  TChain* chain1 = new TChain("info","info");
-  TChain* chain2 = new TChain("hodo","hodo");
-  TChain* chain3 = new TChain("digi","digi");
-  for(unsigned int fileIt = 0; fileIt < inputFiles.size(); ++fileIt)
-  {
-    chain1 -> Add(inputFiles.at(fileIt).c_str());
-    chain2 -> Add(inputFiles.at(fileIt).c_str());
-    chain3 -> Add(inputFiles.at(fileIt).c_str());
-  }
-  chain2 -> BuildIndex("index");
-  chain1 -> AddFriend("hodo");
-  chain3 -> BuildIndex("index");
-  chain1 -> AddFriend("digi");
-  chain1 -> BuildIndex("index");
-  std::cout << " Read " << chain1->GetEntries() << " total events in tree " << chain1->GetName() << std::endl;
-  std::cout << " Read " << chain2->GetEntries() << " total events in tree " << chain2->GetName() << std::endl;
-  std::cout << " Read " << chain3->GetEntries() << " total events in tree " << chain3->GetName() << std::endl;
-  
-  TreeVars treeVars;
-  InitTreeVars(chain1,treeVars,opts);
-  
-  
-  //------------------
-  // Define histograms
-  TH2F* h2_beam_Y_vs_X = new TH2F("h2_beam_Y_vs_X","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
-  TH2F* h2_beam_Y_vs_X_cut = new TH2F("h2_beam_Y_vs_X_cut","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
-  
-  TH1F* h_amp1 = new TH1F(Form("h_amp1"),"",250,0.,1000.);
-  TH1F* h_amp2 = new TH1F(Form("h_amp2"),"",250,0.,1000.);
-  TH1F* h_amp1_center = new TH1F(Form("h_amp1_center"),"",250,0.,1000.);
-  TH1F* h_amp2_center = new TH1F(Form("h_amp2_center"),"",250,0.,1000.);
-  TH1F* h_amp1_border = new TH1F(Form("h_amp1_border"),"",250,0.,1000.);
-  TH1F* h_amp2_border = new TH1F(Form("h_amp2_border"),"",250,0.,1000.);
-  TH1F* h_ampRatio = new TH1F(Form("h_ampRatio"),"",1000,0.,3.);
-  TH1F* h_amp1_cut = new TH1F(Form("h_amp1_cut"),"",250,0.,1000.);
-  TH1F* h_amp2_cut = new TH1F(Form("h_amp2_cut"),"",250,0.,1000.);
-  TH1F* h_ampRatio_cut = new TH1F(Form("h_ampRatio_cut"),"",1000,0.,3.);
-  
-  TH1F* h_dur1 = new TH1F(Form("h_dur1"),"",200,0.,100.);
-  TH1F* h_dur2 = new TH1F(Form("h_dur2"),"",200,0.,100.);
-  TH1F* h_dur1_cut = new TH1F(Form("h_dur1_cut"),"",200,0.,100.);
-  TH1F* h_dur2_cut = new TH1F(Form("h_dur2_cut"),"",200,0.,100.);
-  
-  TProfile* p1_amp1_vs_beam_X = new TProfile("p1_amp1_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_amp1_vs_beam_Y = new TProfile("p1_amp1_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_amp2_vs_beam_X = new TProfile("p1_amp2_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_amp2_vs_beam_Y = new TProfile("p1_amp2_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_amp1_vs_beam_Y_vs_X = new TProfile2D("p2_amp1_vs_beam_Y_vs_X","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
-  TProfile2D* p2_amp2_vs_beam_Y_vs_X = new TProfile2D("p2_amp2_vs_beam_Y_vs_X","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
-  TProfile* p1_amp1_vs_beam_X_cut = new TProfile("p1_amp1_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_amp1_vs_beam_Y_cut = new TProfile("p1_amp1_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_amp2_vs_beam_X_cut = new TProfile("p1_amp2_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_amp2_vs_beam_Y_cut = new TProfile("p1_amp2_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_amp1_vs_beam_Y_vs_X_cut = new TProfile2D("p2_amp1_vs_beam_Y_vs_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_amp2_vs_beam_Y_vs_X_cut = new TProfile2D("p2_amp2_vs_beam_Y_vs_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_vs_beam_X = new TProfile("p1_CTR_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_vs_beam_Y = new TProfile("p1_CTR_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_vs_beam_X_cut = new TProfile("p1_CTR_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_vs_beam_Y_cut = new TProfile("p1_CTR_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_ampCorr_vs_beam_X = new TProfile("p1_CTR_ampCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorr_vs_beam_Y = new TProfile("p1_CTR_ampCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_ampCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_ampCorr_vs_beam_X_cut = new TProfile("p1_CTR_ampCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorr_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_ampCorrEff_vs_beam_X = new TProfile("p1_CTR_ampCorrEff_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorrEff_vs_beam_Y = new TProfile("p1_CTR_ampCorrEff_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_ampCorrEff_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorrEff_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_ampCorrEff_vs_beam_X_cut = new TProfile("p1_CTR_ampCorrEff_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorrEff_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorrEff_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_ampCorrPerBin_vs_beam_X = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorrPerBin_vs_beam_Y = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_ampCorrPerBin_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorrPerBin_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_ampCorrPerBin_vs_beam_X_cut = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorrPerBin_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_posCorr_vs_beam_X = new TProfile("p1_CTR_posCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_posCorr_vs_beam_Y = new TProfile("p1_CTR_posCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_posCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_posCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_posCorr_vs_beam_X_cut = new TProfile("p1_CTR_posCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_posCorr_vs_beam_Y_cut = new TProfile("p1_CTR_posCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_posCorrAmpCorr_vs_beam_X = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_posCorrAmpCorr_vs_beam_Y = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_posCorrAmpCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_posCorrAmpCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_posCorrAmpCorr_vs_beam_X_cut = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_posCorrAmpCorr_vs_beam_Y_cut = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_X = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_Y = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile2D* p2_CTR_ampCorrEffPosCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorrEffPosCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_X_cut = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
-  
-  
-  TH1F* h_CTR_raw = new TH1F("h_CTR_raw","",10000,-5.,5.);
-  TH1F* h_CTR = new TH1F("h_CTR","",10000,-5.,5.);
-  TH1F* h_CTR_center = new TH1F("h_CTR_center","",10000,-5.,5.);
-  TH1F* h_CTR_border = new TH1F("h_CTR_border","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorr = new TH1F("h_CTR_ampCorr","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorr_center = new TH1F("h_CTR_ampCorr_center","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorr_border = new TH1F("h_CTR_ampCorr_border","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrEff = new TH1F("h_CTR_ampCorrEff","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrEff_center = new TH1F("h_CTR_ampCorrEff_center","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrEff_border = new TH1F("h_CTR_ampCorrEff_border","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrPerBin = new TH1F("h_CTR_ampCorrPerBin","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrPerBin_center = new TH1F("h_CTR_ampCorrPerBin_center","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrPerBin_border = new TH1F("h_CTR_ampCorrPerBin_border","",10000,-5.,5.);
-  TH1F* h_CTR_posCorr = new TH1F("h_CTR_posCorr","",10000,-5.,5.);
-  TH1F* h_CTR_posCorr_center = new TH1F("h_CTR_posCorr_center","",10000,-5.,5.);
-  TH1F* h_CTR_posCorr_border = new TH1F("h_CTR_posCorr_border","",10000,-5.,5.);
-  TH1F* h_CTR_posCorrAmpCorr = new TH1F("h_CTR_posCorrAmpCorr","",10000,-5.,5.);
-  TH1F* h_CTR_posCorrAmpCorr_center = new TH1F("h_CTR_posCorrAmpCorr_center","",10000,-5.,5.);
-  TH1F* h_CTR_posCorrAmpCorr_border = new TH1F("h_CTR_posCorrAmpCorr_border","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrEffPosCorr = new TH1F("h_CTR_ampCorrEffPosCorr","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrEffPosCorr_center = new TH1F("h_CTR_ampCorrEffPosCorr_center","",10000,-5.,5.);
-  TH1F* h_CTR_ampCorrEffPosCorr_border = new TH1F("h_CTR_ampCorrEffPosCorr_border","",10000,-5.,5.);
-  
-  TProfile* p1_CTR_vs_amp1 = new TProfile("p1_CTR_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_vs_amp2 = new TProfile("p1_CTR_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_vs_ampRatio = new TProfile("p1_CTR_vs_ampRatio","",100,0.,5.);
-  
-  TProfile* p1_CTR_ampCorr_vs_amp1 = new TProfile("p1_CTR_ampCorr_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorr_vs_amp2 = new TProfile("p1_CTR_ampCorr_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorr_vs_ampRatio = new TProfile("p1_CTR_ampCorr_vs_ampRatio","",100,0.,5.);
-  
-  TProfile* p1_CTR_ampCorrEff_vs_amp1 = new TProfile("p1_CTR_ampCorrEff_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorrEff_vs_amp2 = new TProfile("p1_CTR_ampCorrEff_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorrEff_vs_ampRatio = new TProfile("p1_CTR_ampCorrEff_vs_ampRatio","",100,0.,5.);
-  
-  TProfile* p1_CTR_ampCorrPerBin_vs_amp1 = new TProfile("p1_CTR_ampCorrPerBin_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorrPerBin_vs_amp2 = new TProfile("p1_CTR_ampCorrPerBin_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorrPerBin_vs_ampRatio = new TProfile("p1_CTR_ampCorrPerBin_vs_ampRatio","",100,0.,5.);
-  
-  TProfile* p1_CTR_posCorr_vs_amp1 = new TProfile("p1_CTR_posCorr_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_posCorr_vs_amp2 = new TProfile("p1_CTR_posCorr_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_posCorr_vs_ampRatio = new TProfile("p1_CTR_posCorr_vs_ampRatio","",100,0.,5.);
-  
-  TProfile* p1_CTR_posCorrAmpCorr_vs_amp1 = new TProfile("p1_CTR_posCorrAmpCorr_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_posCorrAmpCorr_vs_amp2 = new TProfile("p1_CTR_posCorrAmpCorr_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_posCorrAmpCorr_vs_ampRatio = new TProfile("p1_CTR_posCorrAmpCorr_vs_ampRatio","",100,0.,5.);
-  
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_amp1 = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_amp1","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_amp2 = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_amp2","",100,0.,1000.);
-  TProfile* p1_CTR_ampCorrEffPosCorr_vs_ampRatio = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_ampRatio","",100,0.,5.);
-  
-  std::map<std::string,TH1F*> map_h_amp1;
-  std::map<std::string,TH1F*> map_h_amp2;
-  std::map<std::string,TH1F*> map_h_ampRatio;
-  std::map<std::string,TH1F*> map_h_CTR;
-  std::map<std::string,TH1F*> map_h_CTR_ampCorr;
-  std::map<std::string,TH1F*> map_h_CTR_ampCorrEff;
-  std::map<std::string,TH1F*> map_h_CTR_ampCorrPerBin;
-  std::map<std::string,TProfile*> map_p1_CTR_vs_amp1;
-  std::map<std::string,TProfile*> map_p1_CTR_vs_amp2;
-  std::map<std::string,TProfile*> map_p1_CTR_vs_ampRatio;
-  std::map<std::string,TProfile*> map_p1_CTR_ampCorr_vs_amp1;
-  std::map<std::string,TProfile*> map_p1_CTR_ampCorr_vs_amp2;
-  std::map<std::string,TProfile*> map_p1_CTR_ampCorr_vs_ampRatio;
-  
-  for(int binX = 0; binX < nBinsX; ++binX)
-    for(int binY = 0; binY < nBinsY; ++binY)
-    {
-      std::string label(Form("%d-%d",binX,binY));
-      
-      map_h_amp1[label] = new TH1F(Form("h_amp1_%s",label.c_str()),"",250,0.,1000.);
-      map_h_amp2[label] = new TH1F(Form("h_amp2_%s",label.c_str()),"",250,0.,1000.);
-      map_h_ampRatio[label] = new TH1F(Form("h_ampRatio_%s",label.c_str()),"",1000,0.,3.);
-      
-      map_h_CTR[label] = new TH1F(Form("h_CTR_%s",label.c_str()),"",10000,-5.,5.);
-      map_h_CTR_ampCorr[label] = new TH1F(Form("h_CTR_ampCorr_%s",label.c_str()),"",10000,-5.,5.);
-      map_h_CTR_ampCorrEff[label] = new TH1F(Form("h_CTR_ampCorrEff_%s",label.c_str()),"",10000,-5.,5.);
-      map_h_CTR_ampCorrPerBin[label] = new TH1F(Form("h_CTR_ampCorrPerBin_%s",label.c_str()),"",10000,-5.,5.);
-      
-      map_p1_CTR_vs_amp1[label] = new TProfile(Form("p1_CTR_vs_amp1_%s",label.c_str()),"",50,0.,1000.);
-      map_p1_CTR_vs_amp2[label] = new TProfile(Form("p1_CTR_vs_amp2_%s",label.c_str()),"",50,0.,1000.);
-      map_p1_CTR_vs_ampRatio[label] = new TProfile(Form("p1_CTR_vs_ampRatio_%s",label.c_str()),"",50,0.,5.);
-      map_p1_CTR_ampCorr_vs_amp1[label] = new TProfile(Form("p1_CTR_ampCorr_vs_amp1_%s",label.c_str()),"",50,0.,1000.);
-      map_p1_CTR_ampCorr_vs_amp2[label] = new TProfile(Form("p1_CTR_ampCorr_vs_amp2_%s",label.c_str()),"",50,0.,1000.);
-      map_p1_CTR_ampCorr_vs_ampRatio[label] = new TProfile(Form("p1_CTR_ampCorr_vs_ampRatio_%s",label.c_str()),"",50,0.,5.);
-    }
-  
-  TH1F* h1_chessOccupancyX  = new TH1F("h1_chessOccupancyX", "",nBinsX,cut_crystalXMin,cut_crystalXMax);
-  TH1F* h1_chessOccupancyY  = new TH1F("h1_chessOccupancyY", "",nBinsY,cut_crystalYMin,cut_crystalYMax);
-  TH2F* h2_chessOccupancyXY = new TH2F("h2_chessOccupancyXY","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
-  
-  TH2F* h2_CTR_chess = new TH2F("h2_CTR_chess","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
-  TH2F* h2_CTR_chess_ampCorr = new TH2F("h2_CTR_chess_ampCorr","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
-  TH2F* h2_CTR_chess_ampCorrEff = new TH2F("h2_CTR_chess_ampCorrEff","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
-  TH2F* h2_CTR_chess_ampCorrPerBin = new TH2F("h2_CTR_chess_ampCorrPerBin","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
-  
-  
-  //-----------------------
-  // first loop over events
-  int nEntries = chain1 -> GetEntries();
-  int nEntries_cut = 0;
-  for(int entry = 0; entry < nEntries; ++entry)
-  {
-    if( entry%1000 == 0 ) std::cout << ">>> loop 1/3: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
-    chain1 -> GetEntry(entry);
-    
-    float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[enCh0]] * 0.25;
-    float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[enCh1]] * 0.25;
-    float dur1 = treeVars.t_dur[(*treeVars.t_channelId)[timeCh0]] * 0.2;
-    float dur2 = treeVars.t_dur[(*treeVars.t_channelId)[timeCh1]] * 0.2;
-    int extraIt1 = isMCP0 ? 14 : 0;
-    int extraIt2 = isMCP1 ? 14 : 0;
-    float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt1];
-    float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt2];
-    float CTR = time2 - time1;
-    
-    bool isCenter = false;
-    bool isBorder = false;
-    if( treeVars.t_beamX[0] > cut_crystalXMin &&
-        treeVars.t_beamX[0] < cut_crystalXMax &&
-        treeVars.t_beamY[0] > cut_crystalYMin &&
-        treeVars.t_beamY[0] < cut_crystalYMax )
-    {
-      isCenter = false;
-      isBorder = true;
-    }
-    if( treeVars.t_beamX[0] > 0.5*(cut_crystalXMin+cut_crystalXMax)-2. &&
-        treeVars.t_beamX[0] < 0.5*(cut_crystalXMin+cut_crystalXMax)+2. &&
-        treeVars.t_beamY[0] > 0.5*(cut_crystalYMin+cut_crystalYMax)-2. &&
-        treeVars.t_beamY[0] < 0.5*(cut_crystalYMin+cut_crystalYMax)+2. )
-    {
-      isCenter = true;
-      isBorder = false;
-    }
-        
-    if( !AcceptEventVbias(VbiasIndex1,VbiasIndex2,treeVars,cut_Vbias,cut_Vbias) ) continue;
-    if( !AcceptEventTh(treeVars,cut_NINOthr,cut_NINOthr) ) continue;
-    if( !AcceptEventAmp(enCh0,enCh1,treeVars,1.,1000.,1.,1000.) ) continue;
-    
-    h2_beam_Y_vs_X -> Fill(treeVars.t_beamX[0],treeVars.t_beamY[0]);
-    
-    p2_amp1_vs_beam_Y_vs_X -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp1 );
-    p2_amp2_vs_beam_Y_vs_X -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp2 );
-    
-    if( AcceptEventAmp(enCh0,enCh1,treeVars,cut_ampMin1,cut_ampMax1,1.,1000.) )
-    {
-      p1_amp1_vs_beam_X -> Fill( treeVars.t_beamX[0],amp1 );
-      p1_amp1_vs_beam_Y -> Fill( treeVars.t_beamY[0],amp1 );
-      p2_amp1_vs_beam_Y_vs_X_cut -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp1 );
-      
-      if( fabs( treeVars.t_beamY[0] - 0.5*(cut_crystalYMin+cut_crystalYMax) ) < 2. )
-      {
-        p1_amp1_vs_beam_X_cut -> Fill( treeVars.t_beamX[0],amp1 );
-      }
-      if( fabs( treeVars.t_beamX[0] - 0.5*(cut_crystalXMin+cut_crystalXMax) ) < 2. )
-      {
-        p1_amp1_vs_beam_Y_cut -> Fill( treeVars.t_beamY[0],amp1 );
-      }
-    }
-    if( AcceptEventAmp(enCh0,enCh1,treeVars,1.,1000.,cut_ampMin2,cut_ampMax2) )
-    {
-      p1_amp2_vs_beam_X -> Fill( treeVars.t_beamX[0],amp2 );
-      p1_amp2_vs_beam_Y -> Fill( treeVars.t_beamY[0],amp2 );
-      p2_amp2_vs_beam_Y_vs_X_cut -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp2 );
-      
-      if( fabs( treeVars.t_beamY[0] - 0.5*(cut_crystalYMin+cut_crystalYMax) ) < 2. )
-      {
-        p1_amp2_vs_beam_X_cut -> Fill( treeVars.t_beamX[0],amp2 );
-      }
-      if( fabs( treeVars.t_beamX[0] - 0.5*(cut_crystalXMin+cut_crystalXMax) ) < 2. )
-      {
-        p1_amp2_vs_beam_Y_cut -> Fill( treeVars.t_beamY[0],amp2 );
-      }
-    }
-    
-    if( !AcceptEvent(enCh0,enCh1,timeCh0,timeCh1,treeVars,
-                     1,cut_crystalXMin,cut_crystalXMax,cut_crystalYMin,cut_crystalYMax,
-                     -1) )
-      continue;
-    
-    if( isMCP0 || isMCP1 )
-      if( !AcceptEventMCP(treeVars,cut_MCPX,cut_MCPY,cut_MCPR) ) continue;
-    
-    h_amp1 -> Fill( amp1 );
-    h_amp2 -> Fill( amp2 );
-    h_ampRatio -> Fill( amp2/amp1 );
-    if( isCenter )
-    {
-      h_amp1_center -> Fill( amp1 );
-      h_amp2_center -> Fill( amp2 );    
-    }
-    if( isBorder )
-    {
-      h_amp1_border -> Fill( amp1 );
-      h_amp2_border -> Fill( amp2 );    
-    }
-    
-    if( !AcceptEventAmp(enCh0,enCh1,treeVars,cut_ampMin1,cut_ampMax1,cut_ampMin2,cut_ampMax2) ) continue;
-    
-    h_dur1 -> Fill( dur1 );
-    h_dur2 -> Fill( dur2 );
-    
-    if( !AcceptEventDur(timeCh0,timeCh1,treeVars,cut_durMin1,cut_durMax1,cut_durMin2,cut_durMax2) ) continue;
-    
-    h2_beam_Y_vs_X_cut -> Fill(treeVars.t_beamX[0],treeVars.t_beamY[0]);
-    
-    if( !AcceptEventTime(timeCh0,timeCh1,isMCP0,isMCP1,treeVars,0.,200.,0.,200.) ) continue;
-    
+
+   //----------------------
+   // parse the config file
+   CfgManager opts;
+   opts.ParseConfigFile(argv[1]);
+
+   std::vector<std::string> inputFiles = opts.GetOpt<std::vector<std::string> >("Input.inputFiles");
+
+   std::vector<std::string> timeChannels = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
+   std::string timeCh0 = timeChannels.at(0);
+   std::string timeCh1 = timeChannels.at(1);
+   std::vector<std::string> energyChannels = opts.GetOpt<std::vector<std::string> >("Input.energyChannels");
+   std::string enCh0 = energyChannels.at(0);
+   std::string enCh1 = energyChannels.at(1);
+   std::vector<float> isMCP = opts.GetOpt<std::vector<float> >("Input.isMCP");
+   bool isMCP0 = bool(isMCP.at(0));
+   bool isMCP1 = bool(isMCP.at(1));
+   std::string xLabel1_en("SiPM_{1}"); if( isMCP0 ) xLabel1_en = "MCP";
+   std::string xLabel2_en("SiPM_{2}"); if( isMCP1 ) xLabel2_en = "MCP";
+   std::string xLabel1_time("NINO_{1}"); if( isMCP0 ) xLabel1_time = "MCP";
+   std::string xLabel2_time("NINO_{2}"); if( isMCP1 ) xLabel2_time = "MCP";
+
+   int VbiasIndex1 = opts.GetOpt<int>("Input.VbiasIndex1");
+   int VbiasIndex2 = opts.GetOpt<int>("Input.VbiasIndex2");
+   int configuration = opts.GetOpt<int>("Input.configuration");
+   std::string extra = opts.GetOpt<std::string>("Input.extra");
+   float MCPIntrinsic = opts.GetOpt<float>("Input.MCPIntrinsic");
+
+   float cut_NINOthr = opts.GetOpt<float>("Cuts.NINOthr");
+   float cut_Vbias = opts.GetOpt<float>("Cuts.Vbias");  
+
+   float cut_ampMin1 = opts.GetOpt<float>("Cuts.minAmplitude1");
+   float cut_ampMax1 = opts.GetOpt<float>("Cuts.maxAmplitude1");
+   float cut_ampMin2 = opts.GetOpt<float>("Cuts.minAmplitude2");
+   float cut_ampMax2 = opts.GetOpt<float>("Cuts.maxAmplitude2");
+
+   float cut_durMin1 = opts.GetOpt<float>("Cuts.minDuration1");
+   float cut_durMax1 = opts.GetOpt<float>("Cuts.maxDuration1");
+   float cut_durMin2 = opts.GetOpt<float>("Cuts.minDuration2");
+   float cut_durMax2 = opts.GetOpt<float>("Cuts.maxDuration2");
+
+   float cut_rangeXMin = opts.GetOpt<float>("Cuts.rangeXMin");
+   float cut_rangeXMax = opts.GetOpt<float>("Cuts.rangeXMax");
+   float cut_rangeYMin = opts.GetOpt<float>("Cuts.rangeYMin");
+   float cut_rangeYMax = opts.GetOpt<float>("Cuts.rangeYMax");
+
+   float cut_crystalXMin = opts.GetOpt<float>("Cuts.crystalXMin");
+   float cut_crystalXMax = opts.GetOpt<float>("Cuts.crystalXMax");
+   float cut_crystalYMin = opts.GetOpt<float>("Cuts.crystalYMin");
+   float cut_crystalYMax = opts.GetOpt<float>("Cuts.crystalYMax");
+
+   float cut_MCPX = opts.GetOpt<float>("Cuts.MCPX");
+   float cut_MCPY = opts.GetOpt<float>("Cuts.MCPY");
+   float cut_MCPR = opts.GetOpt<float>("Cuts.MCPR");
+
+   int nBinsX = opts.GetOpt<int>("Cuts.nBinsX");
+   int nBinsY = opts.GetOpt<int>("Cuts.nBinsY");
+
+   int rebin = opts.GetOpt<int>("Plots.rebin");
+   std::string label1 = opts.GetOpt<std::string>("Plots.label1");
+   std::string label2 = opts.GetOpt<std::string>("Plots.label2");
+   std::string label12;
+   if( label1 == label2 ) label12 = label1;
+   else label12 = std::string(Form("%s-%s",label1.c_str(),label2.c_str()));
+
+
+   //------------------------
+   // labels and canvas style
+   setTDRStyle();
+   gStyle->SetPaintTextFormat("4.1f");
+   gStyle->SetPadLeftMargin(0.10);
+   gStyle->SetPadRightMargin(0.15);
+
+   TApplication* theApp;
+   if( popupPlots )
+     theApp = new TApplication("App", &argc, argv);
+
+   TLatex* latexLabel1 = new TLatex(0.13,0.97,Form("%s",label1.c_str()));
+   TLatex* latexLabel2 = new TLatex(0.13,0.97,Form("%s",label2.c_str()));
+   TLatex* latexLabel12 = new TLatex(0.13,0.97,Form("%s",label12.c_str()));
+   latexLabel1 -> SetNDC();
+   latexLabel1 -> SetTextFont(42);
+   latexLabel1 -> SetTextSize(0.03);
+   latexLabel2 -> SetNDC();
+   latexLabel2 -> SetTextFont(42);
+   latexLabel2 -> SetTextSize(0.03);
+   latexLabel12 -> SetNDC();
+   latexLabel12 -> SetTextFont(42);
+   latexLabel12 -> SetTextSize(0.03);
+
+   TLatex* latexLabel_all = new TLatex(0.40,0.90,Form("all events"));
+   latexLabel_all -> SetNDC();
+   latexLabel_all -> SetTextFont(42);
+   latexLabel_all -> SetTextColor(kBlack);
+   latexLabel_all -> SetTextSize(0.04);
+   TLatex* latexLabel_center = new TLatex(0.40,0.85,Form("center selection"));
+   latexLabel_center -> SetNDC();
+   latexLabel_center -> SetTextFont(42);
+   latexLabel_center -> SetTextColor(kRed);
+   latexLabel_center -> SetTextSize(0.04);
+   TLatex* latexLabel_border = new TLatex(0.40,0.80,Form("border selection"));
+   latexLabel_border -> SetNDC();
+   latexLabel_border -> SetTextFont(42);
+   latexLabel_border -> SetTextColor(kBlue);
+   latexLabel_border -> SetTextSize(0.04);
+
+   TLatex* latexLabel_ysel = new TLatex(0.40,0.85,Form("Y selection"));
+   latexLabel_ysel -> SetNDC();
+   latexLabel_ysel -> SetTextFont(42);
+   latexLabel_ysel -> SetTextColor(kRed);
+   latexLabel_ysel -> SetTextSize(0.04);
+
+   TLatex* latexLabel_xsel = new TLatex(0.40,0.85,Form("X selection"));
+   latexLabel_xsel -> SetNDC();
+   latexLabel_xsel -> SetTextFont(42);
+   latexLabel_xsel -> SetTextColor(kBlue);
+   latexLabel_xsel -> SetTextSize(0.04);
+
+   std::string baseDir(Form("/afs/cern.ch/user/a/abenagli/www/TIMING/TBatH6August2017/chess_config%02d%s/",configuration,extra.c_str()));
+   system(Form("mkdir -p %s",baseDir.c_str()));
+   system(Form("cp /afs/cern.ch/user/a/abenagli/public/index.php %s",baseDir.c_str()));
+   std::string plotDir(Form("%s/%s/",baseDir.c_str(),label12.c_str()));
+   system(Form("mkdir %s",plotDir.c_str()));
+   system(Form("cp /afs/cern.ch/user/a/abenagli/public/index.php %s",plotDir.c_str()));
+
+
+   //---------------------------
+   // open input files and trees
+   TChain* chain0 = new TChain("h4","h4");
+   // TChain* chain1 = new TChain("info","info");
+   // TChain* chain2 = new TChain("wire","wire");
+   // TChain* chain3 = new TChain("digi","digi");
+   for(unsigned int fileIt = 0; fileIt < inputFiles.size(); ++fileIt)
+   {
+     chain0 -> Add(inputFiles.at(fileIt).c_str());
+     // chain1 -> Add(inputFiles.at(fileIt).c_str());
+     // chain2 -> Add(inputFiles.at(fileIt).c_str());
+     // chain3 -> Add(inputFiles.at(fileIt).c_str());
+   }
+   // chain2 -> BuildIndex("index");
+   // chain1 -> AddFriend("hodo");
+   // chain3 -> BuildIndex("index");
+   // chain1 -> AddFriend("digi");
+   // chain1 -> BuildIndex("index");
+   std::cout << " Read " << chain0->GetEntries() << " total events in tree " << chain0->GetName() << std::endl;
+   // std::cout << " Read " << chain1->GetEntries() << " total events in tree " << chain1->GetName() << std::endl;
+   // std::cout << " Read " << chain2->GetEntries() << " total events in tree " << chain2->GetName() << std::endl;
+   // std::cout << " Read " << chain3->GetEntries() << " total events in tree " << chain3->GetName() << std::endl;
+
+   TreeVars treeVars;
+   InitTreeVars(chain0,treeVars,opts);
+
+
+   //------------------
+   // Define histograms
+   TH2F* h2_beam_Y_vs_X = new TH2F("h2_beam_Y_vs_X","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
+   TH2F* h2_beam_Y_vs_X_cut = new TH2F("h2_beam_Y_vs_X_cut","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
+
+   TH1F* h_amp1 = new TH1F(Form("h_amp1"),"",250,0.,1000.);
+   TH1F* h_amp2 = new TH1F(Form("h_amp2"),"",250,0.,1000.);
+   TH1F* h_amp1_center = new TH1F(Form("h_amp1_center"),"",250,0.,1000.);
+   TH1F* h_amp2_center = new TH1F(Form("h_amp2_center"),"",250,0.,1000.);
+   TH1F* h_amp1_border = new TH1F(Form("h_amp1_border"),"",250,0.,1000.);
+   TH1F* h_amp2_border = new TH1F(Form("h_amp2_border"),"",250,0.,1000.);
+   TH1F* h_ampRatio = new TH1F(Form("h_ampRatio"),"",1000,0.,3.);
+   TH1F* h_amp1_cut = new TH1F(Form("h_amp1_cut"),"",250,0.,1000.);
+   TH1F* h_amp2_cut = new TH1F(Form("h_amp2_cut"),"",250,0.,1000.);
+   TH1F* h_ampRatio_cut = new TH1F(Form("h_ampRatio_cut"),"",1000,0.,3.);
+
+   TH1F* h_dur1 = new TH1F(Form("h_dur1"),"",200,0.,100.);
+   TH1F* h_dur2 = new TH1F(Form("h_dur2"),"",200,0.,100.);
+   TH1F* h_dur1_cut = new TH1F(Form("h_dur1_cut"),"",200,0.,100.);
+   TH1F* h_dur2_cut = new TH1F(Form("h_dur2_cut"),"",200,0.,100.);
+
+   TProfile* p1_amp1_vs_beam_X = new TProfile("p1_amp1_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_amp1_vs_beam_Y = new TProfile("p1_amp1_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_amp2_vs_beam_X = new TProfile("p1_amp2_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_amp2_vs_beam_Y = new TProfile("p1_amp2_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_amp1_vs_beam_Y_vs_X = new TProfile2D("p2_amp1_vs_beam_Y_vs_X","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
+   TProfile2D* p2_amp2_vs_beam_Y_vs_X = new TProfile2D("p2_amp2_vs_beam_Y_vs_X","",2.*(cut_rangeXMax-cut_rangeXMin),cut_rangeXMin,cut_rangeXMax,2.*(cut_rangeYMax-cut_rangeYMin),cut_rangeYMin,cut_rangeYMax);
+   TProfile* p1_amp1_vs_beam_X_cut = new TProfile("p1_amp1_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_amp1_vs_beam_Y_cut = new TProfile("p1_amp1_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_amp2_vs_beam_X_cut = new TProfile("p1_amp2_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_amp2_vs_beam_Y_cut = new TProfile("p1_amp2_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_amp1_vs_beam_Y_vs_X_cut = new TProfile2D("p2_amp1_vs_beam_Y_vs_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_amp2_vs_beam_Y_vs_X_cut = new TProfile2D("p2_amp2_vs_beam_Y_vs_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_vs_beam_X = new TProfile("p1_CTR_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_vs_beam_Y = new TProfile("p1_CTR_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_vs_beam_X_cut = new TProfile("p1_CTR_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_vs_beam_Y_cut = new TProfile("p1_CTR_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_ampCorr_vs_beam_X = new TProfile("p1_CTR_ampCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorr_vs_beam_Y = new TProfile("p1_CTR_ampCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_ampCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_ampCorr_vs_beam_X_cut = new TProfile("p1_CTR_ampCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorr_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_ampCorrEff_vs_beam_X = new TProfile("p1_CTR_ampCorrEff_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorrEff_vs_beam_Y = new TProfile("p1_CTR_ampCorrEff_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_ampCorrEff_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorrEff_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_ampCorrEff_vs_beam_X_cut = new TProfile("p1_CTR_ampCorrEff_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorrEff_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorrEff_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_ampCorrPerBin_vs_beam_X = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorrPerBin_vs_beam_Y = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_ampCorrPerBin_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorrPerBin_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_ampCorrPerBin_vs_beam_X_cut = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorrPerBin_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorrPerBin_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_posCorr_vs_beam_X = new TProfile("p1_CTR_posCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_posCorr_vs_beam_Y = new TProfile("p1_CTR_posCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_posCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_posCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_posCorr_vs_beam_X_cut = new TProfile("p1_CTR_posCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_posCorr_vs_beam_Y_cut = new TProfile("p1_CTR_posCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_posCorrAmpCorr_vs_beam_X = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_posCorrAmpCorr_vs_beam_Y = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_posCorrAmpCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_posCorrAmpCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_posCorrAmpCorr_vs_beam_X_cut = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_posCorrAmpCorr_vs_beam_Y_cut = new TProfile("p1_CTR_posCorrAmpCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_X = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_Y = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_Y","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile2D* p2_CTR_ampCorrEffPosCorr_vs_beam_Y_vs_X = new TProfile2D("p2_CTR_ampCorrEffPosCorr_vs_beam_Y_vs_X","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax,2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_X_cut = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_X_cut","",2*int(cut_crystalXMax-cut_crystalXMin),cut_crystalXMin,cut_crystalXMax);
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_beam_Y_cut = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_beam_Y_cut","",2*int(cut_crystalYMax-cut_crystalYMin),cut_crystalYMin,cut_crystalYMax);
+
+
+   TH1F* h_CTR_raw = new TH1F("h_CTR_raw","",50000,-100.,100.);
+   
+   TProfile* p1_CTR_vs_amp1 = new TProfile("p1_CTR_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_vs_amp1_center = new TProfile("p1_CTR_vs_amp1_center","",100,0.,1000.);
+   TProfile* p1_CTR_vs_amp1_border = new TProfile("p1_CTR_vs_amp1_border","",100,0.,1000.);
+   TProfile* p1_CTR_vs_amp2 = new TProfile("p1_CTR_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_vs_amp2_center = new TProfile("p1_CTR_vs_amp2_center","",100,0.,1000.);
+   TProfile* p1_CTR_vs_amp2_border = new TProfile("p1_CTR_vs_amp2_border","",100,0.,1000.);
+   TProfile* p1_CTR_vs_ampRatio = new TProfile("p1_CTR_vs_ampRatio","",100,0.,5.);
+   TProfile* p1_CTR_vs_ampRatio_center = new TProfile("p1_CTR_vs_ampRatio_center","",100,0.,5.);
+   TProfile* p1_CTR_vs_ampRatio_border = new TProfile("p1_CTR_vs_ampRatio_border","",100,0.,5.);
+
+   TProfile* p1_CTR_ampCorr_vs_amp1 = new TProfile("p1_CTR_ampCorr_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorr_vs_amp2 = new TProfile("p1_CTR_ampCorr_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorr_vs_ampRatio = new TProfile("p1_CTR_ampCorr_vs_ampRatio","",100,0.,5.);
+
+   TProfile* p1_CTR_ampCorrEff_vs_amp1 = new TProfile("p1_CTR_ampCorrEff_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorrEff_vs_amp2 = new TProfile("p1_CTR_ampCorrEff_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorrEff_vs_ampRatio = new TProfile("p1_CTR_ampCorrEff_vs_ampRatio","",100,0.,5.);
+
+   TProfile* p1_CTR_ampCorrPerBin_vs_amp1 = new TProfile("p1_CTR_ampCorrPerBin_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorrPerBin_vs_amp2 = new TProfile("p1_CTR_ampCorrPerBin_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorrPerBin_vs_ampRatio = new TProfile("p1_CTR_ampCorrPerBin_vs_ampRatio","",100,0.,5.);
+
+   TProfile* p1_CTR_posCorr_vs_amp1 = new TProfile("p1_CTR_posCorr_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_posCorr_vs_amp2 = new TProfile("p1_CTR_posCorr_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_posCorr_vs_ampRatio = new TProfile("p1_CTR_posCorr_vs_ampRatio","",100,0.,5.);
+
+   TProfile* p1_CTR_posCorrAmpCorr_vs_amp1 = new TProfile("p1_CTR_posCorrAmpCorr_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_posCorrAmpCorr_vs_amp2 = new TProfile("p1_CTR_posCorrAmpCorr_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_posCorrAmpCorr_vs_ampRatio = new TProfile("p1_CTR_posCorrAmpCorr_vs_ampRatio","",100,0.,5.);
+
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_amp1 = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_amp1","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_amp2 = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_amp2","",100,0.,1000.);
+   TProfile* p1_CTR_ampCorrEffPosCorr_vs_ampRatio = new TProfile("p1_CTR_ampCorrEffPosCorr_vs_ampRatio","",100,0.,5.);
+
+   std::map<std::string,TH1F*> map_h_amp1;
+   std::map<std::string,TH1F*> map_h_amp2;
+   std::map<std::string,TH1F*> map_h_ampRatio;
+   
+   std::map<std::string,TProfile*> map_p1_CTR_vs_amp1;
+   std::map<std::string,TProfile*> map_p1_CTR_vs_amp2;
+   std::map<std::string,TProfile*> map_p1_CTR_vs_ampRatio;
+   std::map<std::string,TProfile*> map_p1_CTR_ampCorr_vs_amp1;
+   std::map<std::string,TProfile*> map_p1_CTR_ampCorr_vs_amp2;
+   std::map<std::string,TProfile*> map_p1_CTR_ampCorr_vs_ampRatio;
+   
+   for(int binX = 0; binX < nBinsX; ++binX)
+     for(int binY = 0; binY < nBinsY; ++binY)
+     {
+       std::string label(Form("%d-%d",binX,binY));
+       
+       map_h_amp1[label] = new TH1F(Form("h_amp1_%s",label.c_str()),"",250,0.,1000.);
+       map_h_amp2[label] = new TH1F(Form("h_amp2_%s",label.c_str()),"",250,0.,1000.);
+       map_h_ampRatio[label] = new TH1F(Form("h_ampRatio_%s",label.c_str()),"",1000,0.,3.);
+       
+       map_p1_CTR_vs_amp1[label] = new TProfile(Form("p1_CTR_vs_amp1_%s",label.c_str()),"",50,0.,1000.);
+       map_p1_CTR_vs_amp2[label] = new TProfile(Form("p1_CTR_vs_amp2_%s",label.c_str()),"",50,0.,1000.);
+       map_p1_CTR_vs_ampRatio[label] = new TProfile(Form("p1_CTR_vs_ampRatio_%s",label.c_str()),"",50,0.,5.);
+       map_p1_CTR_ampCorr_vs_amp1[label] = new TProfile(Form("p1_CTR_ampCorr_vs_amp1_%s",label.c_str()),"",50,0.,1000.);
+       map_p1_CTR_ampCorr_vs_amp2[label] = new TProfile(Form("p1_CTR_ampCorr_vs_amp2_%s",label.c_str()),"",50,0.,1000.);
+       map_p1_CTR_ampCorr_vs_ampRatio[label] = new TProfile(Form("p1_CTR_ampCorr_vs_ampRatio_%s",label.c_str()),"",50,0.,5.);
+     }
+
+   TH1F* h1_chessOccupancyX  = new TH1F("h1_chessOccupancyX", "",nBinsX,cut_crystalXMin,cut_crystalXMax);
+   TH1F* h1_chessOccupancyY  = new TH1F("h1_chessOccupancyY", "",nBinsY,cut_crystalYMin,cut_crystalYMax);
+   TH2F* h2_chessOccupancyXY = new TH2F("h2_chessOccupancyXY","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
+
+   TH2F* h2_CTR_chess = new TH2F("h2_CTR_chess","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
+   TH2F* h2_CTR_chess_ampCorr = new TH2F("h2_CTR_chess_ampCorr","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
+   TH2F* h2_CTR_chess_ampCorrEff = new TH2F("h2_CTR_chess_ampCorrEff","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
+   TH2F* h2_CTR_chess_ampCorrPerBin = new TH2F("h2_CTR_chess_ampCorrPerBin","",nBinsX,cut_crystalXMin,cut_crystalXMax,nBinsY,cut_crystalYMin,cut_crystalYMax);
+
+
+   //-----------------------
+   // first loop over events
+   int nEntries = chain0 -> GetEntries();
+   int nEntries_cut = 0;
+   for(int entry = 0; entry < nEntries; ++entry)
+   {
+     if( entry%1000 == 0 ) std::cout << ">>> loop 1/3: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
+     chain0 -> GetEntry(entry);
+     
+     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[enCh0]] * 0.25;
+     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[enCh1]] * 0.25;
+     float dur1 = treeVars.t_dur[(*treeVars.t_channelId)[timeCh0]] * 0.2;
+     float dur2 = treeVars.t_dur[(*treeVars.t_channelId)[timeCh1]] * 0.2;
+     int extraIt1 = isMCP0 ? treeVars.t_CFD : treeVars.t_LED;
+     int extraIt2 = isMCP1 ? treeVars.t_CFD : treeVars.t_LED;
+     float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt1];
+     float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt2];
+     float CTR = time2 - time1;
+
+     bool isCenter = false;
+     bool isBorder = false;
+     if( treeVars.t_beamX[0] >= cut_crystalXMin &&
+         treeVars.t_beamX[0]  < cut_crystalXMax &&
+         treeVars.t_beamY[0] >= cut_crystalYMin &&
+         treeVars.t_beamY[0]  < cut_crystalYMax )
+     {
+       isCenter = false;
+       isBorder = true;
+     }
+     if( treeVars.t_beamX[0] >= 0.5*(cut_crystalXMin+cut_crystalXMax)-2. &&
+         treeVars.t_beamX[0]  < 0.5*(cut_crystalXMin+cut_crystalXMax)+2. &&
+         treeVars.t_beamY[0] >= 0.5*(cut_crystalYMin+cut_crystalYMax)-2. &&
+         treeVars.t_beamY[0]  < 0.5*(cut_crystalYMin+cut_crystalYMax)+2. )
+     {
+       isCenter = true;
+       isBorder = false;
+     }
+
+     // if( !AcceptEventVbias(VbiasIndex1,VbiasIndex2,treeVars,cut_Vbias,cut_Vbias) ) continue;
+     // if( !AcceptEventTh(treeVars,cut_NINOthr,cut_NINOthr) ) continue;
+     if( !AcceptEventAmp(enCh0,enCh1,treeVars,1.,1000.,1.,1000.) ) continue;
+
+     h2_beam_Y_vs_X -> Fill(treeVars.t_beamX[0],treeVars.t_beamY[0]);
+
+     p2_amp1_vs_beam_Y_vs_X -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp1 );
+     p2_amp2_vs_beam_Y_vs_X -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp2 );
+
+     if( AcceptEventAmp(enCh0,enCh1,treeVars,cut_ampMin1,cut_ampMax1,1.,1000.) )
+     {
+       p1_amp1_vs_beam_X -> Fill( treeVars.t_beamX[0],amp1 );
+       p1_amp1_vs_beam_Y -> Fill( treeVars.t_beamY[0],amp1 );
+       p2_amp1_vs_beam_Y_vs_X_cut -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp1 );
+
+       if( fabs( treeVars.t_beamY[0] - 0.5*(cut_crystalYMin+cut_crystalYMax) ) < 2. )
+       {
+         p1_amp1_vs_beam_X_cut -> Fill( treeVars.t_beamX[0],amp1 );
+       }
+       if( fabs( treeVars.t_beamX[0] - 0.5*(cut_crystalXMin+cut_crystalXMax) ) < 2. )
+       {
+         p1_amp1_vs_beam_Y_cut -> Fill( treeVars.t_beamY[0],amp1 );
+       }
+     }
+     if( AcceptEventAmp(enCh0,enCh1,treeVars,1.,1000.,cut_ampMin2,cut_ampMax2) )
+     {
+       p1_amp2_vs_beam_X -> Fill( treeVars.t_beamX[0],amp2 );
+       p1_amp2_vs_beam_Y -> Fill( treeVars.t_beamY[0],amp2 );
+       p2_amp2_vs_beam_Y_vs_X_cut -> Fill( treeVars.t_beamX[0],treeVars.t_beamY[0],amp2 );
+
+       if( fabs( treeVars.t_beamY[0] - 0.5*(cut_crystalYMin+cut_crystalYMax) ) < 2. )
+       {
+         p1_amp2_vs_beam_X_cut -> Fill( treeVars.t_beamX[0],amp2 );
+       }
+       if( fabs( treeVars.t_beamX[0] - 0.5*(cut_crystalXMin+cut_crystalXMax) ) < 2. )
+       {
+         p1_amp2_vs_beam_Y_cut -> Fill( treeVars.t_beamY[0],amp2 );
+       }
+     }
+
+     if( !AcceptEvent(enCh0,enCh1,timeCh0,timeCh1,treeVars,
+                      1,cut_crystalXMin,cut_crystalXMax,cut_crystalYMin,cut_crystalYMax,
+                      -1) )
+       continue;
+
+     if( isMCP0 || isMCP1 )
+       if( !AcceptEventMCP(treeVars,cut_MCPX,cut_MCPY,cut_MCPR) ) continue;
+
+     h_amp1 -> Fill( amp1 );
+     h_amp2 -> Fill( amp2 );
+     h_ampRatio -> Fill( amp2/amp1 );
+     if( isCenter )
+     {
+       h_amp1_center -> Fill( amp1 );
+       h_amp2_center -> Fill( amp2 );    
+     }
+     if( isBorder )
+     {
+       h_amp1_border -> Fill( amp1 );
+       h_amp2_border -> Fill( amp2 );    
+     }
+
+     if( !AcceptEventAmp(enCh0,enCh1,treeVars,cut_ampMin1,cut_ampMax1,cut_ampMin2,cut_ampMax2) ) continue;
+
+     h_dur1 -> Fill( dur1 );
+     h_dur2 -> Fill( dur2 );
+
+     if( !AcceptEventDur(timeCh0,timeCh1,treeVars,cut_durMin1,cut_durMax1,cut_durMin2,cut_durMax2) ) continue;
+
+     h2_beam_Y_vs_X_cut -> Fill(treeVars.t_beamX[0],treeVars.t_beamY[0]);
+     
+     if( !AcceptEventTime(timeCh0,timeCh1,isMCP0,isMCP1,treeVars,0.,200.,0.,200.) ) continue;
+
     h_amp1_cut -> Fill( amp1 );
     h_amp2_cut -> Fill( amp2 );
     h_ampRatio_cut -> Fill( amp2/amp1 );
@@ -489,6 +469,18 @@ int main(int argc, char** argv)
     p1_CTR_vs_amp1 -> Fill( amp1,CTR );
     p1_CTR_vs_amp2 -> Fill( amp2,CTR );
     p1_CTR_vs_ampRatio -> Fill( amp2/amp1,CTR );
+    if( isCenter )
+    {
+      p1_CTR_vs_amp1_center -> Fill( amp1,CTR );
+      p1_CTR_vs_amp2_center -> Fill( amp2,CTR );
+      p1_CTR_vs_ampRatio_center -> Fill( amp2/amp1,CTR );    
+    }
+    if( isBorder )
+    {
+      p1_CTR_vs_amp1_border -> Fill( amp1,CTR );
+      p1_CTR_vs_amp2_border -> Fill( amp2,CTR );
+      p1_CTR_vs_ampRatio_border -> Fill( amp2/amp1,CTR );    
+    }
     
     p1_CTR_vs_beam_X -> Fill( treeVars.t_beamX[0],CTR );
     p1_CTR_vs_beam_Y -> Fill( treeVars.t_beamY[0],CTR );
@@ -503,21 +495,20 @@ int main(int argc, char** argv)
       p1_CTR_vs_beam_Y_cut -> Fill( treeVars.t_beamY[0],CTR );
     }
     
-    int binX  = h1_chessOccupancyX -> Fill(treeVars.t_beamX[0]);
-    int binY  = h1_chessOccupancyY -> Fill(treeVars.t_beamY[0]);
+    // int binX = int( (treeVars.t_beamX[0]-cut_crystalXMin) / nBinsX );
+    // int binY = int( (treeVars.t_beamY[0]-cut_crystalYMin) / nBinsY );
+    int binX = h1_chessOccupancyX -> Fill(treeVars.t_beamX[0]);
+    int binY = h1_chessOccupancyY -> Fill(treeVars.t_beamY[0]);
     h2_chessOccupancyXY -> Fill(treeVars.t_beamX[0],treeVars.t_beamY[0]);
     
     std::string label(Form("%d-%d",binX-1,binY-1));
-    
     map_h_amp1[label] -> Fill( amp1 );
     map_h_amp2[label] -> Fill( amp2 );
     map_h_ampRatio[label] -> Fill( amp2/amp1 );
-    map_h_CTR[label] -> Fill( CTR );
     map_p1_CTR_vs_amp1[label] -> Fill( amp1,CTR );
     map_p1_CTR_vs_amp2[label] -> Fill( amp2,CTR );
     map_p1_CTR_vs_ampRatio[label] -> Fill( amp2/amp1,CTR );
     
-      
     ++nEntries_cut;
   }
   std::cout << std::endl;
@@ -530,11 +521,69 @@ int main(int argc, char** argv)
   TF1* fitFunc_corrAmp = new TF1(Form("fitFunc_corrAmp"),"[0]*log([1]*x)+[2]",0.,1000.);
   fitFunc_corrAmp -> SetParameters(-0.2,0.0000001,0.);
   if( isMCP0 && !isMCP1)
-    p1_CTR_vs_amp2 -> Fit(Form("fitFunc_corrAmp"),"NS+","",h_amp2_center->GetMean()+0.5*h_amp2_center->GetRMS(),h_amp2_center->GetMean()+10.*h_amp2_center->GetRMS());
+    p1_CTR_vs_amp2 -> Fit(Form("fitFunc_corrAmp"),"QNS+","",h_amp2_center->GetMean()+0.5*h_amp2_center->GetRMS(),h_amp2_center->GetMean()+10.*h_amp2_center->GetRMS());
   else if( !isMCP0 && isMCP1)
-    p1_CTR_vs_amp1 -> Fit(Form("fitFunc_corrAmp"),"NS+","",h_amp1_center->GetMean()+0.5*h_amp1_center->GetRMS(),h_amp1_center->GetMean()+10.*h_amp1_center->GetRMS());
+    p1_CTR_vs_amp1 -> Fit(Form("fitFunc_corrAmp"),"QNS+","",h_amp1_center->GetMean()+0.5*h_amp1_center->GetRMS(),h_amp1_center->GetMean()+10.*h_amp1_center->GetRMS());
   else
-    p1_CTR_vs_ampRatio -> Fit(Form("fitFunc_corrAmp"),"NS+","");
+    p1_CTR_vs_ampRatio -> Fit(Form("fitFunc_corrAmp"),"QNS+","");
+  
+  
+  
+  // find CTR ranges
+  float CTRMean = -1;
+  float CTRSigma = -1;
+  {
+    TH1F* histo = h_CTR_raw;
+    float* vals = new float[4];
+    FindSmallestInterval(vals,histo,0.68,true); 
+    
+    float mean = vals[0];
+    float min = vals[2];
+    float max = vals[3];
+    float delta = max-min;
+    float sigma = 0.5*delta;
+    float effSigma = sigma;
+    CTRMean = mean;
+    CTRSigma = effSigma;
+  }
+  
+  TH1F* h_CTR = new TH1F("h_CTR","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_center = new TH1F("h_CTR_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_border = new TH1F("h_CTR_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorr = new TH1F("h_CTR_ampCorr","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorr_center = new TH1F("h_CTR_ampCorr_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorr_border = new TH1F("h_CTR_ampCorr_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrEff = new TH1F("h_CTR_ampCorrEff","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrEff_center = new TH1F("h_CTR_ampCorrEff_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrEff_border = new TH1F("h_CTR_ampCorrEff_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrPerBin = new TH1F("h_CTR_ampCorrPerBin","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrPerBin_center = new TH1F("h_CTR_ampCorrPerBin_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrPerBin_border = new TH1F("h_CTR_ampCorrPerBin_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_posCorr = new TH1F("h_CTR_posCorr","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_posCorr_center = new TH1F("h_CTR_posCorr_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_posCorr_border = new TH1F("h_CTR_posCorr_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_posCorrAmpCorr = new TH1F("h_CTR_posCorrAmpCorr","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_posCorrAmpCorr_center = new TH1F("h_CTR_posCorrAmpCorr_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_posCorrAmpCorr_border = new TH1F("h_CTR_posCorrAmpCorr_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrEffPosCorr = new TH1F("h_CTR_ampCorrEffPosCorr","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrEffPosCorr_center = new TH1F("h_CTR_ampCorrEffPosCorr_center","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  TH1F* h_CTR_ampCorrEffPosCorr_border = new TH1F("h_CTR_ampCorrEffPosCorr_border","",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+  
+  std::map<std::string,TH1F*> map_h_CTR;
+  std::map<std::string,TH1F*> map_h_CTR_ampCorr;
+  std::map<std::string,TH1F*> map_h_CTR_ampCorrEff;
+  std::map<std::string,TH1F*> map_h_CTR_ampCorrPerBin;
+  
+  for(int binX = 0; binX < nBinsX; ++binX)
+    for(int binY = 0; binY < nBinsY; ++binY)
+    {
+      std::string label(Form("%d-%d",binX,binY));
+      
+      map_h_CTR[label] = new TH1F(Form("h_CTR_%s",label.c_str()),"",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+      map_h_CTR_ampCorr[label] = new TH1F(Form("h_CTR_ampCorr_%s",label.c_str()),"",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+      map_h_CTR_ampCorrEff[label] = new TH1F(Form("h_CTR_ampCorrEff_%s",label.c_str()),"",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+      map_h_CTR_ampCorrPerBin[label] = new TH1F(Form("h_CTR_ampCorrPerBin_%s",label.c_str()),"",2000,CTRMean-10.*CTRSigma,CTRMean+10.*CTRSigma);
+    }
   
   
   
@@ -543,20 +592,20 @@ int main(int argc, char** argv)
   for(int entry = 0; entry < nEntries; ++entry)
   {
     if( entry%1000 == 0 ) std::cout << ">>> loop 2/3: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
-    chain1 -> GetEntry(entry);
+    chain0 -> GetEntry(entry);
     
     if( !AcceptEvent(enCh0,enCh1,timeCh0,timeCh1,treeVars,
                      1,cut_crystalXMin,cut_crystalXMax,cut_crystalYMin,cut_crystalYMax,
                      -1) )
       continue;
     
-    if( !AcceptEventVbias(VbiasIndex1,VbiasIndex2,treeVars,cut_Vbias,cut_Vbias) ) continue;
-    if( !AcceptEventTh(treeVars,cut_NINOthr,cut_NINOthr) ) continue;
+    // if( !AcceptEventVbias(VbiasIndex1,VbiasIndex2,treeVars,cut_Vbias,cut_Vbias) ) continue;
+    // if( !AcceptEventTh(treeVars,cut_NINOthr,cut_NINOthr) ) continue;
     
     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[enCh0]] * 0.25;
     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[enCh1]] * 0.25;
-    int extraIt1 = isMCP0 ? 14 : 0;
-    int extraIt2 = isMCP1 ? 14 : 0;
+    int extraIt1 = isMCP0 ? treeVars.t_CFD : treeVars.t_LED;
+    int extraIt2 = isMCP1 ? treeVars.t_CFD : treeVars.t_LED;
     float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt1];
     float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt2];
     float CTR = time2 - time1;
@@ -657,6 +706,7 @@ int main(int argc, char** argv)
     if( isCenter ) h_CTR_posCorr_center -> Fill( CTR_posCorr );
     if( isBorder ) h_CTR_posCorr_border -> Fill( CTR_posCorr );
     
+    map_h_CTR[label] -> Fill( CTR );
     map_h_CTR_ampCorr[label] -> Fill( CTR_ampCorr );
     map_h_CTR_ampCorrEff[label] -> Fill( CTR_ampCorrEff );
     map_h_CTR_ampCorrPerBin[label] -> Fill( CTR_ampCorrPerBin );
@@ -717,20 +767,20 @@ int main(int argc, char** argv)
   for(int entry = 0; entry < nEntries; ++entry)
   {
     if( entry%1000 == 0 ) std::cout << ">>> loop 3/3: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
-    chain1 -> GetEntry(entry);
+    chain0 -> GetEntry(entry);
     
     if( !AcceptEvent(enCh0,enCh1,timeCh0,timeCh1,treeVars,
                      1,cut_crystalXMin,cut_crystalXMax,cut_crystalYMin,cut_crystalYMax,
                      -1) )
       continue;
     
-    if( !AcceptEventVbias(VbiasIndex1,VbiasIndex2,treeVars,cut_Vbias,cut_Vbias) ) continue;
-    if( !AcceptEventTh(treeVars,cut_NINOthr,cut_NINOthr) ) continue;
+    // if( !AcceptEventVbias(VbiasIndex1,VbiasIndex2,treeVars,cut_Vbias,cut_Vbias) ) continue;
+    // if( !AcceptEventTh(treeVars,cut_NINOthr,cut_NINOthr) ) continue;
     
     float amp1 = treeVars.t_amp[(*treeVars.t_channelId)[enCh0]] * 0.25;
     float amp2 = treeVars.t_amp[(*treeVars.t_channelId)[enCh1]] * 0.25;
-    int extraIt1 = isMCP0 ? 14 : 0;
-    int extraIt2 = isMCP1 ? 14 : 0;
+    int extraIt1 = isMCP0 ? treeVars.t_CFD : treeVars.t_LED;
+    int extraIt2 = isMCP1 ? treeVars.t_CFD : treeVars.t_LED;
     float time1 = treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt1];
     float time2 = treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt2];
     float CTR = time2 - time1;
@@ -836,24 +886,6 @@ int main(int argc, char** argv)
   }
   std::cout << std::endl;
   
-  
-  // find CTR ranges
-  float CTRMean = -1;
-  float CTRSigma = -1;
-  {
-    TH1F* histo = h_CTR_raw;
-    float* vals = new float[4];
-    FindSmallestInterval(vals,histo,0.68,true); 
-    
-    float mean = vals[0];
-    float min = vals[2];
-    float max = vals[3];
-    float delta = max-min;
-    float sigma = 0.5*delta;
-    float effSigma = sigma;
-    CTRMean = mean;
-    CTRSigma = effSigma;
-  }
   
   // float CTRMean_ampCorr = -1;
   // float CTRSigma_ampCorr = -1;
@@ -1433,7 +1465,15 @@ int main(int argc, char** argv)
   hPad -> Draw();
   gPad -> SetGridy();
   p1_CTR_vs_amp1 -> Draw("same");
-  if( isMCP0 ) fitFunc_corrAmp -> Draw("same");
+  p1_CTR_vs_amp1_center -> SetMarkerSize(0.5);
+  p1_CTR_vs_amp1_center -> SetMarkerColor(kRed);
+  p1_CTR_vs_amp1_center -> SetLineColor(kRed);
+  p1_CTR_vs_amp1_center -> Draw("same");
+  p1_CTR_vs_amp1_border -> SetMarkerSize(0.5);
+  p1_CTR_vs_amp1_border -> SetMarkerColor(kBlue);
+  p1_CTR_vs_amp1_border -> SetLineColor(kBlue);
+  p1_CTR_vs_amp1_border -> Draw("same");
+  if( !isMCP0 ) fitFunc_corrAmp -> Draw("same");
   latexLabel1 -> Draw("same");
   c1 -> cd(2);
   hPad = (TH1F*)( gPad->DrawFrame(0.,CTRMean-5.*CTRSigma,1000.,CTRMean+5.*CTRSigma) );
@@ -1442,7 +1482,15 @@ int main(int argc, char** argv)
   hPad -> Draw();
   gPad -> SetGridy();
   p1_CTR_vs_amp2 -> Draw("same");
-  if( isMCP1 ) fitFunc_corrAmp -> Draw("same");
+  p1_CTR_vs_amp2_center -> SetMarkerSize(0.5);
+  p1_CTR_vs_amp2_center -> SetMarkerColor(kRed);
+  p1_CTR_vs_amp2_center -> SetLineColor(kRed);
+  p1_CTR_vs_amp2_center -> Draw("same");
+  p1_CTR_vs_amp2_border -> SetMarkerSize(0.5);
+  p1_CTR_vs_amp2_border -> SetMarkerColor(kBlue);
+  p1_CTR_vs_amp2_border -> SetLineColor(kBlue);
+  p1_CTR_vs_amp2_border -> Draw("same");
+  if( !isMCP1 ) fitFunc_corrAmp -> Draw("same");
   latexLabel2 -> Draw("same");
   c1 -> cd(3);
   hPad = (TH1F*)( gPad->DrawFrame(0.,CTRMean-5.*CTRSigma,5.,CTRMean+5.*CTRSigma) );
@@ -1451,6 +1499,14 @@ int main(int argc, char** argv)
   hPad -> Draw();
   gPad -> SetGridy();
   p1_CTR_vs_ampRatio -> Draw("same");
+  p1_CTR_vs_ampRatio_center -> SetMarkerSize(0.5);
+  p1_CTR_vs_ampRatio_center -> SetMarkerColor(kRed);
+  p1_CTR_vs_ampRatio_center -> SetLineColor(kRed);
+  p1_CTR_vs_ampRatio_center -> Draw("same");
+  p1_CTR_vs_ampRatio_border -> SetMarkerSize(0.5);
+  p1_CTR_vs_ampRatio_border -> SetMarkerColor(kBlue);
+  p1_CTR_vs_ampRatio_border -> SetLineColor(kBlue);
+  p1_CTR_vs_ampRatio_border -> Draw("same");
   if( !isMCP0 && !isMCP1 ) fitFunc_corrAmp -> Draw("same");
   latexLabel2 -> Draw("same");  
   c1 -> Print(Form("%s/c__deltaT_vs_amp__config%d.png",plotDir.c_str(),configuration));
