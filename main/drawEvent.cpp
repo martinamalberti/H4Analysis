@@ -13,6 +13,7 @@
 #include "TGraphErrors.h"
 #include "TLine.h"
 #include "TApplication.h"
+#include "TLatex.h"
 
 #include "CfgManager/interface/CfgManager.h"
 #include "CfgManager/interface/CfgManagerT.h"
@@ -128,14 +129,17 @@ int main(int argc, char* argv[])
     }
     string event = opts.GetOpt<string>("h4reco.event");
     
+    int maxEvents = opts.OptExist("h4reco.maxEvents") ? opts.GetOpt<int>("h4reco.maxEvents") : -1;
+    int spill     = opts.OptExist("h4reco.spill")     ? opts.GetOpt<int>("h4reco.spill")     : -1;
+    
     TChain* inTree = new TChain("H4tree");
     ReadInputFiles(opts, inTree);
     H4Tree h4Tree(inTree);
     
     //-----output setup-----
     uint64 index=stoul(run)*1e9;
-    TFile* outROOT = new TFile("drawEvent"+TString(run)+"_"+TString(event)+".root", "RECREATE");
-    outROOT->cd();
+    // TFile* outROOT = new TFile("drawEvent"+TString(run)+"_"+TString(event)+".root", "RECREATE");
+    // outROOT->cd();
     RecoTree mainTree(&index);
     
     //---Get plugin sequence---
@@ -168,6 +172,7 @@ int main(int argc, char* argv[])
       }
     }
     
+    
     //---begin
     for(auto& plugin : pluginSequence)
     {
@@ -183,52 +188,21 @@ int main(int argc, char* argv[])
       {
         TTree* tree = (TTree*)shared.obj;
         tree->SetMaxVirtualSize(10000);
-        tree->SetDirectory(outROOT);
+        // tree->SetDirectory(outROOT);
       }
     }
+    
     
     //---interactive plots
     TApplication* theApp;
     if( popupPlots )
       theApp = new TApplication("App", &argc, argv);
     
-    //---events loop
-    int maxEvents = opts.OptExist("h4reco.maxEvents") ? opts.GetOpt<int>("h4reco.maxEvents") : -1;
-    while(h4Tree.NextEntry() && (index-stoul(run)*1e9<maxEvents || maxEvents==-1))
-    {
-      if(index % 1000 == 0)
-      {
-        cout << ">>> Processed events: " << index-stoul(run)*1e9 << "/"
-             << (maxEvents<0 ? h4Tree.GetEntries() : min(h4Tree.GetEntries(), (uint64)maxEvents))
-             << endl;
-      }
-      
-      //---call ProcessEvent for each plugin and check the return status
-      bool status=true;
-      for(auto& plugin : pluginSequence)
-      {
-        if(status)
-        {
-          status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
-        }
-      }
-      
-      vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");
-      for(auto& channel : channels)
-      {
-        auto shared_data = pluginMap["DigiReco"]->GetSharedData(std::string("DigiReco")+"_"+channel, "", false);
-        WFClass* WF = (WFClass*)shared_data.at(0).obj;
-        
-        float leTime = WF->GetLETime();
-        if( (leTime < 0. || leTime > 200.) && (channel == "NINO4" || channel == "NINO5")) std::cout << "channel: " << channel << "   leTime: " << leTime << "   event: " << index-stoul(run)*1e9 << std::endl;
-      }
-      
-      ++index;
-    }
     
     //---events loop
-    cout << ">>> Processing H4DAQ run #" << run << " event # " << event << " <<<" << endl;
-    if( event < h4Tree.GetEntries() )
+    cout << ">>> Processing H4DAQ run #" << run << " event # " << event << " / " << h4Tree.GetEntries() << " <<<" << endl;
+    
+    if( (atoi(event.c_str()) != -1) && (atoi(event.c_str()) < int(h4Tree.GetEntries())) )
     {
       h4Tree.NextEntry(atoi(event.c_str()));
       
@@ -320,25 +294,104 @@ int main(int argc, char* argv[])
           line_leTime -> SetLineColor(kBlue);
           line_leTime -> SetLineStyle(2);
           line_leTime -> Draw("same");
+          
+          TLatex* latexLabel = new TLatex(0.50,0.80,Form("LED: #sigma_{V} / (dV/dt) = %.0f ps",baselineRMS/funcTimeLE->GetParameter(1)*1000.));
+          latexLabel -> SetNDC();
+          latexLabel -> SetTextFont(42);
+          latexLabel -> SetTextSize(0.03);
+          latexLabel -> SetTextColor(kBlue);
+          latexLabel -> Draw("same");
         }
         if( funcTimeCF )
         {
-          funcTimeCF -> SetLineColor(kBlue);
+          funcTimeCF -> SetLineColor(kTeal);
           funcTimeCF -> Draw("same");
           
           TLine* line_cfFrac = new TLine(cfTime/tUnit-10.,baseline+cfFrac*fitAmpMax,cfTime/tUnit+10.,baseline+cfFrac*fitAmpMax);
-          line_cfFrac -> SetLineColor(kBlue);
+          line_cfFrac -> SetLineColor(kTeal);
           line_cfFrac -> SetLineStyle(2);
           line_cfFrac -> Draw("same");
           
           TLine* line_cfTime = new TLine(cfTime/tUnit,baseline,cfTime/tUnit,baseline+fitAmpMax);
-          line_cfTime -> SetLineColor(kBlue);
+          line_cfTime -> SetLineColor(kTeal);
           line_cfTime -> SetLineStyle(2);
           line_cfTime -> Draw("same");
+          
+          TLatex* latexLabel = new TLatex(0.50,0.75,Form("CFD: #sigma_{V} / (dV/dt) = %.0f ps",baselineRMS/funcTimeCF->GetParameter(1)*1000.));
+          latexLabel -> SetNDC();
+          latexLabel -> SetTextFont(42);
+          latexLabel -> SetTextSize(0.03);
+          latexLabel -> SetTextColor(kTeal);
+          latexLabel -> Draw("same");
         }
         
         gPad -> Update();
       } 
+    }
+    
+
+    if( atoi(event.c_str()) == -1 )
+    {
+      vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");
+      std::map<std::string,TCanvas*> c1;
+      for(auto& channel : channels)
+      {
+        c1[channel] = new TCanvas(Form("%s",channel.c_str()),Form("%s",channel.c_str()));
+        TH1F* hPad = (TH1F*)( gPad->DrawFrame(-10.,0.,210.,1000.) );
+        hPad -> SetTitle(";time [ns]; amplitude [mV]");
+        hPad -> Draw();
+      }
+      
+      
+      while( h4Tree.NextEntry() && (index-stoul(run)*1e9<maxEvents || maxEvents==-1) )
+      {
+        if( index%1 == 0 ) std::cout << ">>> processing event " << index-stoul(run)*1e9 << " / " << h4Tree.GetEntries() << "\r" << std::flush;
+        
+        if( spill != -1 && int(h4Tree.spillNumber) != spill ) continue;
+        
+        //---call ProcessEvent for each plugin and check the return status
+        bool status=true;
+        for(auto& plugin : pluginSequence)
+        {
+          if(status)
+          {
+            status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
+          }
+        }
+        
+        //---fill the main tree with info variables and increase event counter
+        if(status)
+        {
+          mainTree.time_stamp = h4Tree.evtTimeStart;
+          mainTree.run = h4Tree.runNumber;
+          mainTree.spill = h4Tree.spillNumber;
+          mainTree.event = h4Tree.evtNumber;
+          mainTree.Fill();
+          ++index;
+        }
+        
+        //---draw waveforms
+        vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");
+        for(auto& channel : channels)
+        {
+          auto shared_data = pluginMap["DigiReco"]->GetSharedData(std::string("DigiReco")+"_"+channel, "", false);
+          WFClass* WF = (WFClass*)shared_data.at(0).obj;
+          
+          auto analizedWF = WF->GetSamples();
+          float tUnit = WF->GetTUnit();
+          
+          TGraphErrors* g = new TGraphErrors();
+          for(unsigned int jSample=0; jSample<analizedWF->size(); ++jSample)
+          {
+            g -> SetPoint(jSample,jSample*tUnit,analizedWF->at(jSample)*0.25);
+          }
+          
+          c1[channel] -> cd();
+          g -> Draw("L,same");
+          
+          // gPad -> Update();
+        } 
+      }
     }
     
     //---end
@@ -374,7 +427,7 @@ int main(int argc, char* argv[])
     // for(auto& loader : pluginLoaders)
     //   loader->Destroy();
     
-    if( popupPlots ) theApp -> Run();
+    if( popupPlots ) { std::cout << ">>> popping up the plots" << std::endl; theApp -> Run(); }
     
     exit(0);
 }    

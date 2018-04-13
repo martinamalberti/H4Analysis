@@ -120,11 +120,13 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
                 pair<float, float> timeInfo = WFs_[channel]->GetTime(timeRecoTypes_[iT], timeOpts_[channel+"."+timeRecoTypes_[iT]]);
                 digiTree_.time[outCh+iT*channelsNames_.size()] = timeInfo.first;
                 digiTree_.time_chi2[outCh+iT*channelsNames_.size()] = timeInfo.second;
+                digiTree_.time_slope[outCh+iT*channelsNames_.size()] = WFs_[channel]->GetTimeFit(timeRecoTypes_[iT])->GetParameter(1);
             }
             else
             {
                 digiTree_.time[outCh+iT*channelsNames_.size()] = -99;
                 digiTree_.time_chi2[outCh+iT*channelsNames_.size()] = -99;
+                digiTree_.time_slope[outCh+iT*channelsNames_.size()] = -99;
             }
         }
         

@@ -40,6 +40,7 @@ public:
     float*        b_rms;
     float*        time;
     float*        time_chi2;
+    float*        time_slope;
     float*        maximum;
     float*        time_maximum;
     float*        amp_max;

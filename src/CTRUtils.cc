@@ -45,6 +45,47 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
     std::string channelName = energyChannels.at(it);
     tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
   }
+  
+  tree -> SetBranchStatus("LED",1); tree -> SetBranchAddress("LED",&treeVars.t_LED);
+  tree -> SetBranchStatus("CFD",1); tree -> SetBranchAddress("CFD",&treeVars.t_CFD);
+}
+
+
+
+void InitTreeVarsCosmics(TTree* tree, TreeVarsCosmics& treeVars, CfgManager& opts)
+{
+  treeVars.t_ped = new float[28];
+  treeVars.t_amp = new float[28];
+  treeVars.t_charge = new float[28];
+  treeVars.t_time = new float[28];
+  treeVars.t_channelId = new std::map<std::string,int>;
+  treeVars.t_timeTypes = new std::map<std::string,int>;
+  
+  //tree -> SetBranchStatus("*",0);
+  
+  tree -> SetBranchStatus("amp_max",   1); tree -> SetBranchAddress("amp_max",   treeVars.t_amp);
+  tree -> SetBranchStatus("charge_tot",1); tree -> SetBranchAddress("charge_tot",treeVars.t_charge);
+  tree -> SetBranchStatus("time",      1); tree -> SetBranchAddress("time",      treeVars.t_time);
+  
+  std::vector<std::string> timeTypes = opts.GetOpt<std::vector<std::string> >("Input.timeTypes");
+  for(unsigned int it = 0; it < timeTypes.size(); ++it)
+  {
+    std::string timeType = timeTypes.at(it);
+    tree -> SetBranchStatus(timeType.c_str(),1); tree -> SetBranchAddress(timeType.c_str(),&((*treeVars.t_timeTypes)[timeType]));
+  }
+  
+  std::vector<std::string> timeChannels = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
+  for(unsigned int it = 0; it < timeChannels.size(); ++it)
+  {
+    std::string channelName = timeChannels.at(it);
+    tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
+  }
+  std::vector<std::string> energyChannels = opts.GetOpt<std::vector<std::string> >("Input.energyChannels");
+  for(unsigned int it = 0; it < energyChannels.size(); ++it)
+  {
+    std::string channelName = energyChannels.at(it);
+    tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
+  }
 }
 
 
@@ -126,35 +167,6 @@ bool AcceptEventMCP(TreeVars& treeVars, const float& x_MCP, const float& y_MCP, 
         (treeVars.t_beamY[0]-y_MCP)*(treeVars.t_beamY[0]-y_MCP) ) > (r_MCP*r_MCP) )
     return false;
   
-  return true;
-}
-
-
-
-bool AcceptEventAmp(const std::string& enCh0, const std::string& enCh1, TreeVars& treeVars,
-                    const float& ampMin1, const float& ampMax1, const float& ampMin2, const float& ampMax2)
-{
-  if( isnan(treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]) ) return false;
-  if( isnan(treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]) ) return false;
-  if( (treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]*0.25 < ampMin1) || (treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]*0.25 > ampMax1) ) return false;
-  if( (treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]*0.25 < ampMin2) || (treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]*0.25 > ampMax2) ) return false;
-  
-  return true;
-}
-
-
-
-bool AcceptEventTime(const std::string& timeCh0, const std::string& timeCh1, const bool& isMCP0, const bool& isMCP1, TreeVars& treeVars,
-                    const float& timeMin1, const float& timeMax1, const float& timeMin2, const float& timeMax2)
-{
-  int extraIt0 = isMCP0 ? 14 : 0;
-  int extraIt1 = isMCP1 ? 14 : 0;
-  
-  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0]) ) return false;
-  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1]) ) return false;
-  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] < timeMin1) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] > timeMax1) ) return false;
-  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] < timeMin2) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] > timeMax2) ) return false;
-  if( fabs( treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] - treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] ) > 1. ) return false;
   return true;
 }
 
