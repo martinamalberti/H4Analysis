@@ -295,7 +295,8 @@ int main(int argc, char* argv[])
           line_leTime -> SetLineStyle(2);
           line_leTime -> Draw("same");
           
-          TLatex* latexLabel = new TLatex(0.50,0.80,Form("LED: #sigma_{V} / (dV/dt) = %.0f ps",baselineRMS/funcTimeLE->GetParameter(1)*1000.));
+          TLatex* latexLabel = new TLatex(0.50,0.80,Form("#splitline{LED}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
+                                                         baselineRMS,funcTimeLE->GetParameter(1),baselineRMS/funcTimeLE->GetParameter(1)*1000.));
           latexLabel -> SetNDC();
           latexLabel -> SetTextFont(42);
           latexLabel -> SetTextSize(0.03);

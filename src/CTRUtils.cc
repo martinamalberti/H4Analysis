@@ -2,34 +2,45 @@
 
 
 
-void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
+void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts, const bool& hodo)
 {
   treeVars.t_Vbias = new float[3];
-  treeVars.t_amp = new float[32];
-  treeVars.t_dur = new float[32];
-  treeVars.t_time = new float[64];
+  treeVars.t_amp = new float[1000];
+  treeVars.t_dur = new float[1000];
+  treeVars.t_time = new float[1000];
   treeVars.t_beamX = new float[2];
   treeVars.t_beamY = new float[2];
   treeVars.t_channelId = new std::map<std::string,int>;
-  
+    
   //tree -> SetBranchStatus("*",0);
   
-  tree -> SetBranchStatus("LED",1);       tree -> SetBranchAddress("LED",      &treeVars.t_LED);
-  tree -> SetBranchStatus("CFD",1);       tree -> SetBranchAddress("CFD",      &treeVars.t_CFD);
+  tree -> SetBranchStatus("run",  1); tree -> SetBranchAddress("run",  &treeVars.t_run);
+  tree -> SetBranchStatus("spill",1); tree -> SetBranchAddress("spill",&treeVars.t_spill);
   
-  // tree -> SetBranchStatus("NINOthr",1); tree -> SetBranchAddress("NINOthr",&treeVars.t_NINOthr);
-  // tree -> SetBranchStatus("Vbias1" ,1); tree -> SetBranchAddress("Vbias1", &treeVars.t_Vbias[0]);
-  // tree -> SetBranchStatus("Vbias2" ,1); tree -> SetBranchAddress("Vbias2", &treeVars.t_Vbias[1]);
-  // tree -> SetBranchStatus("Vbias3" ,1); tree -> SetBranchAddress("Vbias3", &treeVars.t_Vbias[2]);
-
+  tree -> SetBranchStatus("LED",1); tree -> SetBranchAddress("LED",&treeVars.t_LED);
+  tree -> SetBranchStatus("CFD",1); tree -> SetBranchAddress("CFD",&treeVars.t_CFD);
+  
+  tree -> SetBranchStatus("NINOthr",1); tree -> SetBranchAddress("NINOthr",&treeVars.t_NINOthr);
+  tree -> SetBranchStatus("Vbias1" ,1); tree -> SetBranchAddress("Vbias1", &treeVars.t_Vbias[0]);
+  tree -> SetBranchStatus("Vbias2" ,1); tree -> SetBranchAddress("Vbias2", &treeVars.t_Vbias[1]);
+  tree -> SetBranchStatus("Vbias3" ,1); tree -> SetBranchAddress("Vbias3", &treeVars.t_Vbias[2]);
+  
   float cut_angle = opts.GetOpt<float>("Cuts.angle");
   if( cut_angle != -1 )
   {
     tree -> SetBranchStatus("angle"  ,1); tree -> SetBranchAddress("angle",  &treeVars.t_angle);
   }
   
-  tree -> SetBranchStatus("X",1); tree -> SetBranchAddress("X",treeVars.t_beamX);
-  tree -> SetBranchStatus("Y",1); tree -> SetBranchAddress("Y",treeVars.t_beamY);
+  if( hodo )
+  {
+    tree -> SetBranchStatus("hodo.X",1); tree -> SetBranchAddress("hodo.X",treeVars.t_beamX);
+    tree -> SetBranchStatus("hodo.Y",1); tree -> SetBranchAddress("hodo.Y",treeVars.t_beamY);
+  }
+  else
+  {
+    tree -> SetBranchStatus("wire.X",1); tree -> SetBranchAddress("wire.X",treeVars.t_beamX);
+    tree -> SetBranchStatus("wire.Y",1); tree -> SetBranchAddress("wire.Y",treeVars.t_beamY);
+  }
   
   tree -> SetBranchStatus("amp_max",   1); tree -> SetBranchAddress("amp_max",   treeVars.t_amp);
   tree -> SetBranchStatus("charge_sig",1); tree -> SetBranchAddress("charge_sig",treeVars.t_dur);
@@ -38,7 +49,7 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
   std::vector<std::string> timeChannels = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
   for(unsigned int it = 0; it < timeChannels.size(); ++it)
   {
-    std::string channelName = timeChannels.at(it);
+     std::string channelName = timeChannels.at(it);
     tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
   }
   std::vector<std::string> energyChannels = opts.GetOpt<std::vector<std::string> >("Input.energyChannels");
@@ -47,28 +58,31 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
     std::string channelName = energyChannels.at(it);
     tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
   }
-  
-  tree -> SetBranchStatus("LED",1); tree -> SetBranchAddress("LED",&treeVars.t_LED);
-  tree -> SetBranchStatus("CFD",1); tree -> SetBranchAddress("CFD",&treeVars.t_CFD);
 }
 
 
 
-void InitTreeVarsCosmics(TTree* tree, TreeVarsCosmics& treeVars, CfgManager& opts)
+void InitTreeVarsPeacock(TTree* tree, TreeVars& treeVars, CfgManager& opts)
 {
-  treeVars.t_ped = new float[28];
-  treeVars.t_amp = new float[28];
-  treeVars.t_charge = new float[28];
-  treeVars.t_time = new float[28];
+  treeVars.t_Vbias = new float[3];
+  treeVars.t_b_rms = new float[1000];
+  treeVars.t_amp = new float[1000];
+  treeVars.t_dur = new float[1000];
+  treeVars.t_time = new float[1000];
+  treeVars.t_time_slope = new float[1000];
+  treeVars.t_beamX = new float[2];
+  treeVars.t_beamY = new float[2];
+  treeVars.t_trgChannelId = new std::map<std::string,int>;
   treeVars.t_channelId = new std::map<std::string,int>;
   treeVars.t_timeTypes = new std::map<std::string,int>;
   
   //tree -> SetBranchStatus("*",0);
   
-  tree -> SetBranchStatus("amp_max",   1); tree -> SetBranchAddress("amp_max",   treeVars.t_amp);
-  tree -> SetBranchStatus("charge_tot",1); tree -> SetBranchAddress("charge_tot",treeVars.t_charge);
-  tree -> SetBranchStatus("time",      1); tree -> SetBranchAddress("time",      treeVars.t_time);
+  tree -> SetBranchStatus("run",  1); tree -> SetBranchAddress("run",  &treeVars.t_run);
+  tree -> SetBranchStatus("spill",1); tree -> SetBranchAddress("spill",&treeVars.t_spill);
   
+  tree -> SetBranchStatus("LED",1); tree -> SetBranchAddress("LED",&treeVars.t_LED);
+  tree -> SetBranchStatus("CFD",1); tree -> SetBranchAddress("CFD",&treeVars.t_CFD);
   std::vector<std::string> timeTypes = opts.GetOpt<std::vector<std::string> >("Input.timeTypes");
   for(unsigned int it = 0; it < timeTypes.size(); ++it)
   {
@@ -76,16 +90,31 @@ void InitTreeVarsCosmics(TTree* tree, TreeVarsCosmics& treeVars, CfgManager& opt
     tree -> SetBranchStatus(timeType.c_str(),1); tree -> SetBranchAddress(timeType.c_str(),&((*treeVars.t_timeTypes)[timeType]));
   }
   
-  std::vector<std::string> timeChannels = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
-  for(unsigned int it = 0; it < timeChannels.size(); ++it)
+  tree -> SetBranchStatus("Vbias" ,1); tree -> SetBranchAddress("Vbias", &treeVars.t_Vbias[0]);
+  
+  tree -> SetBranchStatus("X",1); tree -> SetBranchAddress("X",treeVars.t_beamX);
+  tree -> SetBranchStatus("Y",1); tree -> SetBranchAddress("Y",treeVars.t_beamY);
+  
+  tree -> SetBranchStatus("b_rms",     1); tree -> SetBranchAddress("b_rms",     treeVars.t_b_rms);
+  tree -> SetBranchStatus("amp_max",   1); tree -> SetBranchAddress("amp_max",   treeVars.t_amp);
+  tree -> SetBranchStatus("charge_sig",1); tree -> SetBranchAddress("charge_sig",treeVars.t_dur);
+  tree -> SetBranchStatus("time",      1); tree -> SetBranchAddress("time",      treeVars.t_time);
+  tree -> SetBranchStatus("time_slope",1); tree -> SetBranchAddress("time_slope",treeVars.t_time_slope);
+  
+  std::string refChannel = opts.GetOpt<std::string>("Input.refChannel");
+  tree -> SetBranchStatus(refChannel.c_str(),1); tree -> SetBranchAddress(refChannel.c_str(),&((*treeVars.t_channelId)[refChannel]));
+  
+  std::vector<std::string> trgChannels = opts.GetOpt<std::vector<std::string> >("Input.trgChannels");
+  for(unsigned int it = 0; it < trgChannels.size(); ++it)
   {
-    std::string channelName = timeChannels.at(it);
-    tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
+    std::string trgChannelName = trgChannels.at(it);
+    tree -> SetBranchStatus(trgChannelName.c_str(),1); tree -> SetBranchAddress(trgChannelName.c_str(),&((*treeVars.t_trgChannelId)[trgChannelName]));
   }
-  std::vector<std::string> energyChannels = opts.GetOpt<std::vector<std::string> >("Input.energyChannels");
-  for(unsigned int it = 0; it < energyChannels.size(); ++it)
+  
+  std::vector<std::string> channels = opts.GetOpt<std::vector<std::string> >("Input.channels");
+  for(unsigned int it = 0; it < channels.size(); ++it)
   {
-    std::string channelName = energyChannels.at(it);
+    std::string channelName = channels.at(it);
     tree -> SetBranchStatus(channelName.c_str(),1); tree -> SetBranchAddress(channelName.c_str(),&((*treeVars.t_channelId)[channelName]));
   }
 }
@@ -223,26 +252,24 @@ bool AcceptEventTh(TreeVars& treeVars, const float& thMin, const float& thMax)
 
 
 
-bool AcceptEventVbias(const int& VbiasIndex1, const int& VbiasIndex2, TreeVars& treeVars,
-                      const float& VbiasMin, const float& VbiasMax)
+bool AcceptEventVbias(const int& VbiasIndex1, const int& VbiasIndex2, const int& isMCP0, const int& isMCP1, TreeVars& treeVars,
+                      const float& VbiasMin1, const float& VbiasMax1, const float& VbiasMin2, const float& VbiasMax2)
 {
-  float Vbias1 = treeVars.t_Vbias[VbiasIndex1];
-  float Vbias2 = treeVars.t_Vbias[VbiasIndex2];
-  if( (Vbias1 < VbiasMin) || (Vbias1 > VbiasMax) ) return false;
-  if( (Vbias2 < VbiasMin) || (Vbias2 > VbiasMax) ) return false;
+  float Vbias1 = -1.; if( !isMCP0 ) Vbias1 = treeVars.t_Vbias[VbiasIndex1];
+  float Vbias2 = -1.; if( !isMCP1 ) Vbias2 = treeVars.t_Vbias[VbiasIndex2];
+  if( (Vbias1 < VbiasMin1) || (Vbias1 > VbiasMax1) ) return false;
+  if( (Vbias2 < VbiasMin2) || (Vbias2 > VbiasMax2) ) return false;
   
   return true;
 }
 
 
 
-void drawCTRPlot(TH1F* histo, TCanvas* c1, const int& rebin, const int& isMCP0, const int& isMCP1, const float& MCPIntrinsic,
+void drawCTRPlot(TH1F* histo, const int& rebin, const int& isMCP0, const int& isMCP1, const float& MCPIntrinsic,
                  const std::string& channelLabel0, const std::string& channelLabel1, const std::string& extraLabel, TLatex* latexLabel,
                  TH1F* histo_center, TH1F* histo_border)
 {
-  c1 -> cd();
-  
-  float* vals = new float[4];
+  float* vals = new float[6];
   FindSmallestInterval(vals,histo,0.68,true);
   histo -> Rebin(rebin);
   histo -> SetMarkerStyle(20);
@@ -254,8 +281,8 @@ void drawCTRPlot(TH1F* histo, TCanvas* c1, const int& rebin, const int& isMCP0, 
   
   float norm = histo -> GetMaximum();
   float mean = vals[0];
-  float min = vals[2];
-  float max = vals[3];
+  float min = vals[4];
+  float max = vals[5];
   float delta = max-min;
   float sigma = 0.5*delta;
   float effSigma = sigma;
@@ -306,7 +333,7 @@ void drawCTRPlot(TH1F* histo, TCanvas* c1, const int& rebin, const int& isMCP0, 
   
   if( histo_center)
   {
-    vals = new float[4];
+    vals = new float[6];
     FindSmallestInterval(vals,histo_center,0.68,true);
     histo_center -> Rebin(rebin);
     histo_center -> SetMarkerStyle(22);
@@ -317,8 +344,8 @@ void drawCTRPlot(TH1F* histo, TCanvas* c1, const int& rebin, const int& isMCP0, 
     
     norm = histo -> GetMaximum();
     mean = vals[0];
-    min = vals[2];
-    max = vals[3];
+    min = vals[4];
+    max = vals[5];
     delta = max-min;
     sigma = 0.5*delta;
     effSigma = sigma;
@@ -341,7 +368,7 @@ void drawCTRPlot(TH1F* histo, TCanvas* c1, const int& rebin, const int& isMCP0, 
   
   if( histo_border)
   {
-    vals = new float[4];
+    vals = new float[6];
     FindSmallestInterval(vals,histo_border,0.68,true);
     histo_border -> Rebin(rebin);
     histo_border -> SetMarkerStyle(23);
@@ -352,8 +379,8 @@ void drawCTRPlot(TH1F* histo, TCanvas* c1, const int& rebin, const int& isMCP0, 
     
     norm = histo -> GetMaximum();
     mean = vals[0];
-    min = vals[2];
-    max = vals[3];
+    min = vals[4];
+    max = vals[5];
     delta = max-min;
     sigma = 0.5*delta;
     effSigma = sigma;
