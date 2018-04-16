@@ -29,6 +29,9 @@
 /*** tree variables ***/
 struct TreeVars
 {
+  int t_LED;
+  int t_CFD;
+  
   float* t_beamX;
   float* t_beamY;
   float* t_Vbias;

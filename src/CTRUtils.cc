@@ -5,20 +5,22 @@
 void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
 {
   treeVars.t_Vbias = new float[3];
-  treeVars.t_ped = new float[28];
-  treeVars.t_amp = new float[28];
-  treeVars.t_dur = new float[28];
-  treeVars.t_time = new float[28];
+  treeVars.t_amp = new float[32];
+  treeVars.t_dur = new float[32];
+  treeVars.t_time = new float[64];
   treeVars.t_beamX = new float[2];
   treeVars.t_beamY = new float[2];
   treeVars.t_channelId = new std::map<std::string,int>;
   
   //tree -> SetBranchStatus("*",0);
   
-  tree -> SetBranchStatus("NINOthr",1); tree -> SetBranchAddress("NINOthr",&treeVars.t_NINOthr);
-  tree -> SetBranchStatus("Vbias1" ,1); tree -> SetBranchAddress("Vbias1", &treeVars.t_Vbias[0]);
-  tree -> SetBranchStatus("Vbias2" ,1); tree -> SetBranchAddress("Vbias2", &treeVars.t_Vbias[1]);
-  tree -> SetBranchStatus("Vbias3" ,1); tree -> SetBranchAddress("Vbias3", &treeVars.t_Vbias[2]);
+  tree -> SetBranchStatus("LED",1);       tree -> SetBranchAddress("LED",      &treeVars.t_LED);
+  tree -> SetBranchStatus("CFD",1);       tree -> SetBranchAddress("CFD",      &treeVars.t_CFD);
+  
+  // tree -> SetBranchStatus("NINOthr",1); tree -> SetBranchAddress("NINOthr",&treeVars.t_NINOthr);
+  // tree -> SetBranchStatus("Vbias1" ,1); tree -> SetBranchAddress("Vbias1", &treeVars.t_Vbias[0]);
+  // tree -> SetBranchStatus("Vbias2" ,1); tree -> SetBranchAddress("Vbias2", &treeVars.t_Vbias[1]);
+  // tree -> SetBranchStatus("Vbias3" ,1); tree -> SetBranchAddress("Vbias3", &treeVars.t_Vbias[2]);
 
   float cut_angle = opts.GetOpt<float>("Cuts.angle");
   if( cut_angle != -1 )
@@ -143,8 +145,8 @@ bool AcceptEvent(const std::string& enCh0, const std::string& enCh1, const std::
   if( beamCutType <= 0 ) return true;
   
   bool inside = false;
-  if( treeVars.t_beamX[0] >= beamXMin && treeVars.t_beamX[0] <= beamXMax &&
-      treeVars.t_beamY[0] >= beamYMin && treeVars.t_beamY[0] <= beamYMax )
+  if( treeVars.t_beamX[0] >= beamXMin && treeVars.t_beamX[0] < beamXMax &&
+      treeVars.t_beamY[0] >= beamYMin && treeVars.t_beamY[0] < beamYMax )
     inside = true;
   
   if     ( beamCutType == 1 && inside == true ) return true;
@@ -167,6 +169,35 @@ bool AcceptEventMCP(TreeVars& treeVars, const float& x_MCP, const float& y_MCP, 
         (treeVars.t_beamY[0]-y_MCP)*(treeVars.t_beamY[0]-y_MCP) ) > (r_MCP*r_MCP) )
     return false;
   
+  return true;
+}
+
+
+
+bool AcceptEventAmp(const std::string& enCh0, const std::string& enCh1, TreeVars& treeVars,
+                    const float& ampMin1, const float& ampMax1, const float& ampMin2, const float& ampMax2)
+{
+  if( isnan(treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]) ) return false;
+  if( isnan(treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]) ) return false;
+  if( (treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]*0.25 < ampMin1) || (treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]*0.25 > ampMax1) ) return false;
+  if( (treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]*0.25 < ampMin2) || (treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]*0.25 > ampMax2) ) return false;
+  
+  return true;
+}
+
+
+
+bool AcceptEventTime(const std::string& timeCh0, const std::string& timeCh1, const bool& isMCP0, const bool& isMCP1, TreeVars& treeVars,
+                    const float& timeMin1, const float& timeMax1, const float& timeMin2, const float& timeMax2)
+{
+  int extraIt0 = isMCP0 ? treeVars.t_CFD : treeVars.t_LED;
+  int extraIt1 = isMCP1 ? treeVars.t_CFD : treeVars.t_LED;
+  
+  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0]) ) return false;
+  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1]) ) return false;
+  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] < timeMin1) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] > timeMax1) ) return false;
+  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] < timeMin2) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] > timeMax2) ) return false;
+  if( fabs( treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] - treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] ) > 25. ) return false;
   return true;
 }
 
