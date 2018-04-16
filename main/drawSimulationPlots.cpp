@@ -10,6 +10,7 @@
 #include <map>
 #include <algorithm>
 #include <cstdlib>
+#include <numeric>
 
 #include "TSystem.h"
 #include "TFile.h"
