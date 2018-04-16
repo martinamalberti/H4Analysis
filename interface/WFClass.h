@@ -57,6 +57,8 @@ public:
     inline float           GetBaselineRMS() {return bRMS_;}
     inline int             GetNSample() {return samples_.size();};
     inline int             GetMaxSample() {return maxSample_;};
+    inline int             GetSWinMin() {return sWinMin_;}
+    inline int             GetSWinMax() {return sWinMax_;}
     inline float           GetFitAmpMax() {return fitAmpMax_;};
     inline float           GetFitTimeMax() {return fitTimeMax_*tUnit_;};
     inline float           GetLEThr() {return leThr_;};
@@ -71,6 +73,7 @@ public:
     pair<float, float>     GetTime(string method, vector<float>& params); 
     pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
     pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    TF1*                   GetTimeFit(string method);
     float                  GetIntegral(int min=-1, int max=-1);
     float                  GetModIntegral(int min=-1, int max=-1);
     virtual float          GetSignalIntegral(int riseWin, int fallWin);

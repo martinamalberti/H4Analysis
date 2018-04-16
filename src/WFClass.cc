@@ -84,7 +84,7 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nFitSamples, i
 //----------Get time with the specified method--------------------------------------------
 pair<float, float> WFClass::GetTime(string method, vector<float>& params)
 {
-    //---CFD
+  //---CFD
     if(method.find("CFD") != string::npos)
     {
         if(params.size()<1)
@@ -112,7 +112,21 @@ pair<float, float> WFClass::GetTime(string method, vector<float>& params)
     }
     
     cout << ">>>ERROR: time reconstruction method <" << method << "> not supported" << endl;
-    return make_pair(-1000, -1);
+    return make_pair(-1000, -1.);
+}
+
+TF1* WFClass::GetTimeFit(string method)
+{
+    //---CFD
+    if(method.find("CFD") != string::npos)
+        return GetTimeCFFunc();
+    
+    //---LED
+    else if(method.find("LED") != string::npos)
+        return GetTimeLEFunc();
+    
+    cout << ">>>ERROR: time reconstruction method <" << method << "> not supported" << endl;
+    return NULL;
 }
 
 //----------Get CF time for a given fraction and in a given range-------------------------
@@ -128,9 +142,9 @@ pair<float, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int 
         cfFrac_ = frac;
         if(fitAmpMax_ == -1)
             GetInterpolatedAmpMax(min, max);
-        if(frac == 1) 
-            return make_pair(maxSample_*tUnit_, 1);
-    
+        if(frac == 1)
+            return make_pair(maxSample_*tUnit_, 1.);
+      
         //---find first sample above Amax*frac
         for(int iSample=maxSample_; iSample>tStart; --iSample)
         {
@@ -157,7 +171,8 @@ pair<float, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamp
 {
     //---check if signal window is valid
     if(min==max && max==-1 && sWinMin_==sWinMax_ && sWinMax_==-1)
-        return make_pair(-1000, -1);
+        return make_pair(-1000, -1.);
+    
     //---setup signal window
     if(min!=-1 && max!=-1)
         SetSignalWindow(min, max);
@@ -182,7 +197,7 @@ pair<float, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamp
         fitLE_ = new TF1("fitLE", "[0]+[1]*(x*[2])", leSample_-nmFitSamples-0.5, leSample_+npFitSamples+0.5);
         fitLE_ -> SetParameters(A,B,tUnit_);
     }
-
+    
     return make_pair(leTime_, chi2le_);
 }
 

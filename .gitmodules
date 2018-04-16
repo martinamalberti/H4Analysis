@@ -1,6 +1,6 @@
 [submodule "DynamicTTree"]
 	path = DynamicTTree
-	url = https://github.com/simonepigazzini/DynamicTTree.git
+	url = git@github.com:abenagli/DynamicTTree
 [submodule "CfgManager"]
 	path = CfgManager
-	url = https://github.com/simonepigazzini/CfgManager.git
+	url = git@github.com:abenagli/CfgManager
