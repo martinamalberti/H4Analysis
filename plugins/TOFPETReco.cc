@@ -25,7 +25,7 @@ bool TOFPETReco::Begin(CfgManager& opts, uint64* index)
 bool TOFPETReco::ProcessEvent(const H4Tree& h4Tree, map<string, PluginBase*>& plugins, CfgManager& opts)
 {
     double h4daq_time = -1;
-    for(int iT=0; iT<h4Tree.nEvtTimes; ++iT)
+    for(unsigned int iT=0; iT<h4Tree.nEvtTimes; ++iT)
     { 
         if(h4daqRefTime_ == -1 && h4Tree.evtTimeBoard[iT] == 16842753)
             h4daqRefTime_ = h4Tree.evtTime[iT]; 

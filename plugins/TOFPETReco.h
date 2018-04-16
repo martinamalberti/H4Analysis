@@ -29,7 +29,7 @@ private:
     TOFPETRawTree* rawTree_;
     TOFPETRecoTree recoTree_;
     
-    int            currentSpill_;
+    unsigned int   currentSpill_;
     double         spillAdjust_;
     double         h4daqRefTime_;
     double         tofpetRefTime_;

@@ -573,12 +573,12 @@ int main(int argc, char** argv)
   
   c1 = new TCanvas("c1_CTR","CTR");
   c1 -> cd();
-  drawCTRPlot(h_CTR,c1,rebin,isMCP0,isMCP1,0.010,xLabel1_time,xLabel2_time,"",latexLabel12);
+  drawCTRPlot(h_CTR,rebin,isMCP0,isMCP1,0.010,xLabel1_time,xLabel2_time,"",latexLabel12);
   c1 -> Print(Form("%s/c__CTR.png",plotDir.c_str()));
   
   c1 = new TCanvas("c1_CTR_ampCorr","CTR_ampCorr");
   c1 -> cd();
-  drawCTRPlot(h_CTR_ampCorr,c1,rebin,isMCP0,isMCP1,0.010,xLabel1_time,xLabel2_time,"amp-corrected ",latexLabel12);
+  drawCTRPlot(h_CTR_ampCorr,rebin,isMCP0,isMCP1,0.010,xLabel1_time,xLabel2_time,"amp-corrected ",latexLabel12);
   c1 -> Print(Form("%s/c__CTR_ampCorr.png",plotDir.c_str()));
   
   

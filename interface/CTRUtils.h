@@ -51,8 +51,22 @@ struct TreeVars
   std::map<std::string,int>* t_channelId;
 };
 
-void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts, const bool& hodo = false);
+struct TreeVarsCosmics
+{
+  float* t_ped;
+  float* t_amp;
+  float* t_charge;
+  float* t_time;
+  std::map<std::string,int>* t_channelId;
+  
+  int t_CFD;
+  int t_LED;
+  std::map<std::string,int>* t_timeTypes;
+};
+
+void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts, const bool& hodo=false);
 void InitTreeVarsPeacock(TTree* tree, TreeVars& treeVars, CfgManager& opts);
+void InitTreeVarsCosmics(TTree* tree, TreeVarsCosmics& treeVars, CfgManager& opts);
 
 bool AcceptEvent(const std::string& enCh0, const std::string& enCh1, const std::string& timeCh0, const std::string& timeCh1, TreeVars& treeVars,
                  const int& beamCutType, const float& beamXMin, const float& beamXMax, const float& beamYMin, const float& beamYMax,
@@ -60,11 +74,33 @@ bool AcceptEvent(const std::string& enCh0, const std::string& enCh1, const std::
 
 bool AcceptEventMCP(TreeVars& treeVars, const float& x_MCP, const float& y_MCP, const float& r_MCP);
 
-bool AcceptEventAmp(const std::string& enCh0, const std::string& enCh1, TreeVars& treeVars,
-                    const float& ampMin1, const float& ampMax1, const float& ampMin2, const float& ampMax2);
+template <class T>
+bool AcceptEventAmp(const std::string& enCh0, const std::string& enCh1, T& treeVars,
+                    const float& ampMin1, const float& ampMax1, const float& ampMin2, const float& ampMax2)
+{
+  if( isnan(treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]) ) return false;
+  if( isnan(treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]) ) return false;
+  if( (treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]*0.25 < ampMin1) || (treeVars.t_amp[(*treeVars.t_channelId)[enCh0]]*0.25 > ampMax1) ) return false;
+  if( (treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]*0.25 < ampMin2) || (treeVars.t_amp[(*treeVars.t_channelId)[enCh1]]*0.25 > ampMax2) ) return false;
+  
+  return true;
+};
 
-bool AcceptEventTime(const std::string& timeCh0, const std::string& timeCh1, const bool& isMCP0, const bool& isMCP1, TreeVars& treeVars,
-                     const float& timeMin1, const float& timeMax1, const float& timeMin2, const float& timeMax2);
+template <class T>
+bool AcceptEventTime(const std::string& timeCh0, const std::string& timeCh1, const bool& isMCP0, const bool& isMCP1, T& treeVars,
+                     const float& timeMin1, const float& timeMax1, const float& timeMin2, const float& timeMax2)
+{
+  int extraIt0 = isMCP0 ? 14 : 0;
+  int extraIt1 = isMCP1 ? 14 : 0;
+  
+  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0]) ) return false;
+  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1]) ) return false;
+  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] < timeMin1) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] > timeMax1) ) return false;
+  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] < timeMin2) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] > timeMax2) ) return false;
+  if( fabs( treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] - treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] ) > 1. ) return false;
+  return true;
+};
+
 
 bool AcceptEventDur(const std::string& timeCh0, const std::string& timeCh1, TreeVars& treeVars,
                     const float& durMin1, const float& durMax1, const float& durMin2, const float& durMax2);
