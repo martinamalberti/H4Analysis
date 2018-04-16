@@ -318,7 +318,8 @@ int main(int argc, char* argv[])
           line_cfTime -> SetLineStyle(2);
           line_cfTime -> Draw("same");
           
-          TLatex* latexLabel = new TLatex(0.50,0.75,Form("CFD: #sigma_{V} / (dV/dt) = %.0f ps",baselineRMS/funcTimeCF->GetParameter(1)*1000.));
+          TLatex* latexLabel = new TLatex(0.50,0.60,Form("#splitline{CFD}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
+                                                         baselineRMS,funcTimeCF->GetParameter(1),baselineRMS/funcTimeCF->GetParameter(1)*1000.));
           latexLabel -> SetNDC();
           latexLabel -> SetTextFont(42);
           latexLabel -> SetTextSize(0.03);
