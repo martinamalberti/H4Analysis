@@ -35,6 +35,7 @@ std::vector<std::string> ampChannels;
 /*** tree variables ***/
 struct TreeVars
 {
+  float t_config;
   float t_beamX;
   float t_beamY;
   uint t_run;
@@ -53,8 +54,9 @@ struct TreeVars
 void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3, TreeVars& treeVars);
 
 bool AcceptEvent(TreeVars treeVars);
-int GetReadoutGroup(std::string channelName);
+int GetReadoutGroup(std::string channelName, float configId);
 int GetAmplitudeBin(float amplitude);
+void EffectiveSigma( TH1F *h , double &ml, double &mh, double &sigmaeff);
 
 int main(int argc, char** argv)
 {
@@ -76,6 +78,8 @@ int main(int argc, char** argv)
   timeChannels   = opts.GetOpt<std::vector<std::string> >("Input.timeChannels");
   ampChannels   = opts.GetOpt<std::vector<std::string> >("Input.ampChannels");
   std::string OutputFile = opts.GetOpt<std::string>("Input.OutputFile");
+  float config = opts.GetOpt<float>("Input.config");
+
 
   std::vector<float> cut_ampMin = opts.GetOpt<std::vector<float> >("Cuts.ampMin");
   std::vector<float> cut_ampMax = opts.GetOpt<std::vector<float> >("Cuts.ampMax");
@@ -86,16 +90,6 @@ int main(int argc, char** argv)
   // labels and canvas style
   setTDRStyle();
   
-  /*
-  std::string baseDir(Form("/afs/cern.ch/user/m/malberti/www/PrecisionTiming/TBatT9May2017/config%02d/",configuration));
-  system(Form("mkdir -p %s",baseDir.c_str()));
-  system(Form("cp /afs/cern.ch/user/m/malberti/www/index.php %s",baseDir.c_str()));
-  std::string plotDir(Form("/afs/cern.ch/user/m/malberti/www/PrecisionTiming/TBatT9May2017/config%02d/%s/",configuration,label1.c_str()));
-  system(Form("mkdir %s",plotDir.c_str()));
-  system(Form("cp /afs/cern.ch/user/m/malberti/www/index.php %s",plotDir.c_str()));
-  */  
-  
-
   //---------------------------
   // open input files and trees
   TChain* chain1 = new TChain("info","info");
@@ -107,6 +101,11 @@ int main(int argc, char** argv)
     chain2 -> Add(inputFiles.at(fileIt).c_str());
     chain3 -> Add(inputFiles.at(fileIt).c_str());
   }
+  //chain2 -> BuildIndex("index");
+  //chain1 -> AddFriend("digi");
+  //chain3 -> BuildIndex("index");
+  //chain1 -> AddFriend("h4");
+  //chain1 -> BuildIndex("index");
   std::cout << " Read " << chain1->GetEntries() << " total events in tree " << chain1->GetName() << std::endl;
   std::cout << " Read " << chain2->GetEntries() << " total events in tree " << chain2->GetName() << std::endl;
   std::cout << " Read " << chain3->GetEntries() << " total events in tree " << chain3->GetName() << std::endl;
@@ -140,7 +139,9 @@ int main(int argc, char** argv)
   std::map<std::string,TH1F*> h_dt_binAmp[nAmpBins];
   std::map<std::string,TH1F*> h_dtcorr_binAmp[nAmpBins];
 
-
+  TGraphErrors *g_timeResol_vs_averageAmplitude = new TGraphErrors();
+  g_timeResol_vs_averageAmplitude->SetName("g_timeResol_vs_averageAmplitude");
+  
   TH2F *h2_dt_vs_x = new TH2F("h2_dt_vs_x","h2_dt_vs_x",120, -24, 24, 1000, -25,25);
   TH2F *h2_dt_vs_y = new TH2F("h2_dt_vs_y","h2_dt_vs_y",120, -24, 24, 1000, -25,25);
 
@@ -150,17 +151,17 @@ int main(int argc, char** argv)
     h_amp_nocuts[ch]  = new TH1F(Form("h_amp_nocuts_%s",ch.c_str()),Form("h_amp_nocuts_%s",ch.c_str()),1000,0.,4000.);
     h_amp[ch]  = new TH1F(Form("h_amp_%s",ch.c_str()),Form("h_amp_%s",ch.c_str()),1000,0.,4000.);
     h_time[ch] = new TH1F(Form("h_time_%s",ch.c_str()),Form("h_time_%s",ch.c_str()),2000,-100.,100.);
-    h_dt[ch]   = new TH1F(Form("h_dt_%s",ch.c_str()),Form("h_dt_%s",ch.c_str()),5000,0.,25.);
+    h_dt[ch]   = new TH1F(Form("h_dt_%s",ch.c_str()),Form("h_dt_%s",ch.c_str()),10000,0.,25.);
     h2_dt_vs_amp[ch] = new TH2F(Form("h2_dt_vs_amp_%s",ch.c_str()),Form("h2_dt_vs_amp_%s",ch.c_str()),1000, 0, 4000, 2500,0.,25.);
     p_dt_vs_amp[ch] = new TProfile(Form("p_dt_vs_amp_%s",ch.c_str()),Form("p_dt_vs_amp_%s",ch.c_str()),100, 0, 4000,0.,25.);
-    h_dtcorr[ch]   = new TH1F(Form("h_dtcorr_%s",ch.c_str()),Form("h_dtcorr_%s",ch.c_str()),5000,0.,25.);
+    h_dtcorr[ch]   = new TH1F(Form("h_dtcorr_%s",ch.c_str()),Form("h_dtcorr_%s",ch.c_str()),10000,0.,25.);
     h2_dtcorr_vs_amp[ch] = new TH2F(Form("h2_dtcorr_vs_amp_%s",ch.c_str()),Form("h2_dtcorr_vs_amp_%s",ch.c_str()),1000, 0, 4000, 2500, 0.,25.);
     p_dtcorr_vs_amp[ch] = new TProfile(Form("p_dtcorr_vs_amp_%s",ch.c_str()),Form("p_dtcorr_vs_amp_%s",ch.c_str()),100, 0, 4000,0.,25.);
  
     for (int ibin = 0; ibin < nAmpBins ; ibin++){
       h_amp_binAmp[ibin][ch] = new TH1F(Form("h_amp_%s_ampBin_%d",ch.c_str(),ibin), Form("h_amp_%s_ampBin_%d",ch.c_str(),ibin) ,1000,0.,4000.);
-      h_dt_binAmp[ibin][ch] = new TH1F(Form("h_dt_%s_ampBin_%d",ch.c_str(),ibin), Form("h_dt_%s_ampBin_%d",ch.c_str(),ibin), 5000,0.,25.);
-      h_dtcorr_binAmp[ibin][ch] = new TH1F(Form("h_dtcorr_%s_ampBin_%d",ch.c_str(),ibin), Form("h_dtcorr_%s_ampBin_%d",ch.c_str(),ibin),5000,0.,25.);
+      h_dt_binAmp[ibin][ch] = new TH1F(Form("h_dt_%s_ampBin_%d",ch.c_str(),ibin), Form("h_dt_%s_ampBin_%d",ch.c_str(),ibin), 10000,0.,25.);
+      h_dtcorr_binAmp[ibin][ch] = new TH1F(Form("h_dtcorr_%s_ampBin_%d",ch.c_str(),ibin), Form("h_dtcorr_%s_ampBin_%d",ch.c_str(),ibin),10000,0.,25.);
     }
   }
 
@@ -233,9 +234,6 @@ int main(int argc, char** argv)
       	amp  = ampMCP[1];
       }
 
-      //std::cout<< ich << "  " << channelName << "   " << channelNameA << "  " << time << std::endl;
-      
-
       
       h_amp_nocuts[channelName] -> Fill(amp);
       h_dur_nocuts[channelName]-> Fill(dur);
@@ -245,7 +243,8 @@ int main(int argc, char** argv)
       if ( ampMCP[1] < cut_ampMin[1] || ampMCP[1] > cut_ampMax[1]) continue;
       if ( amp < cut_ampMin[ich]     || amp > cut_ampMax[ich]) continue;
 
-      rog = GetReadoutGroup(channelName);
+      //rog = GetReadoutGroup(channelName,treeVars.t_config);
+      rog = GetReadoutGroup(channelName,config);
       dt = time - timeMCP[rog];
       
       // attempt to get the position for some channels (eg NINOMAT10)
@@ -303,7 +302,7 @@ int main(int argc, char** argv)
     fitFunc_awcorr[channelName] -> SetLineColor(kRed);
     p_dt_vs_amp[channelName] -> Fit(Form("fitFunc_awcorr_%s",channelName.c_str()),"QS+","",
 				    h_amp[channelName]->GetMean()-5.*h_amp[channelName]->GetRMS(),
-				    h_amp[channelName]->GetMean()+7.*h_amp[channelName]->GetRMS());
+				    h_amp[channelName]->GetMean()+6.*h_amp[channelName]->GetRMS());
   }
 
 
@@ -345,7 +344,7 @@ int main(int argc, char** argv)
 	if ( ampMCP[1] < cut_ampMin[1] || ampMCP[1] > cut_ampMax[1]) continue;
 	if ( amp < cut_ampMin[ich]     || amp > cut_ampMax[ich]) continue;
 
-	rog = GetReadoutGroup(channelName);
+	rog = GetReadoutGroup(channelName,config);
 	dt = time - timeMCP[rog];
 	dtcorr = dt - fitFunc_awcorr[channelName]->Eval(amp) + fitFunc_awcorr[channelName]->Eval(h_amp[channelName]->GetMean()) ;  
 
@@ -369,15 +368,21 @@ int main(int argc, char** argv)
   // --  Get time resolution for each channel 
   std::map<std::string,TF1*>  fitFun;
   std::map<std::string,TF1*>  fitFun2[nAmpBins];
-  std::map<std::string,TGraphErrors*>  g_resol_vs_amp;
+  std::map<std::string,TGraphErrors*>  g_timeResol_vs_amp;
   float tmin = 0;
   float tmax = 0;
+
+  int n = 0;
+  float sigma = 0;
+  float resolMCP = 0.015; //ns
+  float resol = 0;
+  float binwidth ;
 
   for (int ich = 0; ich < NCHANNELS; ich++){
     channelName = timeChannels[ich];  
    
     if (strcmp(channelName.c_str(), "MCP1") == 0 || strcmp(channelName.c_str(), "MCP2") == 0) continue;
-    
+    n++;    
     fitFun[channelName] = new TF1(Form("fitFun_%s",channelName.c_str()),"gaus",3);
     fitFun[channelName]->SetLineColor(1);
     fitFun[channelName]->SetLineWidth(1);
@@ -387,11 +392,21 @@ int main(int argc, char** argv)
     tmax = h_dtcorr[channelName]->GetMean()+2.0*h_dtcorr[channelName]->GetRMS();
     h_dtcorr[channelName]->Fit(Form("fitFun_%s",channelName.c_str()),"QS+","", tmin, tmax);
     
-    g_resol_vs_amp[channelName] = new TGraphErrors();
-    g_resol_vs_amp[channelName]->SetName(Form("g_resol_vs_amp_%s",channelName.c_str()));
+    sigma = fitFun[channelName]->GetParameter(2);
+    resol = sqrt(sigma*sigma-resolMCP*resolMCP);
+    g_timeResol_vs_averageAmplitude->SetPoint(n, h_amp[channelName]->GetMean(), resol*1000.); // ps                                                                              
+    g_timeResol_vs_averageAmplitude->SetPointError(n, h_amp[channelName]->GetMeanError(), fitFun[channelName]->GetParError(2)*1000.); //ps 
+
+    //double xl, xh, sigmaEff;
+    //EffectiveSigma(h_dtcorr[channelName], xl, xh, sigmaEff);
+    //std::cout << channelName <<"  "<< fitFun[channelName]->GetParameter(2) << "  " << sigmaEff<< "  " << h_dtcorr[channelName]->GetRMS() << std::endl;
+    
+
+    g_timeResol_vs_amp[channelName] = new TGraphErrors();
+    g_timeResol_vs_amp[channelName]->SetName(Form("g_timeResol_vs_amp_%s",channelName.c_str()));
     for (int ibin = 0; ibin < nAmpBins; ibin++){
       fitFun2[ibin][channelName] = new TF1(Form("fitFun2_%s_%d",channelName.c_str(),ibin),"gaus",3);
-      fitFun2[ibin][channelName]->SetLineColor(1);
+      fitFun2[ibin][channelName]->SetLineColor(2);
       fitFun2[ibin][channelName]->SetLineWidth(1);
       fitFun2[ibin][channelName]->SetParameter(1,h_dtcorr_binAmp[ibin][channelName]->GetMean());
       fitFun2[ibin][channelName]->SetParameter(2,h_dtcorr_binAmp[ibin][channelName]->GetRMS());
@@ -399,19 +414,19 @@ int main(int argc, char** argv)
       tmax = h_dtcorr_binAmp[ibin][channelName]->GetMean()+2.0*h_dtcorr_binAmp[ibin][channelName]->GetRMS();
       h_dtcorr_binAmp[ibin][channelName]->Fit(Form("fitFun2_%s_%d", channelName.c_str(),ibin),"QS+","", tmin, tmax);
 
-      float sigma = fitFun2[ibin][channelName]->GetParameter(2);
-      float resolMCP = 0.015;
-      float resol = sqrt(sigma*sigma-resolMCP*resolMCP);
-      float binwidth = h_amp_binAmp[ibin][channelName]->GetRMS(); //
-      g_resol_vs_amp[channelName]->SetPoint(ibin, h_amp_binAmp[ibin][channelName]->GetMean(), resol);
-      g_resol_vs_amp[channelName]->SetPointError(ibin, binwidth,fitFun2[ibin][channelName]->GetParError(2) );
+      sigma = fitFun2[ibin][channelName]->GetParameter(2);
+      resol = sqrt(sigma*sigma-resolMCP*resolMCP);
+      binwidth = h_amp_binAmp[ibin][channelName]->GetRMS(); //
+
+      //double xl, xh, sigmaEff;
+      //EffectiveSigma(h_dtcorr_binAmp[ibin][channelName], xl, xh, sigmaEff);
+      //std::cout << "sigmaGaus = " << sigma << "  sigmaEff = " << sigmaEff <<std::endl;
+      g_timeResol_vs_amp[channelName]->SetPoint(ibin, h_amp_binAmp[ibin][channelName]->GetMean(), resol*1000); // ps
+      g_timeResol_vs_amp[channelName]->SetPointError(ibin, binwidth,fitFun2[ibin][channelName]->GetParError(2)*1000); //ps
     }
     
   }
   
-
-
-
 
 
   // -- Save histograms on file
@@ -442,10 +457,11 @@ int main(int argc, char** argv)
       h_dt_binAmp[ibin][channelName]->Write();
       h_dtcorr_binAmp[ibin][channelName]->Write();
     }
-    g_resol_vs_amp[channelName]-> Write();
+    g_timeResol_vs_amp[channelName]-> Write();
   }
 
-
+  g_timeResol_vs_averageAmplitude-> Write();
+  
   h2_dt_vs_x->Write();
   h2_dt_vs_y->Write();
   
@@ -460,19 +476,36 @@ bool AcceptEvent(TreeVars treeVars)
   return true;
 }
 
-int GetReadoutGroup(std::string channelName){
+int GetReadoutGroup(std::string channelName, float configId){
   int rog = 0;
+  //std::cout << "config = " << configId <<std::endl;
+  if (configId == float(2.1) || configId == float(2.2)){ // e' senza senso che debba mettere float(2.x)
+    if (strcmp(channelName.c_str(), "MCP2") == 0 || 
+	strcmp(channelName.c_str(), "NINOMAT1") == 0 ||
+	strcmp(channelName.c_str(), "NINOMAT2") == 0 ||
+	strcmp(channelName.c_str(), "NINOMAT7") == 0 ||
+	strcmp(channelName.c_str(), "NINOMAT9") == 0 ||
+	strcmp(channelName.c_str(), "NINOMAT10") == 0 ||
+	strcmp(channelName.c_str(), "NINOMAT11") == 0 ||
+	strcmp(channelName.c_str(), "NINOMAT12") == 0 ){
+      rog =1;
+    }
+  }
+  //std::cout << "channelName = " << channelName.c_str() << "  rog = " << rog << std::endl; 
 
-  if (strcmp(channelName.c_str(), "MCP2") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT1") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT2") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT7") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT9") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT10") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT11") == 0 ||
-      strcmp(channelName.c_str(), "NINOMAT12") == 0 )
-    rog =1;
 
+  if (configId == float(7.1)){
+    if (strcmp(channelName.c_str(), "MCP2") == 0 ||
+        strcmp(channelName.c_str(), "NINOMAT2") == 0 ||
+        strcmp(channelName.c_str(), "NINOMAT3") == 0 ||
+        strcmp(channelName.c_str(), "NINOMAT7") == 0 ||
+        strcmp(channelName.c_str(), "NINOMAT11") == 0 ||
+        strcmp(channelName.c_str(), "NINOMAT12") == 0 ||
+        strcmp(channelName.c_str(), "NINOMAT16") == 0 )
+      rog =1;
+  }
+
+  
   return rog;
 }
 
@@ -487,9 +520,68 @@ int GetAmplitudeBin(float amplitude){
   return bin;
 }
 
+
+
+
+//****Effective sigma from histogram ****************************************************************
+ void EffectiveSigma( TH1F *h , double &ml, double &mh, double &sigmaeff){
+
+   double center = h->GetMean() - h->GetRMS();
+   //int lowestBin = h->FindFirstBinAbove(0);
+   //double center = h->GetBinCenter(lowestBin);
+
+   double cdfhi = 0;
+   double cdflo = 0;
+   double mlmin = 0.0;
+   double mhmin = 0.0;
+   double step  = h->GetBinWidth(1);
+   //int npoints =  (h->FindLastBinAbove(0) - h->FindFirstBinAbove(0))/step;
+   int npoints = int(2*h->GetRMS()/step);
+   std::cout << center << "  " << step << "   " << npoints <<std::endl;
+
+   double minwidth = 999.0;
+
+   double mlow = -999;
+   double mhigh = -999;
+   int binlow, binhigh;
+   int nbins = h->GetNbinsX();
+
+   for (int i=0; i<npoints; ++i) {
+     //if (i%100==0) cout <<  i << endl;
+     mlow = center+i*step;
+     binlow = h ->FindBin(mlow);
+     cdflo = h->Integral(1, binlow)/h->Integral(1, nbins);
+     for (int j=i; j<npoints; ++j) {
+       mhigh = center+j*step;
+       binhigh = h ->FindBin(mhigh);
+       cdfhi = h->Integral(1, binhigh)/h->Integral(1, nbins);
+       if ( (cdfhi-cdflo)>0.684 ) {
+	 if ( (mhigh-mlow)<minwidth) {
+	   minwidth = mhigh-mlow;
+	   mlmin = mlow;
+	   mhmin = mhigh;
+	 }
+	 break;
+       }
+     }
+   }
+  
+   sigmaeff = minwidth/2.0;
+   ml = mlmin;
+   mh = mhmin;
+   std::cout << "Mmin = " << mlmin << "  Mmax = " << mhmin << "  effective sigma = " << sigmaeff << std::endl;
+  
+   // return (sigmaeff);
+   return;
+ }
+
+
+
 void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3,TreeVars& treeVars)
 {
-  treeVars.t_Vbias_matrix = -99.;
+  treeVars.t_config = -99;
+  treeVars.t_NINOthr_matrix = -99;
+  treeVars.t_Vbias_matrix = -99;
   treeVars.t_amp = new float[36];
   treeVars.t_dur = new float[36];
   treeVars.t_time = new float[360];
@@ -498,6 +590,7 @@ void InitTreeVars(TTree* chain1, TTree* chain2, TTree* chain3,TreeVars& treeVars
   treeVars.t_channelId = new std::map<std::string,int>;
 
   chain1 -> SetBranchStatus("*",0);
+  chain1 -> SetBranchStatus("config",1); chain1 -> SetBranchAddress("config",&treeVars.t_config);
   chain1 -> SetBranchStatus("NINOthr_matrix",1); chain1 -> SetBranchAddress("NINOthr_matrix",&treeVars.t_NINOthr_matrix);
   chain1 -> SetBranchStatus("Vbias_matrix"  ,1); chain1 -> SetBranchAddress("Vbias_matrix", &treeVars.t_Vbias_matrix);
      
