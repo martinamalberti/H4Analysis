@@ -53,26 +53,34 @@ public:
     inline float           GetTUnit() {return tUnit_;};
     inline int             GetBWinMin() {return bWinMin_;}
     inline int             GetBWinMax() {return bWinMax_;}
+    inline int             GetBIntWinMin() {return bIntWinMin_;}
+    inline int             GetBIntWinMax() {return bIntWinMax_;}
     inline float           GetBaseline() {return baseline_;}
     inline float           GetBaselineRMS() {return bRMS_;}
     inline int             GetNSample() {return samples_.size();};
     inline int             GetMaxSample() {return maxSample_;};
     inline int             GetSWinMin() {return sWinMin_;}
     inline int             GetSWinMax() {return sWinMax_;}
+    inline int             GetSIntWinMin() {return sIntWinMin_;}
+    inline int             GetSIntWinMax() {return sIntWinMax_;}
     inline float           GetFitAmpMax() {return fitAmpMax_;};
     inline float           GetFitTimeMax() {return fitTimeMax_*tUnit_;};
     inline float           GetLEThr() {return leThr_;};
     inline float           GetLETime() {return leTime_;};
+    inline float           GetTEThr() {return teThr_;};
+    inline float           GetTETime() {return teTime_;};
     inline float           GetCFFrac() {return cfFrac_;};
     inline float           GetCFTime() {return cfTime_;};
     inline TF1*            GetAmpFunc() { return fitMax_; };
     inline TF1*            GetTimeCFFunc() { return fitCF_; };
     inline TF1*            GetTimeLEFunc() { return fitLE_; };
+    inline TF1*            GetTimeTEFunc() { return fitTE_; };
     float                  GetAmpMax(int min=-1, int max=-1);
-    WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7, int fitMode=1);
+    WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7, const std::string& fitFunc = "pol2");
     pair<float, float>     GetTime(string method, vector<float>& params); 
-    pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
     pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    pair<float, float>     GetTimeTE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
     TF1*                   GetTimeFit(string method);
     float                  GetIntegral(int min=-1, int max=-1);
     float                  GetModIntegral(int min=-1, int max=-1);
@@ -80,7 +88,9 @@ public:
     //---setters---
     inline void            SetTrigRef(float trigRef){trigRef_ = trigRef;};
     void                   SetSignalWindow(int min, int max);
+    void                   SetSignalIntegralWindow(int min, int max);
     void                   SetBaselineWindow(int min, int max);
+    void                   SetBaselineIntegralWindow(int min, int max);
     void                   SetTemplate(TH1* templateWF=NULL);
     //---utils---
     void                   Reset();
@@ -109,25 +119,34 @@ protected:
     float          trigRef_;
     int            sWinMin_;
     int            sWinMax_;
+    int            sIntWinMin_;
+    int            sIntWinMax_;
     int            bWinMin_;
     int            bWinMax_;
+    int            bIntWinMin_;
+    int            bIntWinMax_;
     int            maxSample_;
     float          fitAmpMax_;
     float          fitTimeMax_;
     float          fitChi2Max_;
     TF1*           fitMax_;
-    TF1*           fitCF_;
     TF1*           fitLE_;
+    TF1*           fitTE_;
+    TF1*           fitCF_;
     float          baseline_;
     float          bRMS_;
-    int            cfSample_;
-    float          cfFrac_;
-    float          cfTime_;
     int            leSample_;
     float          leThr_;
     float          leTime_;
-    float          chi2cf_;
+    int            teSample_;
+    float          teThr_;
+    float          teTime_;
+    int            cfSample_;
+    float          cfFrac_;
+    float          cfTime_;
     float          chi2le_;
+    float          chi2te_;
+    float          chi2cf_;
     int            fWinMin_;
     int            fWinMax_;
     float          tempFitTime_;

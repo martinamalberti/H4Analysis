@@ -94,6 +94,7 @@ void ReadInputFiles(CfgManager& opts, TChain* inTree)
                             "` | sed -e 's:^.*\\/cms\\/:root\\:\\/\\/xrootd-cms.infn.it\\/\\/:g' | grep 'root' > tmp/"+run+".list");
     else
         ls_command = string("ls "+path+run+" | grep 'root' > tmp/"+run+".list");
+    std::cout << ls_command << std::endl;
     system(ls_command.c_str());
     ifstream waveList(string("tmp/"+run+".list").c_str(), ios::in);
     while(waveList >> file && (opts.GetOpt<int>("h4reco.maxFiles")<0 || nFiles<opts.GetOpt<int>("h4reco.maxFiles")) )
@@ -240,6 +241,15 @@ int main(int argc, char* argv[])
             mainTree.run = h4Tree.runNumber;
             mainTree.spill = h4Tree.spillNumber;
             mainTree.event = h4Tree.evtNumber;
+            
+            for(unsigned int iT=0; iT<h4Tree.nEvtTimes; ++iT)
+            {
+              if( h4Tree.evtTimeBoard[iT] == 16908289 )
+              {
+                mainTree.timestamp = h4Tree.evtTime[iT];
+              }
+            }
+            
             mainTree.Fill();
             ++index;
         }

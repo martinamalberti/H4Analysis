@@ -28,7 +28,7 @@ bool WFAnalyzer::Begin(CfgManager& opts, uint64* index)
     {        
         if(opts.OptExist(channel+".templateFit.file"))
         {            
-            TFile* templateFile = TFile::Open(opts.GetOpt<string>(channel+".templateFit.file", 0).c_str(), ".READ");
+              TFile* templateFile = TFile::Open(opts.GetOpt<string>(channel+".templateFit.file", 0).c_str(), ".READ");
             TH1* wfTemplate=(TH1*)templateFile->Get((opts.GetOpt<string>(channel+".templateFit.file", 1)+
                                                      +"_"+templateTag).c_str());
 	    templates_[channel] = (TH1F*) wfTemplate->Clone();
@@ -91,15 +91,20 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         
         //---subtract a specified channel if requested
         if(opts.OptExist(channel+".subtractChannel") && WFs_.find(opts.GetOpt<string>(channel+".subtractChannel")) != WFs_.end())
-            *WFs_[channel] -= *WFs_[opts.GetOpt<string>(channel+".subtractChannel")];        
-        WFs_[channel]->SetBaselineWindow(opts.GetOpt<int>(channel+".baselineWin", 0), 
-                                        opts.GetOpt<int>(channel+".baselineWin", 1));
-        WFs_[channel]->SetSignalWindow(opts.GetOpt<int>(channel+".signalWin", 0), 
-                                      opts.GetOpt<int>(channel+".signalWin", 1));
+          *WFs_[channel] -= *WFs_[opts.GetOpt<string>(channel+".subtractChannel")];
+        
+        WFs_[channel]->SetBaselineWindow(opts.GetOpt<int>(channel+".baselineWin", 0),
+                                         opts.GetOpt<int>(channel+".baselineWin", 1));
+        WFs_[channel]->SetBaselineIntegralWindow(opts.GetOpt<int>(channel+".baselineInt", 0),
+                                                 opts.GetOpt<int>(channel+".baselineInt", 1));
+        WFs_[channel]->SetSignalWindow(opts.GetOpt<int>(channel+".signalWin", 0),
+                                       opts.GetOpt<int>(channel+".signalWin", 1));
+        WFs_[channel]->SetSignalIntegralWindow(opts.GetOpt<int>(channel+".signalInt", 0),
+                                               opts.GetOpt<int>(channel+".signalInt", 1));
         WFBaseline baselineInfo = WFs_[channel]->SubtractBaseline();
-        WFFitResults interpolAmpMax = WFs_[channel]->GetInterpolatedAmpMax(-1,-1,opts.GetOpt<int>(channel+".signalWin", 2),opts.GetOpt<int>(channel+".signalWin", 3));
+        WFFitResults interpolAmpMax = WFs_[channel]->GetInterpolatedAmpMax(-1,-1,opts.GetOpt<int>(channel+".signalWin", 2),opts.GetOpt<std::string>(channel+".signalWin", 3));
         digiTree_.b_charge[outCh] = WFs_[channel]->GetIntegral(opts.GetOpt<int>(channel+".baselineInt", 0), 
-                                                             opts.GetOpt<int>(channel+".baselineInt", 1));        
+                                                               opts.GetOpt<int>(channel+".baselineInt", 1));        
         digiTree_.b_slope[outCh] = baselineInfo.slope;
         digiTree_.b_rms[outCh] = baselineInfo.rms;
         digiTree_.maximum[outCh] = WFs_[channel]->GetAmpMax();
@@ -108,9 +113,9 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         digiTree_.time_max[outCh] = interpolAmpMax.time;
         digiTree_.chi2_max[outCh] = interpolAmpMax.chi2;
         digiTree_.charge_tot[outCh] = WFs_[channel]->GetModIntegral(opts.GetOpt<int>(channel+".baselineInt", 1), 
-                                                                   WFs_[channel]->GetNSample());
+                                                                    WFs_[channel]->GetNSample());
         digiTree_.charge_sig[outCh] = WFs_[channel]->GetSignalIntegral(opts.GetOpt<int>(channel+".signalInt", 0), 
-                                                                     opts.GetOpt<int>(channel+".signalInt", 1));
+                                                                       opts.GetOpt<int>(channel+".signalInt", 1));
         //---compute time with all the requested time reconstruction method
         for(unsigned int iT=0; iT<timeRecoTypes_.size(); ++iT)
         {

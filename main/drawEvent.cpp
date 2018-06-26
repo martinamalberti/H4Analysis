@@ -6,12 +6,14 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <algorithm>
 
 #include "TFile.h"
 #include "TChain.h"
 #include "TCanvas.h"
 #include "TGraphErrors.h"
 #include "TLine.h"
+#include "TBox.h"
 #include "TApplication.h"
 #include "TLatex.h"
 
@@ -132,6 +134,7 @@ int main(int argc, char* argv[])
     int maxEvents = opts.OptExist("h4reco.maxEvents") ? opts.GetOpt<int>("h4reco.maxEvents") : -1;
     int spill     = opts.OptExist("h4reco.spill")     ? opts.GetOpt<int>("h4reco.spill")     : -1;
     
+    std::cout << ">>> Getting tree" << std::endl;
     TChain* inTree = new TChain("H4tree");
     ReadInputFiles(opts, inTree);
     H4Tree h4Tree(inTree);
@@ -204,7 +207,7 @@ int main(int argc, char* argv[])
     
     if( (atoi(event.c_str()) != -1) && (atoi(event.c_str()) < int(h4Tree.GetEntries())) )
     {
-      h4Tree.NextEntry(atoi(event.c_str()));
+      h4Tree.NextEntry(atoi(event.c_str())-1);
       
       //---call ProcessEvent for each plugin and check the return status
       bool status=true;
@@ -241,17 +244,27 @@ int main(int argc, char* argv[])
         float tUnit = WF->GetTUnit();
         int bWinMin = WF->GetBWinMin();
         int bWinMax = WF->GetBWinMax();
+        int bIntWinMin = WF->GetBIntWinMin();
+        int bIntWinMax = WF->GetBIntWinMax();
+        int sWinMin = WF->GetSWinMin();
+        int sWinMax = WF->GetSWinMax();
+        int sIntWinMin = WF->GetSIntWinMin();
+        int sIntWinMax = WF->GetSIntWinMax();
         float baseline = WF->GetBaseline();
         float baselineRMS = WF->GetBaselineRMS();
+        float maxSample = WF->GetMaxSample();
         float fitAmpMax = WF->GetFitAmpMax();
         float fitTimeMax = WF->GetFitTimeMax();
         float cfFrac = WF->GetCFFrac();
         float cfTime = WF->GetCFTime();
         float leThr = WF->GetLEThr();
         float leTime = WF->GetLETime();
+        float teThr = WF->GetTEThr();
+        float teTime = WF->GetTETime();
         TF1* funcAmp = WF->GetAmpFunc();
         TF1* funcTimeCF = WF->GetTimeCFFunc();
         TF1* funcTimeLE = WF->GetTimeLEFunc();
+        TF1* funcTimeTE = WF->GetTimeTEFunc();
         
         TGraphErrors* g = new TGraphErrors();
         for(unsigned int jSample=0; jSample<analizedWF->size(); ++jSample)
@@ -267,8 +280,24 @@ int main(int argc, char* argv[])
         g -> Draw("P,same");
         
         TLine* line_baseline = new TLine(bWinMin,baseline,bWinMax,baseline);
-        line_baseline -> SetLineColor(kRed);
+        line_baseline -> SetLineColor(kRed+2);
+        line_baseline -> SetLineWidth(3);
         line_baseline -> Draw("same");
+        
+        TBox* box_baselineInt = new TBox(std::max(float(0.),float(bIntWinMin)),0.-fitAmpMax/10.,std::min(float(1023.),float(bIntWinMax)),0+fitAmpMax/10.);
+        box_baselineInt -> SetFillColor(kRed);
+        box_baselineInt -> SetFillStyle(3001);
+        box_baselineInt -> Draw("same");
+        
+        TLine* line_signal = new TLine(sWinMin,baseline,sWinMax,baseline);
+        line_signal -> SetLineColor(kGreen+2);
+        line_signal -> SetLineWidth(2);
+        line_signal -> Draw("same");
+        
+        TBox* box_signalInt = new TBox(std::max(float(0.),float(maxSample-sIntWinMin)),0.-fitAmpMax/10.,std::min(float(1023.),float(maxSample+sIntWinMax)),0+fitAmpMax/10.);
+        box_signalInt -> SetFillColor(kGreen);
+        box_signalInt -> SetFillStyle(3001);
+        box_signalInt -> Draw("same");
         
         if( funcAmp )
         {
@@ -303,6 +332,29 @@ int main(int argc, char* argv[])
           latexLabel -> SetTextColor(kBlue);
           latexLabel -> Draw("same");
         }
+        if( funcTimeTE )
+        {
+          funcTimeTE -> SetLineColor(kBlue);
+          funcTimeTE -> Draw("same");
+          
+          TLine* line_thr = new TLine(teTime/tUnit-10.,teThr,teTime/tUnit+10.,teThr);
+          line_thr -> SetLineColor(kBlue);
+          line_thr -> SetLineStyle(2);
+          line_thr -> Draw("same");
+          
+          TLine* line_teTime = new TLine(teTime/tUnit,baseline,teTime/tUnit,baseline+fitAmpMax);
+          line_teTime -> SetLineColor(kBlue);
+          line_teTime -> SetLineStyle(2);
+          line_teTime -> Draw("same");
+          
+          TLatex* latexLabel = new TLatex(0.50,0.60,Form("#splitline{TED}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
+                                                         baselineRMS,funcTimeTE->GetParameter(1),baselineRMS/funcTimeTE->GetParameter(1)*1000.));
+          latexLabel -> SetNDC();
+          latexLabel -> SetTextFont(42);
+          latexLabel -> SetTextSize(0.03);
+          latexLabel -> SetTextColor(kBlue);
+          latexLabel -> Draw("same");
+        }
         if( funcTimeCF )
         {
           funcTimeCF -> SetLineColor(kTeal);
@@ -318,7 +370,7 @@ int main(int argc, char* argv[])
           line_cfTime -> SetLineStyle(2);
           line_cfTime -> Draw("same");
           
-          TLatex* latexLabel = new TLatex(0.50,0.60,Form("#splitline{CFD}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
+          TLatex* latexLabel = new TLatex(0.50,0.40,Form("#splitline{CFD}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
                                                          baselineRMS,funcTimeCF->GetParameter(1),baselineRMS/funcTimeCF->GetParameter(1)*1000.));
           latexLabel -> SetNDC();
           latexLabel -> SetTextFont(42);

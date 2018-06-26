@@ -46,7 +46,7 @@ typedef unsigned long long int uint64;
     DATA(unsigned int, patternChannel, nPatterns)       \
     DATA(unsigned int, digiGroup, nDigiSamples)         \
     DATA(unsigned int, digiChannel, nDigiSamples)       \
-    DATA(float,        digiSampleValue, nDigiSamples)   
+    DATA(uint16_t,     digiSampleValue, nDigiSamples)   
 
 #include "DynamicTTree/interface/DynamicTTreeInterface.h"
 

@@ -90,14 +90,14 @@ template <class T>
 bool AcceptEventTime(const std::string& timeCh0, const std::string& timeCh1, const bool& isMCP0, const bool& isMCP1, T& treeVars,
                      const float& timeMin1, const float& timeMax1, const float& timeMin2, const float& timeMax2)
 {
-  int extraIt0 = isMCP0 ? 14 : 0;
-  int extraIt1 = isMCP1 ? 14 : 0;
+  /* int extraIt0 = isMCP0 ? treeVars.t_CFD : 0; */
+  /* int extraIt1 = isMCP1 ? treeVars.t_CFD : 0; */
   
-  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0]) ) return false;
-  if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1]) ) return false;
-  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] < timeMin1) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] > timeMax1) ) return false;
-  if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] < timeMin2) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] > timeMax2) ) return false;
-  if( fabs( treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] - treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] ) > 1. ) return false;
+  /* if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0]) ) return false; */
+  /* if( isnan(treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1]) ) return false; */
+  /* if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] < timeMin1) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] > timeMax1) ) return false; */
+  /* if( (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] < timeMin2) || (treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] > timeMax2) ) return false; */
+  /* if( fabs( treeVars.t_time[(*treeVars.t_channelId)[timeCh1]+extraIt1] - treeVars.t_time[(*treeVars.t_channelId)[timeCh0]+extraIt0] ) > 1. ) return false; */
   return true;
 };
 
