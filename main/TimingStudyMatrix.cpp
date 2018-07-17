@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
-
+#include <stdlib.h>
 
 #include "TSystem.h"
 #include "TFile.h"
@@ -51,7 +51,8 @@ void InitTreeVars(TTree* chain1, TreeVars& treeVars);
 bool AcceptEvent(TreeVars treeVars);
 int GetReadoutGroup(std::string channelName, float configId);
 int GetAmplitudeBin(float amplitude, std::string channelName, float configId);
-bool VetoNeighbourChannels(std::string channelNameA, TreeVars treeVars, std::map<std::string,float>  minAmplitude);
+bool VetoNeighbourChannels(std::string channelNameA, TreeVars treeVars, std::map<std::string,float>  minAmplitude, float configId);
+void GetPositionFromEnergySharing(std::string channelNameA, TreeVars treeVars, std::map<std::string,float>  minAmplitude, float& x, float& y);
 
 
 
@@ -85,12 +86,14 @@ int main(int argc, char** argv)
   for (int ich = 0; ich < cut_ampMin.size(); ich++){
     minAmplitude[ampChannels[ich]] = cut_ampMin[ich];
     maxAmplitude[ampChannels[ich]] = cut_ampMax[ich];
-    //std::cout << ich << "  " << ampChannels[ich].c_str() << "  " << minAmplitude[ampChannels[ich]]  << "  " <<maxAmplitude[ampChannels[ich]] <<std::endl;
-  }
+    std::cout << ich << "  " << ampChannels[ich].c_str() << "  " << minAmplitude[ampChannels[ich]]  << "  " <<maxAmplitude[ampChannels[ich]] <<std::endl;
+  } 
   
+  std::cout << "Ciao"<<std::endl;
+
   std::string label = opts.GetOpt<std::string>("Plots.label");
 
-
+  std::cout << " Setting TDRStyle..."<<std::endl;
   //--------------------------
   // labels and canvas style
   setTDRStyle();
@@ -98,6 +101,7 @@ int main(int argc, char** argv)
   
   //---------------------------
   // open input files and trees
+  std::cout << "Loading tree ..." << std::endl; 
   TChain* chain1 = new TChain("digi","digi");
   for(unsigned int fileIt = 0; fileIt < inputFiles.size(); ++fileIt)
   {
@@ -147,8 +151,9 @@ int main(int argc, char** argv)
   g_timeResolEffSigma_vs_averageAmplitude->SetName("g_timeResolEffSigma_vs_averageAmplitude");
   
 
-  TH2F *h2_dt_vs_x = new TH2F("h2_dt_vs_x","h2_dt_vs_x",120, -24, 24, 1000, -25,25);
-  TH2F *h2_dt_vs_y = new TH2F("h2_dt_vs_y","h2_dt_vs_y",120, -24, 24, 1000, -25,25);
+  std::map<std::string,TH2F*>  h2_dt_vs_x;
+  std::map<std::string,TH2F*>  h2_dt_vs_y;
+
 
   for (int i = 0 ; i < NCHANNELS; i++){
     std::string channelName = timeChannels.at(i); // es: ch = MCP1, NINOMAT1, etc...
@@ -171,6 +176,9 @@ int main(int argc, char** argv)
     h_dtcorr[channelName]   = new TH1F(Form("h_dtcorr_%s",channelName.c_str()),Form("h_dtcorr_%s",channelName.c_str()),12500,0.,25.);
     h2_dtcorr_vs_amp[channelName] = new TH2F(Form("h2_dtcorr_vs_amp_%s",channelName.c_str()),Form("h2_dtcorr_vs_amp_%s",channelName.c_str()),1000, 0, 4000, 2500, 0.,25.);
     h_effectiveSigma[channelName]   = new TH1F(Form("h_effectiveSigma_%s",channelName.c_str()),Form("h_effectiveSigma_%s",channelName.c_str()),2000,0.,200.);
+
+    h2_dt_vs_x[channelName] = new TH2F(Form("h2_dt_vs_x_%s",channelName.c_str()),Form("h2_dt_vs_x_%s",channelName.c_str()),200, -10, 10, 2500,0.,25.);
+    h2_dt_vs_y[channelName] = new TH2F(Form("h2_dt_vs_y_%s",channelName.c_str()),Form("h2_dt_vs_y_%s",channelName.c_str()),200, -10, 10, 2500,0.,25.);
 
     for (int ibin = 0; ibin < nAmpBins ; ibin++){
       h_amp_binAmp[ibin][channelName] = new TH1F(Form("h_amp_%s_ampBin_%d",channelName.c_str(),ibin), Form("h_amp_%s_ampBin_%d",channelName.c_str(),ibin) ,1000,0.,4000.);
@@ -253,8 +261,7 @@ int main(int argc, char** argv)
       h_amp_nocuts[channelName] -> Fill(amp);
 
       // -- veto events if amplitude compatible with coming from neighbour channels 
-      //if (strcmp(channelName.c_str(), "NINOMAT5") == 0 && treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]]>1400.) continue;
-      if ( VetoNeighbourChannels(channelNameA,treeVars, minAmplitude) ) continue;
+      if ( VetoNeighbourChannels(channelNameA,treeVars, minAmplitude, config) ) continue;
 
       h_amp_vetoNeighbours[channelName] -> Fill(amp);
       
@@ -266,6 +273,11 @@ int main(int argc, char** argv)
 
       ///std::cout<< entry << "    ch = " << channelName << "   amp = " << amp << std::endl; 
 
+      // test
+      float x = 0;
+      float y = 0;
+      GetPositionFromEnergySharing(channelNameA, treeVars, minAmplitude, x, y);
+
       // -- get time difference wrt to MCP1 or MCP2 according to the readout group
       rog = GetReadoutGroup(channelName,config);
       dt = time - timeMCP[rog];
@@ -276,6 +288,8 @@ int main(int argc, char** argv)
       h_dt[channelName]   -> Fill(dt);
       h2_dt_vs_amp[channelName] -> Fill(amp,dt);
       p_dt_vs_amp[channelName] -> Fill(amp,dt);
+      h2_dt_vs_x[channelName]->Fill(x,dt);
+      h2_dt_vs_y[channelName]->Fill(y,dt);
   
     } //end loop over channels
     
@@ -332,8 +346,7 @@ int main(int argc, char** argv)
 
 
 	// -- veto events if amplitude compatible with coming from neighbour channels
-	//if (strcmp(channelName.c_str(), "NINOMAT5") == 0 && treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]]>1400.) continue;
-	if ( VetoNeighbourChannels(channelNameA,treeVars, minAmplitude) ) continue;
+	if ( VetoNeighbourChannels(channelNameA,treeVars, minAmplitude, config) ) continue;
 
 	// -- select events
 	if ( ampMCP[0] < minAmplitude["MCP1"] || ampMCP[0] > maxAmplitude["MCP1"]) continue;
@@ -488,6 +501,9 @@ int main(int argc, char** argv)
     h_dtcorr[channelName]->Write();
     h2_dtcorr_vs_amp[channelName]->Write();
     p_dtcorr_vs_amp[channelName]->Write();
+
+    h2_dt_vs_x[channelName]->Write();
+    h2_dt_vs_y[channelName]->Write();
   }
  
   for (int ich = 0; ich < NCHANNELS; ich++){
@@ -512,15 +528,13 @@ int main(int argc, char** argv)
     channelName = timeChannels[ich];
     for (int jch=0; jch < NCHANNELS; jch++){
       std::string channelName2 = timeChannels.at(jch);
-	h2_amp_nocuts_vs_neighbours[channelName][channelName2] ->Write();
+      h2_amp_nocuts_vs_neighbours[channelName][channelName2] ->Write();
     }
     }*/
 
   g_timeResolGaus_vs_averageAmplitude-> Write();
   g_timeResolEffSigma_vs_averageAmplitude-> Write();
 
-  h2_dt_vs_x->Write();
-  h2_dt_vs_y->Write();
   
   outfile->Close();
   return 0;
@@ -533,7 +547,8 @@ bool AcceptEvent(TreeVars treeVars)
   return true;
 }
 
-int GetReadoutGroup(std::string channelName, float configId){
+int GetReadoutGroup(std::string channelName, float configId)
+{
   int rog = 0;
   //std::cout << "config = " << configId <<std::endl;
   if (configId == float(2.1) || configId == float(2.2) || configId == float(5.1) ){ // e' senza senso che debba mettere float(2.x)
@@ -617,49 +632,96 @@ int GetAmplitudeBin(float amplitude, std::string channelName, float configId){
 }
 
 
-bool VetoNeighbourChannels(std::string channelNameA, TreeVars treeVars, std::map<std::string,float>  minAmplitude){
+bool VetoNeighbourChannels(std::string channelNameA, TreeVars treeVars, std::map<std::string,float>  minAmplitude, float configId){
 
   bool veto = false;
-  
+
+  if ( configId == float(5.1) ) { 
  
-  if (channelNameA == "AMPMAT5"){ // ch5 --> neighbours are ch6 and ch9
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT6"]] > minAmplitude["AMPMAT6"] && !(treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) ) veto = true;
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > minAmplitude["AMPMAT9"]) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT6"]] > 10 ) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > 10 ) veto = true;
-
-  }
-  
-  if (channelNameA == "AMPMAT6"){ // ch6 --> neighbours are ch5 and ch10
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT5"]] > minAmplitude["AMPMAT5"]) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) veto = true;
-  }
-  
-  if (channelNameA == "AMPMAT9"){ // ch9 --> neighbours are ch5, ch10, ch13
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT5"]] > minAmplitude["AMPMAT5"]) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT13"]] > minAmplitude["AMPMAT13"]) veto = true;
-  }
-
-  if (channelNameA == "AMPMAT10"){ // ch10 --> neighbours are ch6, ch9, ch14
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT6"]] > minAmplitude["AMPMAT6"]) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > minAmplitude["AMPMAT9"]) veto = true;
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT14"]] > minAmplitude["AMPMAT14"]) veto = true;
-  }
-
-  
-  if (channelNameA == "AMPMAT13"){ // ch13 --> neighbours are ch9, ch14
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > minAmplitude["AMPMAT9"]) veto = true;
-    //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT14"]] > minAmplitude["AMPMAT14"]) veto = true;
-  }
-
-  if (channelNameA == "AMPMAT14"){ // ch14 --> neighbours are ch10, ch13
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) veto = true;
-    if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT13"]] > minAmplitude["AMPMAT13"]) veto = true;
+    if (channelNameA == "AMPMAT5"){ // ch5 --> neighbours are ch6 and ch9
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT6"]] > minAmplitude["AMPMAT6"] && !(treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) ) veto = true;
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > minAmplitude["AMPMAT9"]) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT6"]] > 10 ) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > 10 ) veto = true;
     }
- 
+    
+    if (channelNameA == "AMPMAT6"){ // ch6 --> neighbours are ch5 and ch10
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT5"]] > minAmplitude["AMPMAT5"]) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) veto = true;
+    }
+    
+    if (channelNameA == "AMPMAT9"){ // ch9 --> neighbours are ch5, ch10, ch13
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT5"]] > minAmplitude["AMPMAT5"]) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT13"]] > minAmplitude["AMPMAT13"]) veto = true;
+    }
+    
+    if (channelNameA == "AMPMAT10"){ // ch10 --> neighbours are ch6, ch9, ch14
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT6"]] > minAmplitude["AMPMAT6"]) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > minAmplitude["AMPMAT9"]) veto = true;
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT14"]] > minAmplitude["AMPMAT14"]) veto = true;
+    }
+    
+    if (channelNameA == "AMPMAT13"){ // ch13 --> neighbours are ch9, ch14
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT9"]] > minAmplitude["AMPMAT9"]) veto = true;
+      //if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT14"]] > minAmplitude["AMPMAT14"]) veto = true;
+    }
+    
+    if (channelNameA == "AMPMAT14"){ // ch14 --> neighbours are ch10, ch13
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT10"]] > minAmplitude["AMPMAT10"]) veto = true;
+      if (treeVars.t_amp[(*treeVars.t_channelId)["AMPMAT13"]] > minAmplitude["AMPMAT13"]) veto = true;
+    }
+  }
+
+
+  // -- config 7.1: veto in ALL other channels
+  if (configId == float(7.1)){
+    for (int ich = 0; ich < 16; ich++){
+      std::string chName = Form("AMPMAT%d",ich+1);
+      if (chName ==  "AMPMAT15"  ) continue;
+      if (chName == channelNameA ) continue;
+      if (treeVars.t_amp[(*treeVars.t_channelId)[chName]] > minAmplitude[chName] ) {
+	veto = true;
+	break;
+      }
+    }
+  }
 
   return veto;
+
+}
+
+
+void GetPositionFromEnergySharing(std::string channelNameA, TreeVars treeVars, std::map<std::string,float>  minAmplitude, float& x, float& y)
+{
+  float xx = 0;
+  float yy = 0;
+
+  float a0  = 0.;
+  float axp = 0.;
+  float axm = 0.;
+  float ayp = 0.;
+  float aym = 0.;
+  float dx = 11.; //mm
+  float dy = 11.; //mm
+  float x0 = 0;
+  float y0 = 0;
+
+  std::string newstring = channelNameA.erase(0, 6);
+  int ch = atoi(newstring.c_str());
+
+  a0  = treeVars.t_amp[(*treeVars.t_channelId)[Form("AMPMAT%d",ch)]];
+  if (     ch%4 !=0 ) axp = treeVars.t_amp[(*treeVars.t_channelId)[Form("AMPMAT%d",ch+1)]];
+  if ( (ch-1)%4 !=0 ) axm = treeVars.t_amp[(*treeVars.t_channelId)[Form("AMPMAT%d",ch-1)]];
+  if ( (ch-4) > 0  ) ayp = treeVars.t_amp[(*treeVars.t_channelId)[Form("AMPMAT%d",ch-4)]];
+  if ( (ch+4) < 16 ) aym = treeVars.t_amp[(*treeVars.t_channelId)[Form("AMPMAT%d",ch+4)]];
+
+  
+  xx = (x0 * a0 + (x0+dx) * axp + (x0-dx) * axm)/(a0+axp+axm);
+  yy = (y0 * a0 + (y0+dy) * ayp + (y0-dy) * aym)/(a0+ayp+aym);
+
+  x = xx;
+  y = yy;
 
 }
 
