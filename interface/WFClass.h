@@ -76,7 +76,7 @@ public:
     inline TF1*            GetTimeLEFunc() { return fitLE_; };
     inline TF1*            GetTimeTEFunc() { return fitTE_; };
     float                  GetAmpMax(int min=-1, int max=-1);
-    WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7, const std::string& fitFunc = "pol2");
+    WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nmFitSamples=7, int npFitSamples=7, const std::string& fitFunc = "pol2");
     pair<float, float>     GetTime(string method, vector<float>& params); 
     pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
     pair<float, float>     GetTimeTE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);

@@ -42,7 +42,7 @@ float WFClass::GetAmpMax(int min, int max)
 }
 
 //----------Get the interpolated max/min amplitude wrt polarity---------------------------
-WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nFitSamples, const std::string& fitFunc)
+WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, int npFitSamples, const std::string& fitFunc)
 {
     //---check if already computed
     if(min==-1 && max==-1 && fitAmpMax_!=-1)
@@ -57,12 +57,15 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nFitSamples, c
     else if(maxSample_ == -1) 
         GetAmpMax(min, max); 
     
+    int minSample = int(std::max(float(0.),float(maxSample_-nmFitSamples)));
+    int maxSample = int(std::min(float(samples_.size()-1),float(maxSample_+npFitSamples)));
+    
     //---fit the max
     TGraphErrors g_max;
-    fitMax_ = new TF1("fitMax", fitFunc.c_str(), std::max(float(0.),float(maxSample_-int(nFitSamples/2)-0.5)), std::min(float(1023.),float(maxSample_+int(nFitSamples/2)+0.5)));
+    fitMax_ = new TF1("fitMax", fitFunc.c_str(), minSample-0.5, maxSample+0.5);
     
     int point=0;
-    for(int iSample=maxSample_-(nFitSamples-1)/2; iSample<=maxSample_+(nFitSamples-1)/2; ++iSample)
+    for(int iSample=minSample; iSample<=maxSample; ++iSample)
     {
         g_max.SetPoint(point, iSample, samples_[iSample]);
         g_max.SetPointError(point, 0., BaselineRMS());
@@ -246,7 +249,7 @@ pair<float, float> WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamp
       
         //---find first sample above thr
         teThr_ = thr;
-        for(int iSample=maxSample_; iSample<samples_.size(); ++iSample)
+        for(unsigned int iSample=maxSample_; iSample<samples_.size(); ++iSample)
         {
             if(samples_.at(iSample) < teThr_) 
             {
