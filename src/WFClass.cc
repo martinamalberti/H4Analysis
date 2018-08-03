@@ -42,7 +42,7 @@ float WFClass::GetAmpMax(int min, int max)
 }
 
 //----------Get the interpolated max/min amplitude wrt polarity---------------------------
-WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, int npFitSamples, const std::string& fitFunc)
+WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, int npFitSamples, const std::string& fitFunc, std::vector<float>* fitParams)
 {
     //---check if already computed
     if(min==-1 && max==-1 && fitAmpMax_!=-1)
@@ -63,6 +63,8 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, 
     //---fit the max
     TGraphErrors g_max;
     fitMax_ = new TF1("fitMax", fitFunc.c_str(), minSample-0.5, maxSample+0.5);
+    for(unsigned int param = 0; param < fitParams->size(); ++param)
+      fitMax_ -> SetParameter(param,fitParams->at(param));
     
     int point=0;
     for(int iSample=minSample; iSample<=maxSample; ++iSample)
