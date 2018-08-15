@@ -8,6 +8,8 @@
 
    =cd H4Analysis=
 
+   =git checkout MTDTB_T10_May2018=
+  
    =source scripts/setup.sh=
    
    =make; make exe=
