@@ -12,7 +12,7 @@
    
    =make; make exe=
 
-   =bin/H4Reco cfg/Oct2015_timing.cfg 4443=
+   =./bin/H4Reco.exe cfg/MTDTB_T10_May2018/MTDTB_T10_May2018_conf1.cfg 10944=
 ** The cfg file
    - Comment lines start with a '#' followed by a space
    - blocks are defined within =<block>...</block>=
