@@ -307,6 +307,7 @@ int main(int argc, char* argv[])
           funcAmp -> Draw("same");
           for(int param = 0; param < funcAmp->GetNpar(); ++param)
             std::cout << "[" << param << "] = " << funcAmp->GetParameter(param) << " +/- " << funcAmp->GetParError(param) << std::endl;
+          std::cout << "chi2/NDF: " << funcAmp->GetChisquare()/funcAmp->GetNDF() << std::endl;
           TLine* line_maxTime = new TLine(fitTimeMax/tUnit,0.,fitTimeMax/tUnit,0.+fitAmpMax);
           line_maxTime -> SetLineColor(kRed);
           line_maxTime -> SetLineStyle(2);
