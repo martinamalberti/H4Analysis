@@ -4,7 +4,7 @@
   - The main program is the H4Reco ntuples producer which can be easily
     configured through the input cfg file (examples in cfg/).
 ** Install and run
-   =git clone --recursive https://github.com/simonepigazzini/H4Analysis.git=
+   =git clone --recursive https://github.com/abenagli/H4Analysis.git=
 
    =cd H4Analysis=
 
