@@ -250,7 +250,6 @@ int main(int argc, char* argv[])
         int sWinMax = WF->GetSWinMax();
         int sIntWinMin = WF->GetSIntWinMin();
         int sIntWinMax = WF->GetSIntWinMax();
-        float baseline = WF->GetBaseline();
         float baselineRMS = WF->GetBaselineRMS();
         float maxSample = WF->GetMaxSample();
         float fitAmpMax = WF->GetFitAmpMax();
@@ -266,6 +265,9 @@ int main(int argc, char* argv[])
         TF1* funcTimeLE = WF->GetTimeLEFunc();
         TF1* funcTimeTE = WF->GetTimeTEFunc();
         
+        std::cout << "\n\n\n***CHANNEL: " << channel << std::endl;
+        std::cout << ">>> baseline RMS: " << baselineRMS << std::endl;
+        
         TGraphErrors* g = new TGraphErrors();
         for(unsigned int jSample=0; jSample<analizedWF->size(); ++jSample)
         {
@@ -279,7 +281,7 @@ int main(int argc, char* argv[])
         g -> Draw("AL");
         g -> Draw("P,same");
         
-        TLine* line_baseline = new TLine(bWinMin,baseline,bWinMax,baseline);
+        TLine* line_baseline = new TLine(bWinMin,0.,bWinMax,0.);
         line_baseline -> SetLineColor(kRed+2);
         line_baseline -> SetLineWidth(3);
         line_baseline -> Draw("same");
@@ -289,7 +291,7 @@ int main(int argc, char* argv[])
         box_baselineInt -> SetFillStyle(3001);
         box_baselineInt -> Draw("same");
         
-        TLine* line_signal = new TLine(sWinMin,baseline,sWinMax,baseline);
+        TLine* line_signal = new TLine(sWinMin,0.,sWinMax,0.);
         line_signal -> SetLineColor(kGreen+2);
         line_signal -> SetLineWidth(2);
         line_signal -> Draw("same");
@@ -303,8 +305,10 @@ int main(int argc, char* argv[])
         {
           funcAmp -> SetLineColor(kRed);
           funcAmp -> Draw("same");
-          
-          TLine* line_maxTime = new TLine(fitTimeMax/tUnit,baseline,fitTimeMax/tUnit,baseline+fitAmpMax);
+          for(int param = 0; param < funcAmp->GetNpar(); ++param)
+            std::cout << "[" << param << "] = " << funcAmp->GetParameter(param) << " +/- " << funcAmp->GetParError(param) << std::endl;
+          std::cout << "chi2/NDF: " << funcAmp->GetChisquare()/funcAmp->GetNDF() << std::endl;
+          TLine* line_maxTime = new TLine(fitTimeMax/tUnit,0.,fitTimeMax/tUnit,0.+fitAmpMax);
           line_maxTime -> SetLineColor(kRed);
           line_maxTime -> SetLineStyle(2);
           line_maxTime -> Draw("same");
@@ -319,7 +323,7 @@ int main(int argc, char* argv[])
           line_thr -> SetLineStyle(2);
           line_thr -> Draw("same");
           
-          TLine* line_leTime = new TLine(leTime/tUnit,baseline,leTime/tUnit,baseline+fitAmpMax);
+          TLine* line_leTime = new TLine(leTime/tUnit,0.,leTime/tUnit,0.+fitAmpMax);
           line_leTime -> SetLineColor(kBlue);
           line_leTime -> SetLineStyle(2);
           line_leTime -> Draw("same");
@@ -342,7 +346,7 @@ int main(int argc, char* argv[])
           line_thr -> SetLineStyle(2);
           line_thr -> Draw("same");
           
-          TLine* line_teTime = new TLine(teTime/tUnit,baseline,teTime/tUnit,baseline+fitAmpMax);
+          TLine* line_teTime = new TLine(teTime/tUnit,0.,teTime/tUnit,0.+fitAmpMax);
           line_teTime -> SetLineColor(kBlue);
           line_teTime -> SetLineStyle(2);
           line_teTime -> Draw("same");
@@ -360,12 +364,12 @@ int main(int argc, char* argv[])
           funcTimeCF -> SetLineColor(kTeal);
           funcTimeCF -> Draw("same");
           
-          TLine* line_cfFrac = new TLine(cfTime/tUnit-10.,baseline+cfFrac*fitAmpMax,cfTime/tUnit+10.,baseline+cfFrac*fitAmpMax);
+          TLine* line_cfFrac = new TLine(cfTime/tUnit-10.,0.+cfFrac*fitAmpMax,cfTime/tUnit+10.,0.+cfFrac*fitAmpMax);
           line_cfFrac -> SetLineColor(kTeal);
           line_cfFrac -> SetLineStyle(2);
           line_cfFrac -> Draw("same");
           
-          TLine* line_cfTime = new TLine(cfTime/tUnit,baseline,cfTime/tUnit,baseline+fitAmpMax);
+          TLine* line_cfTime = new TLine(cfTime/tUnit,0.,cfTime/tUnit,0.+fitAmpMax);
           line_cfTime -> SetLineColor(kTeal);
           line_cfTime -> SetLineStyle(2);
           line_cfTime -> Draw("same");
