@@ -71,7 +71,7 @@ with open(args.baseFolder+'/'+args.configFile) as fi:
 
    
 ##### creates jobs #######
-with open('job.sh', 'w') as fout:
+with open('job_%s.sh'%(str(args.run)), 'w') as fout:
    fout.write("#!/bin/sh\n")
    fout.write("echo\n")
    fout.write("echo 'START---------------'\n")
@@ -87,11 +87,11 @@ with open('job.sh', 'w') as fout:
    fout.write("echo 'STOP---------------'\n")
    fout.write("echo\n")
    fout.write("echo\n")
-   os.system("chmod 755 job.sh")
+   os.system("chmod 755 job_%s.sh"%(str(args.run)))
 
 ###### sends bjobs ######
 if args.submit:
-   command = "bsub -q "+args.queue+" -cwd "+jobDir+" job.sh"
+   command = "bsub -q "+args.queue+" -cwd "+jobDir+" job_%s.sh"%(str(args.run))
    print command
    os.system(command)
    print "job run" + str(args.run) + " submitted"

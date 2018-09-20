@@ -27,4 +27,4 @@ with open("/afs/cern.ch/user/m/malberti/public/runList_H4_Sep2018_digiConf"+conf
             " -p9 " + str(vbiasmat) + \
             " -s "
         print command
-        #os.system(command)
+#        os.system(command)
