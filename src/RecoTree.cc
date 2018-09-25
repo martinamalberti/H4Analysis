@@ -3,7 +3,8 @@
 RecoTree::RecoTree(uint64* idx, TTree* tree)
 {
     tree_ = tree ? tree : new TTree();
-
+    tree_ -> SetAutoSave(104857600);
+    
     index=idx;
     start_time=0;
     time_stamp=0;

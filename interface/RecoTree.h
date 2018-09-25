@@ -25,12 +25,13 @@ public:
 
     //---utils---
     void Fill() {tree_->Fill();};
+    void AutoSave() { tree_->AutoSave();};
     void Write(const char* name="h4", const char* title="main_h4reco_tree")
         {tree_->BuildIndex("index"); tree_->SetTitle(title); tree_->Write(name);};
     void AddFriend(const char* friend_name="wf_tree = wf") {tree_->AddFriend(friend_name, "");};
-
+    
     TTree* tree_; 
-
+    
     uint64*      index;
     uint64       start_time;
     uint64       time_stamp;
