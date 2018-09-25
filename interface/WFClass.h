@@ -46,7 +46,7 @@ public:
     WFClass() {};
     WFClass(int polarity, float tUnit);
     //---dtor---
-    ~WFClass() {};
+    ~WFClass();
 
     //---getters---
     inline const vector<double>* GetSamples() {return &samples_;};
