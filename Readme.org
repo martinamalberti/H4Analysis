@@ -8,9 +8,13 @@
 
    =cd H4Analysis=
 
-   =make=
+   =git checkout MTDTB_T10_May2018=
+  
+   =source scripts/setup.sh=
+   
+   =make; make exe=
 
-   =./bin/H4Reco.exe cfg/Oct2015_timing.cfg 4443=
+   =./bin/H4Reco.exe cfg/MTDTB_T10_May2018/MTDTB_T10_May2018_conf1.cfg 10944=
 ** The cfg file
    - Comment lines start with a '#' followed by a space
    - blocks are defined within =<block>...</block>=
@@ -34,11 +38,3 @@
    - A single output file is produced, it contains the main tree "h4" to which all the trees registered by the 
      plugins as "permanent" are linked (using =TTree::AddFriend()=).
    - More information can be found in =plugin/Readme.org=
-** Some examples:
-   + plot WF for APD2 only: 
-     =h4->Draw("WF_val:WF_time","WF_ch==APD2")=
-   + plot amplitude map:
-     =h4->Draw("fit_ampl[APD2]:hodoY1:hodoX1>>map(100,-10,10,100,-10,10)","","PROFCOLZ")
-   + time resolution:
-     =h4->Draw("fit_time[APD2]-time[MCP1]","amp_max[MCP1]>100 && fit_ampl[APD2]>700")
-     
