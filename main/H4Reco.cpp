@@ -52,8 +52,8 @@ void TrackProcess(float* cpu, float* mem, float* vsz, float* rss)
     getline(proc_tmp, dummy1);
     proc_tmp >> dummy1 >> dummy2 >> cpu[0] >> mem[0] >> vsz[0] >> rss[0]
              >> dummy3 >> dummy4 >> dummy5 >> time;
-    vsz[0] = vsz[0]/1000;
-    rss[0] = rss[0]/1000;
+    vsz[0] = vsz[0]/1024;
+    rss[0] = rss[0]/1024;
     proc_tmp.close();
     if(cpu[0]>cpu[1])
         cpu[1] = cpu[0];
@@ -65,10 +65,10 @@ void TrackProcess(float* cpu, float* mem, float* vsz, float* rss)
         rss[1] = rss[0];
     //---print statistics
     cout << "-----Machine stats---current/max-----" << endl
-         << "CPU(%): " << cpu[0] << "/" << cpu[1] << endl
-         << "MEM(%): " << mem[0] << "/" << mem[1] << endl
-         << "VSZ(M): " << vsz[0] << "/" << vsz[1] << endl
-         << "RSS(M): " << rss[0] << "/" << rss[1] << endl
+         << " CPU(%): " << cpu[0] << "/" << cpu[1] << endl
+         << " MEM(%): " << mem[0] << "/" << mem[1] << endl
+         << "VSZ(MB): " << vsz[0] << "/" << vsz[1] << endl
+         << "RSS(MB): " << rss[0] << "/" << rss[1] << endl
          << "time lasted: " << time << endl;
 }
                   

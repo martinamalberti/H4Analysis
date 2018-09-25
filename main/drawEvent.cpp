@@ -256,14 +256,14 @@ int main(int argc, char* argv[])
         float fitTimeMax = WF->GetFitTimeMax();
         float cfFrac = WF->GetCFFrac();
         float cfTime = WF->GetCFTime();
+        float cfSlope = WF->GetCFSlope();
         float leThr = WF->GetLEThr();
         float leTime = WF->GetLETime();
+        float leSlope = WF->GetLESlope();
         float teThr = WF->GetTEThr();
         float teTime = WF->GetTETime();
+        float teSlope = WF->GetTESlope();
         TF1* funcAmp = WF->GetAmpFunc();
-        TF1* funcTimeCF = WF->GetTimeCFFunc();
-        TF1* funcTimeLE = WF->GetTimeLEFunc();
-        TF1* funcTimeTE = WF->GetTimeTEFunc();
         
         std::cout << "\n\n\n***CHANNEL: " << channel << std::endl;
         std::cout << ">>> baseline RMS: " << baselineRMS << std::endl;
@@ -313,10 +313,10 @@ int main(int argc, char* argv[])
           line_maxTime -> SetLineStyle(2);
           line_maxTime -> Draw("same");
         }
-        if( funcTimeLE )
+        if( leSlope > 0. )
         {
-          funcTimeLE -> SetLineColor(kBlue);
-          funcTimeLE -> Draw("same");
+          // funcTimeLE -> SetLineColor(kBlue);
+          // funcTimeLE -> Draw("same");
           
           TLine* line_thr = new TLine(leTime/tUnit-10.,leThr,leTime/tUnit+10.,leThr);
           line_thr -> SetLineColor(kBlue);
@@ -329,17 +329,17 @@ int main(int argc, char* argv[])
           line_leTime -> Draw("same");
           
           TLatex* latexLabel = new TLatex(0.50,0.80,Form("#splitline{LED}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
-                                                         baselineRMS,funcTimeLE->GetParameter(1),baselineRMS/funcTimeLE->GetParameter(1)*1000.));
+                                                         baselineRMS,leSlope,baselineRMS/leSlope*1000.));
           latexLabel -> SetNDC();
           latexLabel -> SetTextFont(42);
           latexLabel -> SetTextSize(0.03);
           latexLabel -> SetTextColor(kBlue);
           latexLabel -> Draw("same");
         }
-        if( funcTimeTE )
+        if( teSlope > 0. )
         {
-          funcTimeTE -> SetLineColor(kBlue);
-          funcTimeTE -> Draw("same");
+          // funcTimeTE -> SetLineColor(kBlue);
+          // funcTimeTE -> Draw("same");
           
           TLine* line_thr = new TLine(teTime/tUnit-10.,teThr,teTime/tUnit+10.,teThr);
           line_thr -> SetLineColor(kBlue);
@@ -352,17 +352,17 @@ int main(int argc, char* argv[])
           line_teTime -> Draw("same");
           
           TLatex* latexLabel = new TLatex(0.50,0.60,Form("#splitline{TED}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
-                                                         baselineRMS,funcTimeTE->GetParameter(1),baselineRMS/funcTimeTE->GetParameter(1)*1000.));
+                                                         baselineRMS,teSlope,baselineRMS/teSlope*1000.));
           latexLabel -> SetNDC();
           latexLabel -> SetTextFont(42);
           latexLabel -> SetTextSize(0.03);
           latexLabel -> SetTextColor(kBlue);
           latexLabel -> Draw("same");
         }
-        if( funcTimeCF )
+        if( cfSlope > 0. )
         {
-          funcTimeCF -> SetLineColor(kTeal);
-          funcTimeCF -> Draw("same");
+          // funcTimeCF -> SetLineColor(kTeal);
+          // funcTimeCF -> Draw("same");
           
           TLine* line_cfFrac = new TLine(cfTime/tUnit-10.,0.+cfFrac*fitAmpMax,cfTime/tUnit+10.,0.+cfFrac*fitAmpMax);
           line_cfFrac -> SetLineColor(kTeal);
@@ -375,7 +375,7 @@ int main(int argc, char* argv[])
           line_cfTime -> Draw("same");
           
           TLatex* latexLabel = new TLatex(0.50,0.40,Form("#splitline{CFD}{#splitline{#sigma_{V}: %.1f ADC   dV/dt = %.1f ADC/ns}{#sigma_{V} / (dV/dt) = %.0f ps}}",
-                                                         baselineRMS,funcTimeCF->GetParameter(1),baselineRMS/funcTimeCF->GetParameter(1)*1000.));
+                                                         baselineRMS,cfSlope,baselineRMS/cfSlope*1000.));
           latexLabel -> SetNDC();
           latexLabel -> SetTextFont(42);
           latexLabel -> SetTextSize(0.03);
@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
       } 
     }
     
-
+    
     if( atoi(event.c_str()) == -1 )
     {
       vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");

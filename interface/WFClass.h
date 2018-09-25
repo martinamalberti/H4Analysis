@@ -7,6 +7,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <tuple>
 
 #include "Math/Interpolator.h"
 #include "Math/Minimizer.h"
@@ -67,21 +68,20 @@ public:
     inline float           GetFitTimeMax() {return fitTimeMax_*tUnit_;};
     inline float           GetLEThr() {return leThr_;};
     inline float           GetLETime() {return leTime_;};
+    inline float           GetLESlope() {return leSlope_;};
     inline float           GetTEThr() {return teThr_;};
     inline float           GetTETime() {return teTime_;};
+    inline float           GetTESlope() {return teSlope_;};
     inline float           GetCFFrac() {return cfFrac_;};
     inline float           GetCFTime() {return cfTime_;};
+    inline float           GetCFSlope() {return cfSlope_;};
     inline TF1*            GetAmpFunc() { return fitMax_; };
-    inline TF1*            GetTimeCFFunc() { return fitCF_; };
-    inline TF1*            GetTimeLEFunc() { return fitLE_; };
-    inline TF1*            GetTimeTEFunc() { return fitTE_; };
     float                  GetAmpMax(int min=-1, int max=-1);
     WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nmFitSamples=7, int npFitSamples=7, const std::string& fitFunc = "pol2", std::vector<float>* fitParams = NULL);
-    pair<float, float>     GetTime(string method, vector<float>& params); 
-    pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
-    pair<float, float>     GetTimeTE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
-    pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
-    TF1*                   GetTimeFit(string method);
+    std::vector<float>     GetTime(string method, vector<float>& params); 
+    std::vector<float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    std::vector<float>     GetTimeTE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    std::vector<float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
     float                  GetIntegral(int min=-1, int max=-1);
     float                  GetModIntegral(int min=-1, int max=-1);
     virtual float          GetSignalIntegral(int riseWin, int fallWin);
@@ -130,20 +130,20 @@ protected:
     float          fitTimeMax_;
     float          fitChi2Max_;
     TF1*           fitMax_;
-    TF1*           fitLE_;
-    TF1*           fitTE_;
-    TF1*           fitCF_;
     float          baseline_;
     float          bRMS_;
     int            leSample_;
     float          leThr_;
     float          leTime_;
+    float          leSlope_;
     int            teSample_;
     float          teThr_;
     float          teTime_;
+    float          teSlope_;
     int            cfSample_;
     float          cfFrac_;
     float          cfTime_;
+    float          cfSlope_;
     float          chi2le_;
     float          chi2te_;
     float          chi2cf_;

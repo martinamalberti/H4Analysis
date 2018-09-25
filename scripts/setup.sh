@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source /cvmfs/sft.cern.ch/lcg/releases/LCG_94/ROOT/6.14.04/x86_64-slc6-gcc62-opt/ROOT-env.sh
+
 #cd /afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.08/x86_64-slc6-gcc49-opt/root/
 #source ./bin/thisroot.sh
 #cd -
