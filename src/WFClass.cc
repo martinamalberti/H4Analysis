@@ -72,7 +72,7 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, 
     int minSample = int(std::max(float(0.),float(maxSample_-nmFitSamples)));
     int maxSample = int(std::min(float(samples_.size()-1),float(maxSample_+npFitSamples)));
     
-
+    
     //---fit the max
     TGraphErrors g_max;
     if (fitMax_!=NULL) delete fitMax_;
@@ -89,11 +89,13 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, 
       g_max.SetPointError(point, 0., BaselineRMS());
       ++point;
     }
-    auto fit_result = g_max.Fit(fitMax_, "QRSO");
+    //auto fit_result = g_max.Fit(fitMax_, "QRSO");
+    g_max.Fit(fitMax_, "QRON");
     fitTimeMax_ = fitMax_->GetMaximumX();
     fitAmpMax_ = fitMax_->Eval(fitTimeMax_);
-    fitChi2Max_ = fit_result->Chi2()/fitMax_->GetNDF();
-
+    //fitChi2Max_ = fit_result->Chi2()/fitMax_->GetNDF();
+    fitChi2Max_ = fitMax_->GetChisquare()/fitMax_->GetNDF();
+    
     return WFFitResults{fitAmpMax_, fitTimeMax_*tUnit_, fitChi2Max_, fitMax_};
 }
  
