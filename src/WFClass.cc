@@ -8,7 +8,7 @@
 WFClass::WFClass(int polarity, float tUnit):
     tUnit_(tUnit), polarity_(polarity), trigRef_(0), sWinMin_(-1), sWinMax_(-1), 
     bWinMin_(-1), bWinMax_(-1),  maxSample_(-1), fitAmpMax_(-1), fitTimeMax_(-1),
-    fitChi2Max_(-1), fitMax_(NULL), fitLE_(NULL), fitTE_(NULL), fitCF_(NULL),
+    fitChi2Max_(-1), fitMax_(NULL),
     baseline_(-1), bRMS_(-1),
     leSample_(-1), leTime_(-1),
     teSample_(-1), teTime_(-1),
@@ -19,10 +19,7 @@ WFClass::WFClass(int polarity, float tUnit):
 
 //**********Destructors******************************************************************
 WFClass::~WFClass(){
-  delete fitMax_;
-  delete fitLE_;
-  delete fitTE_;
-  delete fitCF_;
+  // delete fitMax_;
 }
 
 
@@ -54,7 +51,6 @@ float WFClass::GetAmpMax(int min, int max)
 //----------Get the interpolated max/min amplitude wrt polarity---------------------------
 WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, int npFitSamples, const std::string& fitFunc, std::vector<float>* fitParams)
 {
-
     //---check if already computed
     if(min==-1 && max==-1 && fitAmpMax_!=-1)
         return WFFitResults{fitAmpMax_, fitTimeMax_*tUnit_, fitChi2Max_};
@@ -68,20 +64,18 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, 
     else if(maxSample_ == -1) 
         GetAmpMax(min, max); 
 
-    
     int minSample = int(std::max(float(0.),float(maxSample_-nmFitSamples)));
     int maxSample = int(std::min(float(samples_.size()-1),float(maxSample_+npFitSamples)));
     
-
     //---fit the max
     TGraphErrors g_max;
     if (fitMax_!=NULL) delete fitMax_;
     fitMax_ = new TF1("fitMax", fitFunc.c_str(), minSample-0.5, maxSample+0.5);
     if (fitParams!=NULL){
       for(unsigned int param = 0; param < fitParams->size(); ++param)
-	fitMax_ -> SetParameter(param,fitParams->at(param));
+        fitMax_ -> SetParameter(param,fitParams->at(param));
     }
-
+    
     int point=0;
     for(int iSample=minSample; iSample<=maxSample; ++iSample)
     {
@@ -89,16 +83,44 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nmFitSamples, 
       g_max.SetPointError(point, 0., BaselineRMS());
       ++point;
     }
-    auto fit_result = g_max.Fit(fitMax_, "QRSO");
+    g_max.Fit(fitMax_, "QNR+");
     fitTimeMax_ = fitMax_->GetMaximumX();
     fitAmpMax_ = fitMax_->Eval(fitTimeMax_);
-    fitChi2Max_ = fit_result->Chi2()/fitMax_->GetNDF();
+    fitChi2Max_ = fitMax_->GetChisquare()/fitMax_->GetNDF();
 
+    return WFFitResults{fitAmpMax_, fitTimeMax_*tUnit_, fitChi2Max_, fitMax_};
+    
+    
+    // //---fit the max
+    // TGraphErrors g_max;
+    // TF1 fitMax("fitMax", fitFunc.c_str(), minSample-0.5, maxSample+0.5);
+    // if (fitParams!=NULL){
+    //   for(unsigned int param = 0; param < fitParams->size(); ++param)
+    //     fitMax.SetParameter(param,fitParams->at(param));
+    // }
+    
+    // int point=0;
+    // for(int iSample=minSample; iSample<=maxSample; ++iSample)
+    // {
+    //   g_max.SetPoint(point, iSample, samples_[iSample]);
+    //   g_max.SetPointError(point, 0., BaselineRMS());
+    //   ++point;
+    // }
+    // g_max.Fit(&fitMax, "QRS0");
+    // fitTimeMax_ = fitMax.GetMaximumX();
+    // fitAmpMax_ = fitMax.Eval(fitTimeMax_);
+    // fitChi2Max_ = fitMax.GetChisquare()/fitMax.GetNDF();
+
+    // return WFFitResults{fitAmpMax_, fitTimeMax_*tUnit_, fitChi2Max_, &fitMax};
+    
+    fitTimeMax_ = 10.;
+    fitAmpMax_ = 100.;
+    fitChi2Max_ = 1.;
     return WFFitResults{fitAmpMax_, fitTimeMax_*tUnit_, fitChi2Max_, fitMax_};
 }
  
 //----------Get time with the specified method--------------------------------------------
-pair<float, float> WFClass::GetTime(string method, vector<float>& params)
+vector<float> WFClass::GetTime(string method, vector<float>& params)
 {
   //---CFD
     if(method.find("CFD") != string::npos)
@@ -141,30 +163,15 @@ pair<float, float> WFClass::GetTime(string method, vector<float>& params)
     }
     
     cout << ">>>ERROR: time reconstruction method <" << method << "> not supported" << endl;
-    return make_pair(-1000, -1.);
-}
-
-TF1* WFClass::GetTimeFit(string method)
-{
-    //---CFD
-    if(method.find("CFD") != string::npos)
-        return GetTimeCFFunc();
-    
-    //---LED
-    else if(method.find("LED") != string::npos)
-        return GetTimeLEFunc();
-    
-    //---TED
-    else if(method.find("TED") != string::npos)
-        return GetTimeTEFunc();
-    
-    cout << ">>>ERROR: time reconstruction method <" << method << "> not supported" << endl;
-    return NULL;
+    vector<float> val{-1000.,-1.,0.};
+    return val;
 }
 
 //----------Get CF time for a given fraction and in a given range-------------------------
-pair<float, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int max)
+vector<float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int max)
 {
+    float A=0., B=0.;
+    
     if(frac != cfFrac_ || cfSample_ != -1)
     {
         //---setups---
@@ -176,8 +183,11 @@ pair<float, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int 
         if(fitAmpMax_ == -1)
 	  GetInterpolatedAmpMax(min, max);
         if(frac == 1)
-	  return make_pair(maxSample_*tUnit_, 1.);
-	
+        {
+          vector<float> val{maxSample_*tUnit_, 1.,0.};
+          return val;
+	}
+        
         //---find first sample above Amax*frac
         cfTime_ = -1000.;
         chi2cf_ = -1.;
@@ -189,31 +199,32 @@ pair<float, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int 
                 break;
             }
         }
+        
         //---interpolate -- A+Bx = frac * amp
-        float A=0, B=0;
         chi2cf_ = LinearInterpolation(A, B, cfSample_-int(nFitSamples/2), cfSample_+int((nFitSamples-1)/2));
         cfTime_ = (fitAmpMax_ * frac - A) / B;
-        
-	if (fitCF_!=NULL) delete fitCF_;
-        fitCF_ = new TF1("fitCF", "[0]+[1]*(x*[2])", cfSample_-int(nFitSamples/2)-0.5, cfSample_+int((nFitSamples-1)/2)+0.5);
-        fitCF_ -> SetParameters(A,B,tUnit_);
     }
     
-    return make_pair(cfTime_, chi2cf_);
+    vector<float> val{cfTime_, chi2cf_, B};
+    return val;
 }
 
 //----------Get leading edge time at a given threshold and in a given range---------------
-pair<float, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
+vector<float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
 {
     //---check if signal window is valid
     if(min==max && max==-1 && sWinMin_==sWinMax_ && sWinMax_==-1)
-        return make_pair(-1000., -1.);
+    {
+      vector<float> val{-1000.,-1.,0.};
+      return val;
+    }
     
     //---setup signal window
     if(min!=-1 && max!=-1)
         SetSignalWindow(min, max);
     
     //---compute LED time value 
+    float A=0., B=0.;
     leSample_ = -1;
     if(thr != leThr_ || leSample_ == -1)
     {
@@ -231,39 +242,37 @@ pair<float, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamp
         if( leSample_ >= 0 )
         {
           //---interpolate -- A+Bx = amp
-          float A=0, B=0;
           chi2le_ = LinearInterpolation(A, B, leSample_-nmFitSamples, leSample_+npFitSamples);
           leTime_ = (leThr_ - A) / B;
-          
-	  if (fitLE_!=NULL) delete fitLE_;
-          fitLE_ = new TF1("fitLE", "[0]+[1]*(x*[2])", leSample_-nmFitSamples-0.5, leSample_+npFitSamples+0.5);
-          fitLE_ -> SetParameters(A,B,tUnit_);
         }
         else
         {
           chi2le_ = -1.;
           leTime_ = -99.;
-	  if (fitLE_!=NULL) delete fitLE_;
-          fitLE_ = new TF1("fitLE","[0]+[1]*(x*[2])",0.,1024.);
-          fitLE_ -> SetParameters(0.,0.,tUnit_);
+          B = 0.;
         }
     }
     
-    return make_pair(leTime_, chi2le_);
+    vector<float> val{leTime_, chi2le_, B};
+    return val;
 }
 
 //----------Get trailing edge time at a given threshold and in a given range---------------
-pair<float, float> WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
+vector<float> WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
 {
     //---check if signal window is valid
     if(min==max && max==-1 && sWinMin_==sWinMax_ && sWinMax_==-1)
-        return make_pair(-1000., -1.);
+    {
+      vector<float> val{-1000.,-1.,0.};
+      return val;
+    }
     
     //---setup signal window
     if(min!=-1 && max!=-1)
         SetSignalWindow(min, max);
     
-   //---compute TED time value 
+    //---compute TED time value 
+    float A=0., B=0.;
     teSample_ = -1;
     if(thr != teThr_ || teSample_ == -1)
     {
@@ -282,25 +291,19 @@ pair<float, float> WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamp
         if( teSample_ >= 0 )
         {
           //---interpolate -- A+Bx = amp
-          float A=0, B=0;
           chi2te_ = LinearInterpolation(A, B, teSample_-nmFitSamples, teSample_+npFitSamples);
           teTime_ = (teThr_ - A) / B;
-          
-	  if (fitTE_!=NULL) delete fitTE_;
-          fitTE_ = new TF1("fitTE", "[0]+[1]*(x*[2])", teSample_-nmFitSamples-0.5, teSample_+npFitSamples+0.5);
-          fitTE_ -> SetParameters(A,B,tUnit_);
         }
         else
         {
           chi2te_ = -1.;
           teTime_ = -99.;
-	  if (fitTE_!=NULL) delete fitTE_;
-          fitTE_ = new TF1("fitTE","[0]+[1]*(x*[2])",0.,1024.);
-          fitTE_ -> SetParameters(0.,0.,tUnit_);
+          B = 0.;
         }
     }
     
-    return make_pair(teTime_, chi2te_);
+    vector<float> val{teTime_, chi2te_, B};
+    return val;
 }
 
 //----------Get the waveform integral in the given range----------------------------------

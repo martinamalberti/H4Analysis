@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
                            opts.GetOpt<int>(refChannel+".signalWin", 1));
         WFBaseline refBaseline=WF.SubtractBaseline();
         refAmpl = WF.GetInterpolatedAmpMax().ampl;            
-        refTime = WF.GetTime(opts.GetOpt<string>(refChannel+".timeType"), timeOpts[refChannel]).first;
+        refTime = WF.GetTime(opts.GetOpt<string>(refChannel+".timeType"), timeOpts[refChannel]).at(0);
 	//---you may want to use an offset, for example if you use the trigger time
 	if(opts.OptExist(refChannel+".timeOffset"))refTime -= opts.GetOpt<float>(refChannel+".timeOffset");
         //---require reference channel to be good
@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
                                opts.GetOpt<int>(channel+".signalWin", 1));
             WFBaseline channelBaseline=WF.SubtractBaseline();
 	    channelAmpl = WF.GetInterpolatedAmpMax(-1,-1,opts.GetOpt<int>(channel+".signalWin", 2)).ampl;
-            channelTime = WF.GetTime(opts.GetOpt<string>(channel+".timeType"), timeOpts[channel]).first;
+            channelTime = WF.GetTime(opts.GetOpt<string>(channel+".timeType"), timeOpts[channel]).at(0);
 #ifdef DEBUG
 	    std::cout << "--- " << channel << " " << channelAmpl << "," << channelTime << "," << channelBaseline.rms << std::endl;
 #endif
