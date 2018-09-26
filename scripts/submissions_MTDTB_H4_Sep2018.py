@@ -15,7 +15,7 @@ with open("/afs/cern.ch/user/m/malberti/public/runList_H4_Sep2018_digiConf"+conf
             " -b /afs/cern.ch/work/m/malberti/MTD/TBatH4Sept2018/H4Analysis/" + \
             " -e ./bin/H4Reco.exe" + \
             " -c cfg/MTDTB_H4_Sep2018/MTD_H4_Sep2018_digiConf"+confNumber+".cfg" + \
-            " -q 8nh " + \
+            " -q cmscaf1nd " + \
             " -p1 " + str(tableX) + \
             " -p2 " + str(tableY) + \
             " -p3 " + str(sensorconf) + \
@@ -27,4 +27,4 @@ with open("/afs/cern.ch/user/m/malberti/public/runList_H4_Sep2018_digiConf"+conf
             " -p9 " + str(vbiasmat) + \
             " -s "
         print command
-        os.system(command)
+        #os.system(command)
