@@ -36,6 +36,7 @@ std::vector<std::string> ampChannels;
 /*** tree variables ***/
 struct TreeVars
 {
+  float t_digiConf;
   float t_NINOthr;
   float* t_amp;
   float* t_time;
@@ -154,11 +155,17 @@ int main(int argc, char** argv)
 
   float dtmin = 5;
   float dtmax = 15;
-  if (ninoThr == 20){
-    dtmin = -20;
-    dtmax = 20;
-  }
+  //  if (ninoThr == 20){
+  //  dtmin = -20;
+  //  dtmax = 20;
+  //}
 
+  std::cout << treeVars.t_digiConf <<std::endl;
+  // if (treeVars.t_digiConf == 2){
+  if (runs[0]>=12510 && runs[0]<=12538)  {
+    dtmin = 0;
+    dtmax = 10;
+  }
 
   for (int i = 0 ; i < NCHANNELS; i++){
 
@@ -583,6 +590,7 @@ int main(int argc, char** argv)
 void InitTreeVars(TTree* chain1,TreeVars& treeVars){
   std::cout << "ciao" <<std::endl;
   
+  treeVars.t_digiConf = 0;
   treeVars.t_NINOthr = 0;
   treeVars.t_amp = new float[36];
   treeVars.t_time_max = new float[36];
@@ -595,6 +603,8 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars){
   treeVars.t_Y = new float[2];
 
   //chain1 -> SetBranchStatus("*",0);
+
+  chain1 -> SetBranchStatus("digiConf",      1); chain1 -> SetBranchAddress("digiConf",     &treeVars.t_digiConf);
 
   chain1 -> SetBranchStatus("NINOthr",       1); chain1 -> SetBranchAddress("NINOthr",     &treeVars.t_NINOthr);
 

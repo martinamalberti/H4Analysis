@@ -443,6 +443,14 @@ int main(int argc, char** argv)
   std::map<std::string,float> sigmaEff1;
   std::map<std::string,float> sigmaEff2;
 
+  std::map<std::string,TF1*>  fitFun1_ampRatioCorr;
+  std::map<std::string,TF1*>  fitFun2_ampRatioCorr;
+
+  std::map<std::string,float> sigmaGaus1_ampRatioCorr;
+  std::map<std::string,float> sigmaGaus2_ampRatioCorr;
+  std::map<std::string,float> sigmaEff1_ampRatioCorr;
+  std::map<std::string,float> sigmaEff2_ampRatioCorr;
+
   float tmin, tmax;
   float* vals = new float[6];
 
@@ -455,14 +463,23 @@ int main(int argc, char** argv)
     if (h_dt_MCP1_ampCorr[channelName] -> GetEntries() == 0) continue;
     if (h_dt_MCP2_ampCorr[channelName] -> GetEntries() == 0) continue;
 
+    // -- get the effective sigma (68%)
+    FindSmallestInterval(vals,h_dt_MCP1_ampCorr[channelName],0.68,true); 
+    sigmaEff1[channelName] = 0.5*(vals[5]-vals[4]);   
+
+    FindSmallestInterval(vals,h_dt_MCP2_ampCorr[channelName],0.68,true); 
+    sigmaEff2[channelName] = 0.5*(vals[5]-vals[4]);   
+
     // -- get the gaussian sigma
     fitFun1[channelName] = new TF1(Form("fitFun1_%s",channelName.c_str()),"gaus",3);
     fitFun1[channelName]->SetLineColor(1);
     fitFun1[channelName]->SetLineWidth(1);
     fitFun1[channelName]->SetParameter(1,h_dt_MCP1_ampCorr[channelName]->GetMean());
     fitFun1[channelName]->SetParameter(2,h_dt_MCP1_ampCorr[channelName]->GetRMS());
-    tmin = h_dt_MCP1_ampCorr[channelName]->GetMean()-2.0*h_dt_MCP1_ampCorr[channelName]->GetRMS();
-    tmax = h_dt_MCP1_ampCorr[channelName]->GetMean()+2.0*h_dt_MCP1_ampCorr[channelName]->GetRMS();
+    //tmin = h_dt_MCP1_ampCorr[channelName]->GetMean()-2.0*h_dt_MCP1_ampCorr[channelName]->GetRMS();
+    //tmax = h_dt_MCP1_ampCorr[channelName]->GetMean()+2.0*h_dt_MCP1_ampCorr[channelName]->GetRMS();
+    tmin = h_dt_MCP1_ampCorr[channelName]->GetMean()-1.5*sigmaEff1[channelName];
+    tmax = h_dt_MCP1_ampCorr[channelName]->GetMean()+1.5*sigmaEff1[channelName];
     h_dt_MCP1_ampCorr[channelName]->Fit(Form("fitFun1_%s",channelName.c_str()),"QS+","", tmin, tmax);
     
     sigmaGaus1[channelName] = fitFun1[channelName]->GetParameter(2);
@@ -473,25 +490,63 @@ int main(int argc, char** argv)
     fitFun2[channelName]->SetLineWidth(1);
     fitFun2[channelName]->SetParameter(1,h_dt_MCP2_ampCorr[channelName]->GetMean());
     fitFun2[channelName]->SetParameter(2,h_dt_MCP2_ampCorr[channelName]->GetRMS());
-    tmin = h_dt_MCP2_ampCorr[channelName]->GetMean()-2.0*h_dt_MCP2_ampCorr[channelName]->GetRMS();
-    tmax = h_dt_MCP2_ampCorr[channelName]->GetMean()+2.0*h_dt_MCP2_ampCorr[channelName]->GetRMS();
+    //tmin = h_dt_MCP2_ampCorr[channelName]->GetMean()-2.0*h_dt_MCP2_ampCorr[channelName]->GetRMS();
+    //tmax = h_dt_MCP2_ampCorr[channelName]->GetMean()+2.0*h_dt_MCP2_ampCorr[channelName]->GetRMS();
+    tmin = h_dt_MCP2_ampCorr[channelName]->GetMean()-1.5*sigmaEff2[channelName];
+    tmax = h_dt_MCP2_ampCorr[channelName]->GetMean()+1.5*sigmaEff2[channelName];
     h_dt_MCP2_ampCorr[channelName]->Fit(Form("fitFun2_%s",channelName.c_str()),"QS+","", tmin, tmax);
     
     sigmaGaus2[channelName] = fitFun2[channelName]->GetParameter(2);
     std::cout << " sigma(" << channelName << " - MCP2) = " << sigmaGaus2[channelName] <<std::endl;
 
-    // -- get the effective sigma (68%)
-    FindSmallestInterval(vals,h_dt_MCP1_ampCorr[channelName],0.68,true); 
-    sigmaEff1[channelName] = 0.5*(vals[5]-vals[4]);   
 
-    FindSmallestInterval(vals,h_dt_MCP2_ampCorr[channelName],0.68,true); 
-    sigmaEff2[channelName] = 0.5*(vals[5]-vals[4]);   
+    // ampRatio corrected
+
+    // -- get the effective sigma (68%)
+    FindSmallestInterval(vals,h_dt_MCP1_ampRatioCorr[channelName],0.68,true); 
+    sigmaEff1_ampRatioCorr[channelName] = 0.5*(vals[5]-vals[4]);   
+
+    FindSmallestInterval(vals,h_dt_MCP2_ampRatioCorr[channelName],0.68,true); 
+    sigmaEff2_ampRatioCorr[channelName] = 0.5*(vals[5]-vals[4]);   
+
+    // -- get the gaussian sigma
+    fitFun1_ampRatioCorr[channelName] = new TF1(Form("fitFun1_ampRatioCorr_%s",channelName.c_str()),"gaus",3);
+    fitFun1_ampRatioCorr[channelName]->SetLineColor(1);
+    fitFun1_ampRatioCorr[channelName]->SetLineWidth(1);
+    fitFun1_ampRatioCorr[channelName]->SetParameter(1,h_dt_MCP1_ampRatioCorr[channelName]->GetMean());
+    fitFun1_ampRatioCorr[channelName]->SetParameter(2,h_dt_MCP1_ampRatioCorr[channelName]->GetRMS());
+    //tmin = h_dt_MCP1_ampRatioCorr[channelName]->GetMean()-2.0*h_dt_MCP1_ampRatioCorr[channelName]->GetRMS();
+    //tmax = h_dt_MCP1_ampRatioCorr[channelName]->GetMean()+2.0*h_dt_MCP1_ampRatioCorr[channelName]->GetRMS();
+    tmin = h_dt_MCP1_ampRatioCorr[channelName]->GetMean()-1.5*sigmaEff1_ampRatioCorr[channelName];
+    tmax = h_dt_MCP1_ampRatioCorr[channelName]->GetMean()+1.5*sigmaEff1_ampRatioCorr[channelName];
+    h_dt_MCP1_ampRatioCorr[channelName]->Fit(Form("fitFun1_ampRatioCorr_%s",channelName.c_str()),"QS+","", tmin, tmax);
+    
+    sigmaGaus1_ampRatioCorr[channelName] = fitFun1_ampRatioCorr[channelName]->GetParameter(2);
+    std::cout << " sigma(" << channelName << " - MCP1) = " << sigmaGaus1_ampRatioCorr[channelName] <<std::endl;
+
+    fitFun2_ampRatioCorr[channelName] = new TF1(Form("fitFun2_ampRatioCorr_%s",channelName.c_str()),"gaus",3);
+    fitFun2_ampRatioCorr[channelName]->SetLineColor(1);
+    fitFun2_ampRatioCorr[channelName]->SetLineWidth(1);
+    fitFun2_ampRatioCorr[channelName]->SetParameter(1,h_dt_MCP2_ampRatioCorr[channelName]->GetMean());
+    fitFun2_ampRatioCorr[channelName]->SetParameter(2,h_dt_MCP2_ampRatioCorr[channelName]->GetRMS());
+    //tmin = h_dt_MCP2_ampRatioCorr[channelName]->GetMean()-2.0*h_dt_MCP2_ampRatioCorr[channelName]->GetRMS();
+    //tmax = h_dt_MCP2_ampRatioCorr[channelName]->GetMean()+2.0*h_dt_MCP2_ampRatioCorr[channelName]->GetRMS();
+    tmin = h_dt_MCP2_ampRatioCorr[channelName]->GetMean()-1.5*sigmaEff2_ampRatioCorr[channelName];
+    tmax = h_dt_MCP2_ampRatioCorr[channelName]->GetMean()+1.5*sigmaEff2_ampRatioCorr[channelName];
+    h_dt_MCP2_ampRatioCorr[channelName]->Fit(Form("fitFun2_ampRatioCorr_%s",channelName.c_str()),"QS+","", tmin, tmax);
+    
+    sigmaGaus2_ampRatioCorr[channelName] = fitFun2_ampRatioCorr[channelName]->GetParameter(2);
+    std::cout << " sigma(" << channelName << " - MCP2) = " << sigmaGaus2_ampRatioCorr[channelName] <<std::endl;
+
 
   }
 
   delete vals;
 
-
+  std::cout << "*** With ampl. correction " << std::endl;
+  std::cout << "sigma(MCP2-MCP1) = " << sigmaGaus1["MCP2"] <<std::endl;
+  std::cout << "sigma(PTK2-MCP1) = " << sigmaGaus1["PTK2"] <<std::endl;
+  std::cout << "sigma(PTK2-MCP2) = " << sigmaGaus2["PTK2"] <<std::endl;
   float sigmaGausPTK2 = sqrt (0.5 * (sigmaGaus1["PTK2"]*sigmaGaus1["PTK2"] + sigmaGaus2["PTK2"]*sigmaGaus2["PTK2"] - sigmaGaus1["MCP2"]*sigmaGaus1["MCP2"]) );
   float sigmaGausMCP1 = sqrt(sigmaGaus1["PTK2"]*sigmaGaus1["PTK2"]-sigmaGausPTK2*sigmaGausPTK2 );
   float sigmaGausMCP2 = sqrt(sigmaGaus2["PTK2"]*sigmaGaus2["PTK2"]-sigmaGausPTK2*sigmaGausPTK2 );
@@ -503,6 +558,23 @@ int main(int argc, char** argv)
   float sigmaEffMCP2 = sqrt(sigmaEff2["PTK2"]*sigmaEff2["PTK2"]-sigmaEffPTK2*sigmaEffPTK2 );
   std::cout << "Effective sigma: " << std::endl; 
   std::cout << "sigma(PTK2) = " << sigmaEffPTK2 << "    sigma(MCP1) = " << sigmaEffMCP1 << "  sigma(MCP2) = " <<sigmaEffMCP2 <<std::endl;
+
+
+
+  std::cout << "*** With ampl. ratio correction " << std::endl;
+  sigmaGausPTK2 = sqrt (0.5 * (sigmaGaus1_ampRatioCorr["PTK2"]*sigmaGaus1_ampRatioCorr["PTK2"] + sigmaGaus2_ampRatioCorr["PTK2"]*sigmaGaus2_ampRatioCorr["PTK2"] - sigmaGaus1_ampRatioCorr["MCP2"]*sigmaGaus1_ampRatioCorr["MCP2"]) );
+  sigmaGausMCP1 = sqrt(sigmaGaus1_ampRatioCorr["PTK2"]*sigmaGaus1["PTK2"]-sigmaGausPTK2*sigmaGausPTK2 );
+  sigmaGausMCP2 = sqrt(sigmaGaus2_ampRatioCorr["PTK2"]*sigmaGaus2_ampRatioCorr["PTK2"]-sigmaGausPTK2*sigmaGausPTK2 );
+  std::cout << "Gaussian sigma: " << std::endl; 
+  std::cout << "sigma(PTK2) = " << sigmaGausPTK2 << "    sigma(MCP1) = " << sigmaGausMCP1 << "  sigma(MCP2) = " <<sigmaGausMCP2 <<std::endl;
+
+  sigmaEffPTK2 = sqrt (0.5 * (sigmaEff1_ampRatioCorr["PTK2"]*sigmaEff1_ampRatioCorr["PTK2"] + sigmaEff2_ampRatioCorr["PTK2"]*sigmaEff2_ampRatioCorr["PTK2"] - sigmaEff1_ampRatioCorr["MCP2"]*sigmaEff1_ampRatioCorr["MCP2"]) );
+  sigmaEffMCP1 = sqrt(sigmaEff1_ampRatioCorr["PTK2"]*sigmaEff1_ampRatioCorr["PTK2"]-sigmaEffPTK2*sigmaEffPTK2 );
+  sigmaEffMCP2 = sqrt(sigmaEff2_ampRatioCorr["PTK2"]*sigmaEff2_ampRatioCorr["PTK2"]-sigmaEffPTK2*sigmaEffPTK2 );
+  std::cout << "Effective sigma: " << std::endl; 
+  std::cout << "sigma(PTK2) = " << sigmaEffPTK2 << "    sigma(MCP1) = " << sigmaEffMCP1 << "  sigma(MCP2) = " <<sigmaEffMCP2 <<std::endl;
+
+
 
   // -- Save histograms on file
   std::cout << "Saving histograms in file " << OutputFile.c_str() <<std::endl;
