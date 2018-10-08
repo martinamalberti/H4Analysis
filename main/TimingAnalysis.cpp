@@ -44,6 +44,9 @@ struct TreeVars
   float* t_b_rms;
   int  t_CFD;
   int  t_LED;
+  int  t_LED50;
+  int  t_LED100;
+  int  t_LED200;
   float* t_X;
   float* t_Y;
 
@@ -127,28 +130,47 @@ int main(int argc, char** argv)
   std::map<std::string,TH1F*>  h_amp_nocuts;
   std::map<std::string,TH1F*>  h_amp;
   std::map<std::string,TH1F*>  h_time;
+  std::map<std::string,TH1F*>  h_rt;
   std::map<std::string,TH1F*>  h_posX;
   std::map<std::string,TH1F*>  h_posY;
   std::map<std::string,TH2F*>  h2_posXY;
-  std::map<std::string,TProfile2D*>      p2_eff_vs_posXY;
-  std::map<std::string,TProfile2D*>      p2_amp_vs_posXY;
-  std::map<std::string,TProfile2D*>      p2_dt_vs_posXY;
+
+  std::map<std::string,TProfile2D*>    p2_eff_vs_posXY;
+  std::map<std::string,TProfile2D*>    p2_dt_vs_posXY;
+  std::map<std::string,TProfile2D*>    p2_amp_vs_posXY;
+  std::map<std::string,TProfile*>      p_amp_vs_posX;
+  std::map<std::string,TProfile*>      p_amp_vs_posY;
 
   std::map<std::string,TH1F*>  h_dt;
+  std::map<std::string,TH1F*>  h_dt_central;
+  std::map<std::string,TH1F*>  h_dt_border;
+
   std::map<std::string,TH1F*>  h_dt_ampCorr;
+  std::map<std::string,TH1F*>  h_dt_ampCorr_central;
+  std::map<std::string,TH1F*>  h_dt_ampCorr_border;
   std::map<std::string,TH1F*>  h_dt_ampCorr_posCorr;
+  std::map<std::string,TH1F*>  h_dt_rtCorr;
+  std::map<std::string,TH1F*>  h_dt_rtCorr_posCorr;
 
   std::map<std::string,TProfile*>      p_dt_vs_amp;
+  std::map<std::string,TProfile*>      p_dt_vs_rt;
   std::map<std::string,TProfile*>      p_dt_vs_posX;
   std::map<std::string,TProfile*>      p_dt_vs_posY;
 
   std::map<std::string,TProfile*>      p_dt_ampCorr_vs_amp;
   std::map<std::string,TProfile*>      p_dt_ampCorr_vs_posX;
   std::map<std::string,TProfile*>      p_dt_ampCorr_vs_posY;
+  std::map<std::string,TProfile*>      p_dt_rtCorr_vs_amp;
+  std::map<std::string,TProfile*>      p_dt_rtCorr_vs_posX;
+  std::map<std::string,TProfile*>      p_dt_rtCorr_vs_posY;
 
   std::map<std::string,TProfile*>      p_dt_ampCorr_posCorr_vs_amp;
   std::map<std::string,TProfile*>      p_dt_ampCorr_posCorr_vs_posX;
   std::map<std::string,TProfile*>      p_dt_ampCorr_posCorr_vs_posY;
+  std::map<std::string,TProfile*>      p_dt_rtCorr_posCorr_vs_amp;
+  std::map<std::string,TProfile*>      p_dt_rtCorr_posCorr_vs_posX;
+  std::map<std::string,TProfile*>      p_dt_rtCorr_posCorr_vs_posY;
+
 
   std::string channelName;
   std::string channelNameA;
@@ -174,29 +196,48 @@ int main(int argc, char** argv)
     h_amp_nocuts[channelName]  = new TH1F(Form("h_amp_nocuts_%s", channelName.c_str()), Form("h_amp_nocuts_%s",channelName.c_str()), 1000, 0., 1.0);
     h_amp[channelName]  = new TH1F(Form("h_amp_%s", channelName.c_str()), Form("h_amp_%s",channelName.c_str()), 1000, 0., 1.0);
     h_time[channelName] = new TH1F(Form("h_time_%s",channelName.c_str()),Form("h_time_%s",channelName.c_str()),200,0.,200.);
+    h_rt[channelName] = new TH1F(Form("h_rt_%s",channelName.c_str()),Form("h_rt_%s",channelName.c_str()),100,0.,50.);
     h_posX[channelName] = new TH1F(Form("h_posX_%s",channelName.c_str()),Form("h_posX_%s",channelName.c_str()), 80,-20.,20.);
     h_posY[channelName] = new TH1F(Form("h_posY_%s",channelName.c_str()),Form("h_posY_%s",channelName.c_str()),80,-20.,20.);
     h2_posXY[channelName] = new TH2F(Form("h2_posXY_%s",channelName.c_str()),Form("h2_posXY_%s",channelName.c_str()),80,-20.,20.,80, -20.,20.);
     p2_eff_vs_posXY[channelName] = new TProfile2D(Form("p2_eff_vs_posXY_%s",channelName.c_str()),Form("p2_eff_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., 0, 1);
-    p2_amp_vs_posXY[channelName] = new TProfile2D(Form("p2_amp_vs_posXY_%s",channelName.c_str()),Form("p2_amp_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., 0, 1);
     p2_dt_vs_posXY[channelName] = new TProfile2D(Form("p2_dt_vs_posXY_%s",channelName.c_str()),Form("p2_dt_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., dtmin, dtmax);
-
+    p2_amp_vs_posXY[channelName] = new TProfile2D(Form("p2_amp_vs_posXY_%s",channelName.c_str()),Form("p2_amp_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., 0, 1);
+    p_amp_vs_posX[channelName] = new TProfile(Form("p_amp_vs_posX_%s",channelName.c_str()),Form("p_amp_vs_posX_%s",channelName.c_str()), 80, -20., 20., 0, 1);
+    p_amp_vs_posY[channelName] = new TProfile(Form("p_amp_vs_posY_%s",channelName.c_str()),Form("p_amp_vs_posY_%s",channelName.c_str()), 80, -20., 20., 0, 1);
     
     h_dt[channelName]   = new TH1F(Form("h_dt_%s",channelName.c_str()),Form("h_dt_%s",channelName.c_str()),8000, dtmin, dtmax);
+    h_dt_central[channelName]   = new TH1F(Form("h_dt_central_%s",channelName.c_str()),Form("h_dt_central_%s",channelName.c_str()),8000, dtmin, dtmax);
+    h_dt_border[channelName]   = new TH1F(Form("h_dt_border_%s",channelName.c_str()),Form("h_dt_border_%s",channelName.c_str()),8000, dtmin, dtmax);
+
     h_dt_ampCorr[channelName]   = new TH1F(Form("h_dt_ampCorr_%s",channelName.c_str()),Form("h_dt_ampCorr_%s",channelName.c_str()),8000, dtmin, dtmax);
+    h_dt_ampCorr_central[channelName]   = new TH1F(Form("h_dt_ampCorr_central_%s",channelName.c_str()),Form("h_dt_ampCorr_central_%s",channelName.c_str()),8000, dtmin, dtmax);
+    h_dt_ampCorr_border[channelName]   = new TH1F(Form("h_dt_ampCorr_border_%s",channelName.c_str()),Form("h_dt_ampCorr_border_%s",channelName.c_str()),8000, dtmin, dtmax);
+
     h_dt_ampCorr_posCorr[channelName]   = new TH1F(Form("h_dt_ampCorr_posCorr_%s",channelName.c_str()),Form("h_dt_ampCorr_posCorr_%s",channelName.c_str()),8000, dtmin, dtmax);
+    h_dt_rtCorr[channelName]   = new TH1F(Form("h_dt_rtCorr_%s",channelName.c_str()),Form("h_dt_rtCorr_%s",channelName.c_str()),8000, dtmin, dtmax);
+    h_dt_rtCorr_posCorr[channelName]   = new TH1F(Form("h_dt_rtCorr_posCorr_%s",channelName.c_str()),Form("h_dt_rtCorr_posCorr_%s",channelName.c_str()),8000, dtmin, dtmax);
     
     p_dt_vs_amp[channelName]  = new TProfile(Form("p_dt_vs_amp_%s",channelName.c_str()),Form("p_dt_vs_amp_%s",channelName.c_str()), 200, 0., 1., dtmin, dtmax);
+    p_dt_vs_rt[channelName]   = new TProfile(Form("p_dt_vs_rt_%s",channelName.c_str()),Form("p_dt_vs_rt_%s",channelName.c_str()), 500, 0., 50., dtmin, dtmax);
     p_dt_vs_posX[channelName] = new TProfile(Form("p_dt_vs_posX_%s",channelName.c_str()),Form("p_dt_vs_posX_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
     p_dt_vs_posY[channelName] = new TProfile(Form("p_dt_vs_posY_%s",channelName.c_str()),Form("p_dt_vs_posY_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
     
     p_dt_ampCorr_vs_amp[channelName]  = new TProfile(Form("p_dt_ampCorr_vs_amp_%s",channelName.c_str()),Form("p_dt_ampCorr_vs_amp_%s",channelName.c_str()), 200, 0., 1., dtmin, dtmax);
     p_dt_ampCorr_vs_posX[channelName] = new TProfile(Form("p_dt_ampCorr_vs_posX_%s",channelName.c_str()),Form("p_dt_ampCorr_vs_posX_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
     p_dt_ampCorr_vs_posY[channelName] = new TProfile(Form("p_dt_ampCorr_vs_posY_%s",channelName.c_str()),Form("p_dt_ampCorr_vs_posY_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
-    
+
     p_dt_ampCorr_posCorr_vs_amp[channelName]  = new TProfile(Form("p_dt_ampCorr_posCorr_vs_amp_%s",channelName.c_str()),Form("p_dt_ampCorr_posCorr_vs_amp_%s",channelName.c_str()), 200, 0., 1., dtmin, dtmax);
     p_dt_ampCorr_posCorr_vs_posX[channelName] = new TProfile(Form("p_dt_ampCorr_posCorr_vs_posX_%s",channelName.c_str()),Form("p_dt_ampCorr_posCorr_vs_posX_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
     p_dt_ampCorr_posCorr_vs_posY[channelName] = new TProfile(Form("p_dt_ampCorr_posCorr_vs_posY_%s",channelName.c_str()),Form("p_dt_ampCorr_posCorr_vs_posY_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
+    
+    p_dt_rtCorr_vs_amp[channelName]  = new TProfile(Form("p_dt_rtCorr_vs_amp_%s",channelName.c_str()),Form("p_dt_rtCorr_vs_amp_%s",channelName.c_str()), 200, 0., 1., dtmin, dtmax);
+    p_dt_rtCorr_vs_posX[channelName] = new TProfile(Form("p_dt_rtCorr_vs_posX_%s",channelName.c_str()),Form("p_dt_rtCorr_vs_posX_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
+    p_dt_rtCorr_vs_posY[channelName] = new TProfile(Form("p_dt_rtCorr_vs_posY_%s",channelName.c_str()),Form("p_dt_rtCorr_vs_posY_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
+
+    p_dt_rtCorr_posCorr_vs_amp[channelName]  = new TProfile(Form("p_dt_rtCorr_posCorr_vs_amp_%s",channelName.c_str()),Form("p_dt_rtCorr_posCorr_vs_amp_%s",channelName.c_str()), 200, 0., 1., dtmin, dtmax);
+    p_dt_rtCorr_posCorr_vs_posX[channelName] = new TProfile(Form("p_dt_rtCorr_posCorr_vs_posX_%s",channelName.c_str()),Form("p_dt_rtCorr_posCorr_vs_posX_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
+    p_dt_rtCorr_posCorr_vs_posY[channelName] = new TProfile(Form("p_dt_rtCorr_posCorr_vs_posY_%s",channelName.c_str()),Form("p_dt_rtCorr_posCorr_vs_posY_%s",channelName.c_str()), 80, -20., 20., dtmin, dtmax);
     
     
   }
@@ -209,6 +250,7 @@ int main(int argc, char** argv)
   float timeRef = 0;
   float dt   = 0.;
   float dtcorr = 0.;
+  float rt = 0;
   float timeTrg =0;
   float posX = 0;
   float posY = 0;
@@ -218,6 +260,7 @@ int main(int argc, char** argv)
   float tMaxCh  = 40;
   float tMaxRef = 35;
   float bRmsMax = 200;
+  float xtalSize = 11.5; // mm
 
   //-----------------------
   // first loop over events
@@ -271,7 +314,9 @@ int main(int argc, char** argv)
 	// subtract TRG time for each digi group 
 	time = time - timeTrg;
 	dt   = time - timeRef; 
-	  
+	rt   = treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED200] - treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED50] ; 
+	//std::cout << channelNameA << "  " << treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED200] << "  " << treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED50] <<"  " <<rt <<std::endl;
+
 	// -- fill histograms
 	h_time[channelName] -> Fill(time);
 	h2_posXY[channelName]->Fill(posX,posY);
@@ -288,15 +333,28 @@ int main(int argc, char** argv)
 	h_posX[channelName]->Fill(posX);
 	h_posY[channelName]->Fill(posY);
 	p2_amp_vs_posXY[channelName] ->Fill(posX,posY,amp);
+	p_amp_vs_posX[channelName] ->Fill(posX,amp);
+	p_amp_vs_posY[channelName] ->Fill(posY,amp);
+	h_rt[channelName] ->Fill(rt);
 
 	// -- fill time resol plots only for NINO channels
 	if (! (channelName.find("NINO") != std::string::npos) ) continue;
 		
 	h_dt[channelName]->Fill(dt);
 	p_dt_vs_amp[channelName]->Fill(amp,dt);
+	p_dt_vs_rt[channelName]->Fill(rt,dt);
 	p_dt_vs_posX[channelName]->Fill(posX,dt);
 	p_dt_vs_posY[channelName]->Fill(posY,dt);
 	p2_dt_vs_posXY[channelName] ->Fill(posX,posY,dt);
+
+	float xcenter = cut_hodoXmin[ich] + (cut_hodoXmax[ich] - cut_hodoXmin[ich])/2;
+	float ycenter = cut_hodoYmin[ich] + (cut_hodoYmax[ich] - cut_hodoYmin[ich])/2;
+	if ( fabs(posX-xcenter) < 1.5 && fabs(posY-ycenter) < 1.5   ){
+	  h_dt_central[channelName]->Fill(dt);
+	}
+	if ( fabs(posX-xcenter) > (xtalSize/2-3.) && fabs(posY-ycenter) > (xtalSize/2-3.) ){
+	  h_dt_border[channelName]->Fill(dt);
+	} 
 
       } // -- end loop over channels
       
@@ -304,13 +362,24 @@ int main(int argc, char** argv)
   
   
   // --- Amplitude walk corrections
-  std::map<std::string,TF1*>  fitFunc_ampCorr;
+  std::map<std::string,TF1*>  fitFunc_ampCorr;  
+  std::map<std::string,TF1*>  fitFunc_rtCorr;
 
   for (int i = 0 ; i < NCHANNELS; i++){
     channelName = timeChannels.at(i);
+
+    //if (! (channelName.find("NINO") != std::string::npos) ) continue;
+
     fitFunc_ampCorr[channelName] = new TF1(Form("fitFunc_ampCorr_%s",channelName.c_str()),"pol6");
     fitFunc_ampCorr[channelName] -> SetLineColor(kRed);
     p_dt_vs_amp[channelName] -> Fit(Form("fitFunc_ampCorr_%s",channelName.c_str()),"QSR",0,1);
+
+    fitFunc_rtCorr[channelName] = new TF1(Form("fitFunc_rtCorr_%s",channelName.c_str()),"pol6",0,200);
+    fitFunc_rtCorr[channelName] -> SetLineColor(kBlue);
+    fitFunc_rtCorr[channelName] -> SetParameter(0, p_dt_vs_rt[channelName] -> GetMean(2) );
+    p_dt_vs_rt[channelName] -> Fit(Form("fitFunc_rtCorr_%s",channelName.c_str()),"QSR",0,50);
+    
+    std::cout << channelName << "  " << fitFunc_rtCorr[channelName]->Eval(10.)<<std::endl;
   }
 
 
@@ -356,6 +425,7 @@ int main(int argc, char** argv)
 	// subtract TRG time for each digi group
         time = time - timeTrg;
         dt   = time - timeRef;
+	rt   = treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED200] - treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED50] ;
 
 	// -- remove events with bad reco time
         if ( time    > tMaxCh  ) continue;
@@ -368,13 +438,33 @@ int main(int argc, char** argv)
 	// -- fill time resol plots only for NINO channels                
 	if (! (channelName.find("NINO") != std::string::npos) ) continue;
         
-	// -- amplitude walk correction from fitted funtion 
+	// -- amplitude walk correction from ampl
 	dtcorr = dt - fitFunc_ampCorr[channelName]->Eval(amp) + fitFunc_ampCorr[channelName]->Eval(h_amp[channelName]->GetMean()) ; 
-	
+
 	h_dt_ampCorr[channelName]->Fill(dtcorr);
         p_dt_ampCorr_vs_amp[channelName]->Fill(amp,dtcorr);
         p_dt_ampCorr_vs_posX[channelName]->Fill(posX,dtcorr);
         p_dt_ampCorr_vs_posY[channelName]->Fill(posY,dtcorr);
+
+
+	// -- beam spot selection
+	float xcenter = cut_hodoXmin[ich] + (cut_hodoXmax[ich] - cut_hodoXmin[ich])/2;
+	float ycenter = cut_hodoYmin[ich] + (cut_hodoYmax[ich] - cut_hodoYmin[ich])/2;
+	if ( fabs(posX-xcenter) < 1.5 && fabs(posY-ycenter) < 1.5   ){
+	  h_dt_ampCorr_central[channelName]->Fill(dtcorr);
+	}
+	if ( fabs(posX-xcenter) > (xtalSize/2-1.5) && fabs(posY-ycenter) > (xtalSize/2-1.5) ){
+	  h_dt_ampCorr_border[channelName]->Fill(dtcorr);
+	} 
+
+
+	// -- amplitude walk correction from rise time
+	dtcorr = dt - fitFunc_rtCorr[channelName]->Eval(rt) + fitFunc_rtCorr[channelName]->Eval(h_rt[channelName]->GetMean()) ; 
+	h_dt_rtCorr[channelName]->Fill(dtcorr);
+        p_dt_rtCorr_vs_amp[channelName]->Fill(amp,dtcorr);
+        p_dt_rtCorr_vs_posX[channelName]->Fill(posX,dtcorr);
+        p_dt_rtCorr_vs_posY[channelName]->Fill(posY,dtcorr);
+
 
       } // -- end loop over channels
 
@@ -424,6 +514,7 @@ int main(int argc, char** argv)
 	// subtract TRG time for each digi group
         time = time - timeTrg;
         dt   = time - timeRef;
+	rt   = treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED200] - treeVars.t_time[(*treeVars.t_channelId)[channelNameA]+treeVars.t_LED50] ;
 
 	// -- remove events with bad reco time
         if ( time    > tMaxCh  ) continue;
@@ -450,30 +541,60 @@ int main(int argc, char** argv)
         p_dt_ampCorr_posCorr_vs_posX[channelName]->Fill(posX,dtcorr);
         p_dt_ampCorr_posCorr_vs_posY[channelName]->Fill(posY,dtcorr);
 
+        // -- position corrections on top of risetime correction
+	dtcorr = dt - fitFunc_rtCorr[channelName]->Eval(rt) + fitFunc_rtCorr[channelName]->Eval(h_rt[channelName]->GetMean()) ;
+	// -- vs X
+	bin = p_dt_rtCorr_vs_posX[channelName]->FindBin(posX);
+	dtcorr = dtcorr - p_dt_rtCorr_vs_posX[channelName]->GetBinContent(bin) + h_dt_rtCorr[channelName]->GetMean();
+	// -- vs Y
+	bin = p_dt_rtCorr_vs_posY[channelName]->FindBin(posY);
+        dtcorr = dtcorr - p_dt_rtCorr_vs_posY[channelName]->GetBinContent(bin) + h_dt_rtCorr[channelName]->GetMean();
+
+        h_dt_rtCorr_posCorr[channelName]->Fill(dtcorr);
+        p_dt_rtCorr_posCorr_vs_amp[channelName]->Fill(amp,dtcorr);
+        p_dt_rtCorr_posCorr_vs_posX[channelName]->Fill(posX,dtcorr);
+        p_dt_rtCorr_posCorr_vs_posY[channelName]->Fill(posY,dtcorr);
+
       } // -- end loop over channels                                                                                                                                                                                                                                     
     }// -- end third loop over events   
-
 
 
   // -- Compute resolutions (gaussian and effective sigma)
   std::map<std::string,TF1*>  fitFun_ampCorr;
   std::map<std::string,TF1*>  fitFun_ampCorr_posCorr;
+  std::map<std::string,TF1*>  fitFun_rtCorr;
+  std::map<std::string,TF1*>  fitFun_rtCorr_posCorr;
+  std::map<std::string,TF1*>  fitFun_ampCorr_central;
+  std::map<std::string,TF1*>  fitFun_ampCorr_border;
 
   float tmin = 0;
   float tmax = 0;
   double sigmaEff;
   float* vals = new float[6];
 
-
   std::map<std::string,TH1F*>  h_effectiveSigma;
   std::map<std::string,TH1F*>  h_effectiveSigma_ampCorr;
   std::map<std::string,TH1F*>  h_effectiveSigma_ampCorr_posCorr;
+  std::map<std::string,TH1F*>  h_effectiveSigma_rtCorr;
+  std::map<std::string,TH1F*>  h_effectiveSigma_rtCorr_posCorr;
+
+  std::map<std::string,TH1F*>  h_effectiveSigma_central;
+  std::map<std::string,TH1F*>  h_effectiveSigma_border;
+  std::map<std::string,TH1F*>  h_effectiveSigma_ampCorr_central;
+  std::map<std::string,TH1F*>  h_effectiveSigma_ampCorr_border;
 
   for (int ich = 0; ich < NCHANNELS; ich++){
     channelName = timeChannels[ich];
     h_effectiveSigma[channelName]  = new TH1F(Form("h_effectiveSigma_%s",channelName.c_str()),Form("h_effectiveSigma_%s",channelName.c_str()),2000,0.,200.);
     h_effectiveSigma_ampCorr[channelName]  = new TH1F(Form("h_effectiveSigma_ampCorr_%s",channelName.c_str()),Form("h_effectiveSigma_ampCorr_%s",channelName.c_str()), 2000,0.,200.);
     h_effectiveSigma_ampCorr_posCorr[channelName]  = new TH1F(Form("h_effectiveSigma_ampCorr_posCorr_%s",channelName.c_str()),Form("h_effectiveSigma_ampCorr_posCorr_%s",channelName.c_str()),2000,0.,200.);
+    h_effectiveSigma_rtCorr[channelName]  = new TH1F(Form("h_effectiveSigma_rtCorr_%s",channelName.c_str()),Form("h_effectiveSigma_rtCorr_%s",channelName.c_str()), 2000,0.,200.);
+    h_effectiveSigma_rtCorr_posCorr[channelName]  = new TH1F(Form("h_effectiveSigma_rtCorr_posCorr_%s",channelName.c_str()),Form("h_effectiveSigma_rtCorr_posCorr_%s",channelName.c_str()),2000,0.,200.);
+    
+    h_effectiveSigma_central[channelName]  = new TH1F(Form("h_effectiveSigma_central_%s",channelName.c_str()),Form("h_effectiveSigma_central_%s",channelName.c_str()),2000,0.,200.);
+    h_effectiveSigma_ampCorr_central[channelName]  = new TH1F(Form("h_effectiveSigma_ampCorr_central_%s",channelName.c_str()),Form("h_effectiveSigma_ampCorr_central_%s",channelName.c_str()), 2000,0.,200.);
+    h_effectiveSigma_border[channelName]  = new TH1F(Form("h_effectiveSigma_border_%s",channelName.c_str()),Form("h_effectiveSigma_border_%s",channelName.c_str()),2000,0.,200.);
+    h_effectiveSigma_ampCorr_border[channelName]  = new TH1F(Form("h_effectiveSigma_ampCorr_border_%s",channelName.c_str()),Form("h_effectiveSigma_ampCorr_border_%s",channelName.c_str()), 2000,0.,200.);
   }
 
   int nRe = 4;
@@ -484,7 +605,80 @@ int main(int argc, char** argv)
     // -- skip MCPs and channels with no entries
     if (channelName == "PTK1" || channelName == "TRG0") continue;
 
-    // -- amp & pos corrections
+
+    // -- no corrections
+    FindSmallestInterval(vals,h_dt[channelName],0.68,true);
+    sigmaEff = 0.5*(vals[5]-vals[4]);
+    h_effectiveSigma[channelName]->Fill(sigmaEff);
+    h_dt[channelName]->Rebin(nRe);    
+
+    FindSmallestInterval(vals,h_dt_central[channelName],0.68,true);
+    sigmaEff = 0.5*(vals[5]-vals[4]);
+    h_effectiveSigma_central[channelName]->Fill(sigmaEff);
+    h_dt_central[channelName]->Rebin(nRe);    
+
+    FindSmallestInterval(vals,h_dt_border[channelName],0.68,true);
+    sigmaEff = 0.5*(vals[5]-vals[4]);
+    h_effectiveSigma_border[channelName]->Fill(sigmaEff);
+    h_dt_border[channelName]->Rebin(nRe);    
+
+
+    // ----- amp corr
+    
+    // -- get the effective (68%) sigma
+    FindSmallestInterval(vals,h_dt_ampCorr[channelName],0.68,true); 
+    sigmaEff = 0.5*(vals[5]-vals[4]); 
+    h_effectiveSigma_ampCorr[channelName]->Fill(sigmaEff);
+    h_dt_ampCorr[channelName]->Rebin(nRe);    
+
+    // -- get the gaussian sigma
+    fitFun_ampCorr[channelName]= new TF1(Form("fitFun_ampCorr_%s",channelName.c_str()),"gaus");
+    fitFun_ampCorr[channelName]->SetLineColor(2);
+    fitFun_ampCorr[channelName]->SetLineWidth(1);
+    fitFun_ampCorr[channelName]->SetParameter(1,h_dt_ampCorr[channelName]->GetMean());
+    fitFun_ampCorr[channelName]->SetParameter(2,h_dt_ampCorr[channelName]->GetRMS());
+    tmin = h_dt_ampCorr[channelName]->GetMean()-1.5*sigmaEff;
+    tmax = h_dt_ampCorr[channelName]->GetMean()+1.5*sigmaEff;
+    h_dt_ampCorr[channelName]->Fit(Form("fitFun_ampCorr_%s",channelName.c_str()),"QRS","", tmin, tmax);
+
+
+    // -- only central impact point
+    // -- get the effective (68%) sigma
+    FindSmallestInterval(vals,h_dt_ampCorr_central[channelName],0.68,true); 
+    sigmaEff = 0.5*(vals[5]-vals[4]); 
+    h_effectiveSigma_ampCorr_central[channelName]->Fill(sigmaEff);
+    h_dt_ampCorr_central[channelName]->Rebin(nRe);    
+
+    // -- get the gaussian sigma
+    fitFun_ampCorr_central[channelName]= new TF1(Form("fitFun_ampCorr_central_%s",channelName.c_str()),"gaus");
+    fitFun_ampCorr_central[channelName]->SetLineColor(2);
+    fitFun_ampCorr_central[channelName]->SetLineWidth(1);
+    fitFun_ampCorr_central[channelName]->SetParameter(1,h_dt_ampCorr_central[channelName]->GetMean());
+    fitFun_ampCorr_central[channelName]->SetParameter(2,h_dt_ampCorr_central[channelName]->GetRMS());
+    tmin = h_dt_ampCorr_central[channelName]->GetMean()-1.5*sigmaEff;
+    tmax = h_dt_ampCorr_central[channelName]->GetMean()+1.5*sigmaEff;
+    h_dt_ampCorr_central[channelName]->Fit(Form("fitFun_ampCorr_central_%s",channelName.c_str()),"QRS","", tmin, tmax);
+
+
+    // -- only corner impact point
+    // -- get the effective (68%) sigma
+    FindSmallestInterval(vals,h_dt_ampCorr_border[channelName],0.68,true); 
+    sigmaEff = 0.5*(vals[5]-vals[4]); 
+    h_effectiveSigma_ampCorr_border[channelName]->Fill(sigmaEff);
+    h_dt_ampCorr_border[channelName]->Rebin(nRe);    
+
+    // -- get the gaussian sigma
+    fitFun_ampCorr_border[channelName]= new TF1(Form("fitFun_ampCorr_border_%s",channelName.c_str()),"gaus");
+    fitFun_ampCorr_border[channelName]->SetLineColor(2);
+    fitFun_ampCorr_border[channelName]->SetLineWidth(1);
+    fitFun_ampCorr_border[channelName]->SetParameter(1,h_dt_ampCorr_border[channelName]->GetMean());
+    fitFun_ampCorr_border[channelName]->SetParameter(2,h_dt_ampCorr_border[channelName]->GetRMS());
+    tmin = h_dt_ampCorr_border[channelName]->GetMean()-1.5*sigmaEff;
+    tmax = h_dt_ampCorr_border[channelName]->GetMean()+1.5*sigmaEff;
+    h_dt_ampCorr_border[channelName]->Fit(Form("fitFun_ampCorr_border_%s",channelName.c_str()),"QRS","", tmin, tmax);
+    
+
+    // ---- amp & pos corrections
     
     // -- get the effective (68%) sigma
     FindSmallestInterval(vals,h_dt_ampCorr_posCorr[channelName],0.68,true); 
@@ -500,39 +694,52 @@ int main(int argc, char** argv)
     fitFun_ampCorr_posCorr[channelName]->SetParameter(2,h_dt_ampCorr_posCorr[channelName]->GetRMS());
     tmin = h_dt_ampCorr_posCorr[channelName]->GetMean()-1.5*sigmaEff;
     tmax = h_dt_ampCorr_posCorr[channelName]->GetMean()+1.5*sigmaEff;
-    //tmin = h_dt_ampCorr_posCorr[channelName]->GetMean()-1.0*h_dt_ampCorr_posCorr[channelName]->GetRMS();
-    //tmax = h_dt_ampCorr_posCorr[channelName]->GetMean()+1.0*h_dt_ampCorr_posCorr[channelName]->GetRMS();
     h_dt_ampCorr_posCorr[channelName]->Fit(Form("fitFun_ampCorr_posCorr_%s",channelName.c_str()),"QRS","", tmin, tmax);
+
+
     
-    // -- amp corr
+
+    // ----- risetime corr
     
     // -- get the effective (68%) sigma
-    FindSmallestInterval(vals,h_dt_ampCorr[channelName],0.68,true); 
+    FindSmallestInterval(vals,h_dt_rtCorr[channelName],0.68,true); 
     sigmaEff = 0.5*(vals[5]-vals[4]); 
-    h_effectiveSigma_ampCorr[channelName]->Fill(sigmaEff);
-    h_dt_ampCorr[channelName]->Rebin(nRe);    
+    h_effectiveSigma_rtCorr[channelName]->Fill(sigmaEff);
+    h_dt_rtCorr[channelName]->Rebin(nRe);    
 
     // -- get the gaussian sigma
-    fitFun_ampCorr[channelName]= new TF1(Form("fitFun_ampCorr_%s",channelName.c_str()),"gaus");
-    fitFun_ampCorr[channelName]->SetLineColor(2);
-    fitFun_ampCorr[channelName]->SetLineWidth(1);
-    fitFun_ampCorr[channelName]->SetParameter(1,h_dt_ampCorr[channelName]->GetMean());
-    fitFun_ampCorr[channelName]->SetParameter(2,h_dt_ampCorr[channelName]->GetRMS());
-    tmin = h_dt_ampCorr[channelName]->GetMean()-1.5*sigmaEff;
-    tmax = h_dt_ampCorr[channelName]->GetMean()+1.0*sigmaEff;
-    //tmin = h_dt_ampCorr[channelName]->GetMean()-1.0*h_dt_ampCorr[channelName]->GetRMS();
-    //tmax = h_dt_ampCorr[channelName]->GetMean()+1.0*h_dt_ampCorr[channelName]->GetRMS();
-    h_dt_ampCorr[channelName]->Fit(Form("fitFun_ampCorr_%s",channelName.c_str()),"QRS","", tmin, tmax);
+    fitFun_rtCorr[channelName]= new TF1(Form("fitFun_rtCorr_%s",channelName.c_str()),"gaus");
+    fitFun_rtCorr[channelName]->SetLineColor(2);
+    fitFun_rtCorr[channelName]->SetLineWidth(1);
+    fitFun_rtCorr[channelName]->SetParameter(1,h_dt_rtCorr[channelName]->GetMean());
+    fitFun_rtCorr[channelName]->SetParameter(2,h_dt_rtCorr[channelName]->GetRMS());
+    tmin = h_dt_rtCorr[channelName]->GetMean()-1.5*sigmaEff;
+    tmax = h_dt_rtCorr[channelName]->GetMean()+1.5*sigmaEff;
+    h_dt_rtCorr[channelName]->Fit(Form("fitFun_rtCorr_%s",channelName.c_str()),"QRS","", tmin, tmax);
     
 
-    // -- no corrections
-    FindSmallestInterval(vals,h_dt[channelName],0.68,true);
-    sigmaEff = 0.5*(vals[5]-vals[4]);
-    h_effectiveSigma[channelName]->Fill(sigmaEff);
-    h_dt[channelName]->Rebin(nRe);    
-  }
+    // ---- rt & pos corrections
+    
+    // -- get the effective (68%) sigma
+    FindSmallestInterval(vals,h_dt_rtCorr_posCorr[channelName],0.68,true); 
+    sigmaEff = 0.5*(vals[5]-vals[4]); 
+    h_effectiveSigma_rtCorr_posCorr[channelName]->Fill(sigmaEff);
+    h_dt_rtCorr_posCorr[channelName]->Rebin(nRe);    
 
+    // -- get the gaussian sigma
+    fitFun_rtCorr_posCorr[channelName]= new TF1(Form("fitFun_rtCorr_posCorr_%s",channelName.c_str()),"gaus");
+    fitFun_rtCorr_posCorr[channelName]->SetLineColor(1);
+    fitFun_rtCorr_posCorr[channelName]->SetLineWidth(1);
+    fitFun_rtCorr_posCorr[channelName]->SetParameter(1,h_dt_rtCorr_posCorr[channelName]->GetMean());
+    fitFun_rtCorr_posCorr[channelName]->SetParameter(2,h_dt_rtCorr_posCorr[channelName]->GetRMS());
+    tmin = h_dt_rtCorr_posCorr[channelName]->GetMean()-1.5*sigmaEff;
+    tmax = h_dt_rtCorr_posCorr[channelName]->GetMean()+1.5*sigmaEff;
+    h_dt_rtCorr_posCorr[channelName]->Fit(Form("fitFun_rtCorr_posCorr_%s",channelName.c_str()),"QRS","", tmin, tmax);
+    
 
+  }//
+
+  
 
 
   // -- Save histograms on file
@@ -548,18 +755,28 @@ int main(int argc, char** argv)
     h_amp_nocuts[channelName]->Write();
     h_amp[channelName]->Write();
     h_time[channelName]->Write();
+    h_rt[channelName]->Write();
     h_posX[channelName]->Write();
     h_posY[channelName]->Write();
     h2_posXY[channelName]->Write();
     p2_eff_vs_posXY[channelName]->Write();
     p2_dt_vs_posXY[channelName]->Write();
     p2_amp_vs_posXY[channelName]->Write();
+    p_amp_vs_posX[channelName]->Write();
+    p_amp_vs_posY[channelName]->Write();
     
     h_dt[channelName]->Write();
+    h_dt_central[channelName]->Write();
+    h_dt_border[channelName]->Write();
     h_dt_ampCorr[channelName]->Write();
+    h_dt_ampCorr_central[channelName]->Write();
+    h_dt_ampCorr_border[channelName]->Write();
     h_dt_ampCorr_posCorr[channelName]->Write();
+    h_dt_rtCorr[channelName]->Write();
+    h_dt_rtCorr_posCorr[channelName]->Write();
     
     p_dt_vs_amp[channelName]->Write();
+    p_dt_vs_rt[channelName]->Write();
     p_dt_vs_posX[channelName]->Write();
     p_dt_vs_posY[channelName]->Write();
     
@@ -570,12 +787,28 @@ int main(int argc, char** argv)
     p_dt_ampCorr_posCorr_vs_amp[channelName]->Write();
     p_dt_ampCorr_posCorr_vs_posX[channelName]->Write();
     p_dt_ampCorr_posCorr_vs_posY[channelName]->Write();
+
+    p_dt_rtCorr_vs_amp[channelName]->Write();
+    p_dt_rtCorr_vs_posX[channelName]->Write();
+    p_dt_rtCorr_vs_posY[channelName]->Write();
+    
+    p_dt_rtCorr_posCorr_vs_amp[channelName]->Write();
+    p_dt_rtCorr_posCorr_vs_posX[channelName]->Write();
+    p_dt_rtCorr_posCorr_vs_posY[channelName]->Write();
     
     
     h_effectiveSigma[channelName]->Write();
     h_effectiveSigma_ampCorr[channelName]->Write();
     h_effectiveSigma_ampCorr_posCorr[channelName]->Write();
+
+    h_effectiveSigma_rtCorr[channelName]->Write();
+    h_effectiveSigma_rtCorr_posCorr[channelName]->Write();
     
+    h_effectiveSigma_central[channelName]->Write();
+    h_effectiveSigma_ampCorr_central[channelName]->Write();
+
+    h_effectiveSigma_border[channelName]->Write();
+    h_effectiveSigma_ampCorr_border[channelName]->Write();
     
   }
 
@@ -598,6 +831,10 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars){
   treeVars.t_b_rms = new float[360];
   treeVars.t_CFD = 0;
   treeVars.t_LED = 0;
+  treeVars.t_LED50 = 0;
+  treeVars.t_LED100 = 0;
+  treeVars.t_LED200 = 0;
+
   treeVars.t_channelId = new std::map<std::string,int>;
   treeVars.t_X = new float[2];
   treeVars.t_Y = new float[2];
@@ -617,6 +854,9 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars){
   chain1 -> SetBranchStatus("b_rms",          1); chain1 -> SetBranchAddress("b_rms",         treeVars.t_b_rms);
   chain1 -> SetBranchStatus("CFD",           1); chain1 -> SetBranchAddress("CFD",         &treeVars.t_CFD);
   chain1 -> SetBranchStatus("LED",           1); chain1 -> SetBranchAddress("LED",         &treeVars.t_LED);
+  chain1 -> SetBranchStatus("LED50",           1); chain1 -> SetBranchAddress("LED50",         &treeVars.t_LED50);
+  chain1 -> SetBranchStatus("LED100",           1); chain1 -> SetBranchAddress("LED100",         &treeVars.t_LED100);
+  chain1 -> SetBranchStatus("LED200",           1); chain1 -> SetBranchAddress("LED200",         &treeVars.t_LED200);
 
   for(unsigned int it = 0; it < timeChannels.size(); ++it)
     {
