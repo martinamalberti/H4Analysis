@@ -157,8 +157,8 @@ int main(int argc, char** argv)
   float k = 1./4096.; // factor to convert amplitudes in V
   float tMaxCh  = 40;
   float tMaxRef = 35;
-  float bRmsMax = 200;
-
+  float bRmsMax = 40;
+  std::string chRef ;
   //-----------------------
   // first loop over events
   std::cout<<"First loop over events ..." <<std::endl;
@@ -183,17 +183,15 @@ int main(int argc, char** argv)
 	amp  = treeVars.t_amp[(*treeVars.t_channelId)[channelNameA]] * k;
         time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_LED];
 	ampRef = amp;
-
-	if (channelName == "NINO2") 
-	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINOINT2"]+treeVars.t_CFD]; 
+	if (channelName == "NINO2")
+	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINOINT2"]+treeVars.t_LED]; 
 	if (channelName == "NINO3") 
-	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINOINT3"]+treeVars.t_CFD]; 
+	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINOINT3"]+treeVars.t_LED]; 
 
 	if (channelName == "NINOINT2") 
-	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINO2"]+treeVars.t_CFD]; 
+	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINO2"]+treeVars.t_LED]; 
 	if (channelName == "NINOINT3") 
-	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINO3"]+treeVars.t_CFD]; 
-
+	  timeRef = treeVars.t_time[(*treeVars.t_channelId)["NINO3"]+treeVars.t_LED]; 
 
        	// -- fill histograms before any selection
 	h_amp_nocuts[channelName] -> Fill(amp);
@@ -202,8 +200,8 @@ int main(int argc, char** argv)
 	if ( amp < minAmplitude[channelNameA]  || amp > maxAmplitude[channelNameA]) continue;
 	if ( time < 0 || time > 200) continue;
 	if ( timeRef < 0 || timeRef > 200) continue;
-	//if ( treeVars.t_b_rms[(*treeVars.t_channelId)["NINOINT2"]] > bRmsMax) continue; // cleaning reco failures... 
-	//if ( treeVars.t_b_rms[(*treeVars.t_channelId)["NINOINT3"]] > bRmsMax) continue; // cleaning reco failures... 
+	if ( treeVars.t_b_rms[(*treeVars.t_channelId)[channelName]] > bRmsMax) continue; // cleaning reco failures... 
+	//if ( treeVars.t_b_rms[(*treeVars.t_channelId)[chRef]] > bRmsMax) continue; // cleaning reco failures... 
 
 	dt   = time - timeRef; 
 	  

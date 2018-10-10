@@ -1,4 +1,4 @@
-#digiConf0c sensorConf2
+##digiConf0c sensorConf1
 
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr20.cfg
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr40.cfg
@@ -18,15 +18,7 @@
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias42_NINOthr100.cfg
 
 
-#nino intrinsic
-./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr40_NINOINT.cfg
-./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr60_NINOINT.cfg
-./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr100_NINOINT.cfg
-./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr200_NINOINT.cfg
-./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr500_NINOINT.cfg
-
-
-#digiConf0c sensorConf2
+##digiConf0c sensorConf2
 
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr60.cfg 
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr100.cfg 
@@ -45,3 +37,34 @@
 
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias70_NINOthr100.cfg 
 #./bin/TimingAnalysis.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias70_NINOthr200.cfg 
+
+
+
+
+## NINO intrinsic
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr40_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr60_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr100_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr200_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias44_NINOthr500_NINOINT.cfg
+
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr40_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr60_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr100_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr200_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias46_NINOthr500_NINOINT.cfg
+
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias42_NINOthr60_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf1_Vbias42_NINOthr100_NINOINT.cfg
+
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr60_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr100_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr200_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr500_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias71_NINOthr1000_NINOINT.cfg
+
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias68_NINOthr60_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias68_NINOthr100_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias68_NINOthr200_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias68_NINOthr500_NINOINT.cfg
+./bin/NINOIntrinsicResolution.exe cfg/analysis_cfg/analysis_digiConf0c_sensorConf2_Vbias68_NINOthr1000_NINOINT.cfg

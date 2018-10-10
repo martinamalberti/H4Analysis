@@ -262,6 +262,9 @@ int main(int argc, char** argv)
   float bRmsMax = 200;
   float xtalSize = 11.5; // mm
 
+ 
+  float ampCorrFactor = 1.0;
+
   //-----------------------
   // first loop over events
   std::cout<<"First loop over events ..." <<std::endl;
@@ -292,6 +295,7 @@ int main(int argc, char** argv)
 
 	// -- read amplitude and time for each channel
 	amp  = treeVars.t_amp[(*treeVars.t_channelId)[channelNameA]] * k;
+	if (channelNameA=="AMP1") amp = amp * ampCorrFactor;
         time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_LED];
 	if (channelName=="PTK1") 
 	  time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_CFD];
@@ -368,8 +372,6 @@ int main(int argc, char** argv)
   for (int i = 0 ; i < NCHANNELS; i++){
     channelName = timeChannels.at(i);
 
-    //if (! (channelName.find("NINO") != std::string::npos) ) continue;
-
     fitFunc_ampCorr[channelName] = new TF1(Form("fitFunc_ampCorr_%s",channelName.c_str()),"pol6");
     fitFunc_ampCorr[channelName] -> SetLineColor(kRed);
     p_dt_vs_amp[channelName] -> Fit(Form("fitFunc_ampCorr_%s",channelName.c_str()),"QSR",0,1);
@@ -378,8 +380,7 @@ int main(int argc, char** argv)
     fitFunc_rtCorr[channelName] -> SetLineColor(kBlue);
     fitFunc_rtCorr[channelName] -> SetParameter(0, p_dt_vs_rt[channelName] -> GetMean(2) );
     p_dt_vs_rt[channelName] -> Fit(Form("fitFunc_rtCorr_%s",channelName.c_str()),"QSR",0,50);
-    
-    std::cout << channelName << "  " << fitFunc_rtCorr[channelName]->Eval(10.)<<std::endl;
+
   }
 
 
@@ -411,6 +412,7 @@ int main(int argc, char** argv)
 
 	// -- read amplitude and time for each channel
         amp  = treeVars.t_amp[(*treeVars.t_channelId)[channelNameA]] * k;
+	if (channelNameA == "AMP1") amp = amp*ampCorrFactor;
         time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_LED];
 	if (channelNameA=="PTK")
           time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_CFD];
@@ -500,6 +502,7 @@ int main(int argc, char** argv)
 
         // -- read amplitude and time for each channel
         amp  = treeVars.t_amp[(*treeVars.t_channelId)[channelNameA]] * k;
+	if (channelNameA == "AMP1") amp = amp*ampCorrFactor;
         time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_LED];
         if (channelName=="PTK1")
           time = treeVars.t_time[(*treeVars.t_channelId)[channelName]+treeVars.t_CFD];
