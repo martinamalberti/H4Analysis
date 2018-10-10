@@ -51,7 +51,20 @@ bool DigitizerReco::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& 
             //     cout << ">>>DigiReco WARNING: skipped event" << endl;
             //     return false;
             // }
-            WFs[channel]->AddSample(event.digiSampleValue[iSample]);
+
+	    // MM
+	    if(event.digiSampleValue[iSample] > 4096){
+	    float baseline = 0;
+	    int n = 0;
+	    for(int k = offset; k < offset+10; ++k){ //use first 10 samples to get the baseline
+	      if(event.digiSampleValue[k] > 0 && event.digiSampleValue[k] < 4097){
+		baseline+=event.digiSampleValue[k];
+		n++;
+	      }
+	    }
+	    event.digiSampleValue[iSample] = baseline/n;
+	  }
+	  WFs[channel]->AddSample(event.digiSampleValue[iSample]);
         }
         if(opts.OptExist(channel+".useTrigRef") && opts.GetOpt<bool>(channel+".useTrigRef"))
             WFs[channel]->SetTrigRef(trigRef);
