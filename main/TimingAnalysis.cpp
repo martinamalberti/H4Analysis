@@ -138,6 +138,8 @@ int main(int argc, char** argv)
   std::map<std::string,TProfile2D*>    p2_eff_vs_posXY;
   std::map<std::string,TProfile2D*>    p2_dt_vs_posXY;
   std::map<std::string,TProfile2D*>    p2_amp_vs_posXY;
+  std::map<std::string,TProfile*>      p_eff_vs_posX;
+  std::map<std::string,TProfile*>      p_eff_vs_posY;
   std::map<std::string,TProfile*>      p_amp_vs_posX;
   std::map<std::string,TProfile*>      p_amp_vs_posY;
 
@@ -203,6 +205,8 @@ int main(int argc, char** argv)
     p2_eff_vs_posXY[channelName] = new TProfile2D(Form("p2_eff_vs_posXY_%s",channelName.c_str()),Form("p2_eff_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., 0, 1);
     p2_dt_vs_posXY[channelName] = new TProfile2D(Form("p2_dt_vs_posXY_%s",channelName.c_str()),Form("p2_dt_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., dtmin, dtmax);
     p2_amp_vs_posXY[channelName] = new TProfile2D(Form("p2_amp_vs_posXY_%s",channelName.c_str()),Form("p2_amp_vs_posXY_%s",channelName.c_str()), 80, -20., 20., 80, -20., 20., 0, 1);
+    p_eff_vs_posX[channelName] = new TProfile(Form("p_eff_vs_posX_%s",channelName.c_str()),Form("p_eff_vs_posX_%s",channelName.c_str()), 80, -20., 20., 0, 1);
+    p_eff_vs_posY[channelName] = new TProfile(Form("p_eff_vs_posY_%s",channelName.c_str()),Form("p_eff_vs_posY_%s",channelName.c_str()), 80, -20., 20., 0, 1);
     p_amp_vs_posX[channelName] = new TProfile(Form("p_amp_vs_posX_%s",channelName.c_str()),Form("p_amp_vs_posX_%s",channelName.c_str()), 80, -20., 20., 0, 1);
     p_amp_vs_posY[channelName] = new TProfile(Form("p_amp_vs_posY_%s",channelName.c_str()),Form("p_amp_vs_posY_%s",channelName.c_str()), 80, -20., 20., 0, 1);
     
@@ -303,10 +307,16 @@ int main(int argc, char** argv)
        	// -- fill histograms before any selection
 	h_amp_nocuts[channelName] -> Fill(amp);
 	
-	if ( amp > minAmplitude[channelNameA] )
+	if ( amp > minAmplitude[channelNameA] ) {
 	  p2_eff_vs_posXY[channelName] ->Fill(posX, posY, 1.);
-	else
+	  p_eff_vs_posX[channelName] ->Fill(posX, 1.);
+	  p_eff_vs_posY[channelName] ->Fill(posY, 1.);
+	}
+	else{
 	  p2_eff_vs_posXY[channelName] ->Fill(posX, posY, 0.);
+	  p_eff_vs_posX[channelName] ->Fill(posX, 0.);
+	  p_eff_vs_posY[channelName] ->Fill(posY, 0.);
+	}
 
 	// -- select events
 	if ( ampRef < minAmplitude["PTK1"] || ampRef > maxAmplitude["PTK1"]) continue;
@@ -767,6 +777,8 @@ int main(int argc, char** argv)
     p2_amp_vs_posXY[channelName]->Write();
     p_amp_vs_posX[channelName]->Write();
     p_amp_vs_posY[channelName]->Write();
+    p_eff_vs_posX[channelName]->Write();
+    p_eff_vs_posY[channelName]->Write();
     
     h_dt[channelName]->Write();
     h_dt_central[channelName]->Write();
