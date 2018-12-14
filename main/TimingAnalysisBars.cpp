@@ -27,6 +27,7 @@
 #include "TLatex.h"
 #include "TLine.h"
 #include "TApplication.h"
+#include "TRandom.h"
 
 #include "interface/TrackTree.h"
 
@@ -220,6 +221,7 @@ int main(int argc, char** argv)
 
   TProfile2D*  p2_ampL_vs_posXY[NBARS];
   TProfile*    p_ampL_vs_posX[NBARS];
+  TProfile*    p_ampL_vs_posXc[NBARS];
   TProfile*    p_ampL_vs_posY[NBARS];
   TProfile*    p_ampL_vs_tDiff[NBARS];
 
@@ -230,6 +232,7 @@ int main(int argc, char** argv)
 
   TProfile2D*  p2_ampR_vs_posXY[NBARS];
   TProfile*    p_ampR_vs_posX[NBARS];
+  TProfile*    p_ampR_vs_posXc[NBARS];
   TProfile*    p_ampR_vs_posY[NBARS];
   TProfile*    p_ampR_vs_tDiff[NBARS];
 
@@ -330,10 +333,13 @@ int main(int argc, char** argv)
 
 
   int nbinsHistoX = 500;
-  if (ninoThr != 400){
+  //if (ninoThr != 400){
+  //  nbinsHistoX = 200;
+  // }
+  
+  if (chain1->GetEntries() < 50000){
     nbinsHistoX = 200;
   }
-  
 
   for (int iBar = 0; iBar < NBARS; iBar++){
 
@@ -352,14 +358,16 @@ int main(int argc, char** argv)
     h_timeR[iBar]       = new TH1F(Form("h_timeR_BAR%d",iBar),Form("h_timeR_BAR%d",iBar),400,0.,200.);
     h_dtimeMaximumR[iBar] = new TH1F(Form("h_dtimeMaximumR_BAR%d",iBar),Form("h_dtimeMaximumR_BAR%d",iBar),2000,0.,100.);
 
-    p2_ampL_vs_posXY[iBar] = new TProfile2D(Form("p2_ampL_vs_posXY_BAR%d",iBar),Form("p2_ampL_vs_posXY_BAR%d",iBar), 400, xmin, xmax, 200, ymin, ymax, 0, 1);
-    p_ampL_vs_posX[iBar]   = new TProfile(Form("p_ampL_vs_posX_BAR%d",iBar),Form("p_ampL_vs_posX_BAR%d",iBar), 400, xmin, xmax, 0, 1);
-    p_ampL_vs_posY[iBar]   = new TProfile(Form("p_ampL_vs_posY_BAR%d",iBar),Form("p_ampL_vs_posY_BAR%d",iBar), 200, ymin, ymax, 0, 1);
+    p2_ampL_vs_posXY[iBar] = new TProfile2D(Form("p2_ampL_vs_posXY_BAR%d",iBar),Form("p2_ampL_vs_posXY_BAR%d",iBar), 100, xmin, xmax, 100, ymin, ymax, 0, 1);
+    p_ampL_vs_posX[iBar]   = new TProfile(Form("p_ampL_vs_posX_BAR%d",iBar),Form("p_ampL_vs_posX_BAR%d",iBar), 100, xmin, xmax, 0, 1);
+    p_ampL_vs_posXc[iBar]  = new TProfile(Form("p_ampL_vs_posXc_BAR%d",iBar),Form("p_ampL_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 0, 1);
+    p_ampL_vs_posY[iBar]   = new TProfile(Form("p_ampL_vs_posY_BAR%d",iBar),Form("p_ampL_vs_posY_BAR%d",iBar), 100, ymin, ymax, 0, 1);
     p_ampL_vs_tDiff[iBar]  = new TProfile(Form("p_ampL_vs_tDiff_BAR%d",iBar),Form("p_ampL_vs_tDiff_BAR%d",iBar), 400, -4, 4, 0, 1);
 
-    p2_ampR_vs_posXY[iBar] = new TProfile2D(Form("p2_ampR_vs_posXY_BAR%d",iBar),Form("p2_ampR_vs_posXY_BAR%d",iBar), 400, xmin, xmax, 200, ymin, ymax, 0, 1);
-    p_ampR_vs_posX[iBar]   = new TProfile(Form("p_ampR_vs_posX_BAR%d",iBar),Form("p_ampR_vs_posX_BAR%d",iBar), 400, xmin, xmax, 0, 1);
-    p_ampR_vs_posY[iBar]   = new TProfile(Form("p_ampR_vs_posY_BAR%d",iBar),Form("p_ampR_vs_posY_BAR%d",iBar), 200, ymin, ymax, 0, 1);
+    p2_ampR_vs_posXY[iBar] = new TProfile2D(Form("p2_ampR_vs_posXY_BAR%d",iBar),Form("p2_ampR_vs_posXY_BAR%d",iBar), 100, xmin, xmax, 100, ymin, ymax, 0, 1);
+    p_ampR_vs_posX[iBar]   = new TProfile(Form("p_ampR_vs_posX_BAR%d",iBar),Form("p_ampR_vs_posX_BAR%d",iBar), 100, xmin, xmax, 0, 1);
+    p_ampR_vs_posXc[iBar]  = new TProfile(Form("p_ampR_vs_posXc_BAR%d",iBar),Form("p_ampR_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 0, 1);
+    p_ampR_vs_posY[iBar]   = new TProfile(Form("p_ampR_vs_posY_BAR%d",iBar),Form("p_ampR_vs_posY_BAR%d",iBar), 100, ymin, ymax, 0, 1);
     p_ampR_vs_tDiff[iBar]  = new TProfile(Form("p_ampR_vs_tDiff_BAR%d",iBar),Form("p_ampR_vs_tDiff_BAR%d",iBar), 400, -4, 4, 0, 1);
 
     h2_tDiff_vs_posX[iBar] = new TH2F(Form("h2_tDiff_vs_posX_BAR%d",iBar), Form("h2_tDiff_vs_posX_BAR%d",iBar), 400, xmin, xmax, 400, -4, 4);
@@ -512,6 +520,10 @@ int main(int argc, char** argv)
 
   float dtMaxCh = 1.0;
 
+  float extra_smearing_amp = 0.00;
+  TRandom *gRandom = new TRandom();
+  std::map<int, float> rndL[NBARS];
+  std::map<int, float> rndR[NBARS];
 
   //-----------------------
   // first loop over events
@@ -627,6 +639,7 @@ int main(int argc, char** argv)
 	h_ampL[iBar]  -> Fill(ampL);
 	p2_ampL_vs_posXY[iBar] ->Fill(posX,posY,ampL);
 	p_ampL_vs_posX[iBar] ->Fill(posX,ampL);
+	p_ampL_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]),ampL);
 	p_ampL_vs_posY[iBar] ->Fill(posY,ampL);
 
 	h_tL[iBar]->Fill(tL);
@@ -640,6 +653,7 @@ int main(int argc, char** argv)
         h_ampR[iBar]  -> Fill(ampR);
         p2_ampR_vs_posXY[iBar] ->Fill(posX,posY,ampR);
         p_ampR_vs_posX[iBar] ->Fill(posX,ampR);
+        p_ampR_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]),ampR);
         p_ampR_vs_posY[iBar] ->Fill(posY,ampR);
         
         h_tR[iBar]->Fill(tR);
@@ -735,8 +749,15 @@ int main(int argc, char** argv)
 	// -- amplitude walk correction 
 	tL = tL - tRef;
         tR = tR - tRef;
-	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
-	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ; 
+	
+	rndL[iBar][entry] = gRandom->Gaus(0., extra_smearing_amp*ampL);
+	rndR[iBar][entry] = gRandom->Gaus(0., extra_smearing_amp*ampR);
+	float ampLsm  = ampL + rndL[iBar][entry];
+	float ampRsm  = ampR + rndR[iBar][entry];
+	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampLsm) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
+	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampRsm) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ; 
+	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
+	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ; 
 	float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
 	float tDiff = tR_corr - tL_corr;
 
@@ -868,7 +889,7 @@ int main(int argc, char** argv)
 	// -- amplitude walk correction
         tL = tL - tRef;
         tR = tR - tRef;
-        float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
+	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
         float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
         float tDiff = tR_corr - tL_corr;
         float wL = 1./(tResL[iBar]*tResL[iBar]);
@@ -1013,8 +1034,12 @@ int main(int argc, char** argv)
         // -- amplitude walk correction
         tL = tL - tRef;
         tR = tR - tRef;
-        float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
-        float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
+	float ampLsm  = ampL + rndL[iBar][entry];
+        float ampRsm  = ampR + rndR[iBar][entry];
+	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampLsm) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
+	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampRsm) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ; 
+        //float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
+        //float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
         float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
         float tDiff = tR_corr - tL_corr;
 	float wL = ampL/(ampL+ampR);
@@ -1464,6 +1489,7 @@ int main(int argc, char** argv)
     h_dtimeMaximumL[iBar] ->Write();
     p2_ampL_vs_posXY[iBar]->Write();
     p_ampL_vs_posX[iBar]->Write();
+    p_ampL_vs_posXc[iBar]->Write();
     p_ampL_vs_posY[iBar]->Write();
     p_ampL_vs_tDiff[iBar]->Write();
 
@@ -1473,6 +1499,7 @@ int main(int argc, char** argv)
     h_dtimeMaximumR[iBar] ->Write();
     p2_ampR_vs_posXY[iBar]->Write();
     p_ampR_vs_posX[iBar]->Write();
+    p_ampR_vs_posXc[iBar]->Write();
     p_ampR_vs_posY[iBar]->Write();
     p_ampR_vs_tDiff[iBar]->Write();
 

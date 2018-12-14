@@ -12,7 +12,7 @@ WFClass::WFClass(int polarity, float tUnit):
     tUnit_(tUnit), polarity_(polarity), trigRef_(0), sWinMin_(-1), sWinMax_(-1), 
     bWinMin_(-1), bWinMax_(-1),  maxSample_(-1), fitAmpMax_(-1), fitTimeMax_(-1),
     fitChi2Max_(-1), baseline_(-1), bRMS_(-1), cfSample_(-1), cfFrac_(-1), cfTime_(-1),
-    leSample_(-1), leTime_(-1), chi2cf_(-1), chi2le_(-1),
+    leSample_(-1), leTime_(-1), teSample_(-1), teTime_(-1), chi2cf_(-1), chi2le_(-1),
     fWinMin_(-1), fWinMax_(-1), tempFitTime_(-1), tempFitAmp_(-1),
     f_max_(NULL), interpolator_(NULL)
 {}
@@ -258,6 +258,7 @@ WFFitResults WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamples, i
                 break;
             }
         }
+
         if(teSample_>0)
         {
             //---interpolate -- A+Bx = amp
@@ -267,7 +268,7 @@ WFFitResults WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamples, i
         }
         else
         {
-            leTime_ = -1000;
+            teTime_ = -1000;
             chi2le_ = -1;
             teSlope_ = 0;
         }
@@ -414,8 +415,13 @@ void WFClass::Reset()
     cfTime_ = -1;
     leSample_ = -1;
     leTime_ = -1;
+    teSample_ = -1;
+    teTime_ = -1;
     chi2cf_ = -1;
     chi2le_ = -1;
+    chi2te_ = -1;
+    leSlope_= -1;
+    teSlope_= -1;
     fWinMin_ = -1;
     fWinMax_ = -1;
     tempFitTime_ = -1;
