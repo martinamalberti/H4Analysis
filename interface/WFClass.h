@@ -92,6 +92,7 @@ public:
     void                         SetBaselineIntegralWindow(int min, int max);
     void                         SetTemplate(TH1* templateWF=NULL);
     //---utils---
+    int                          GoodSignal(int min=-1, int max=-1,float thr=0);
     void                         Reset();
     void                         AddSample(float sample,float time) {samples_.push_back(polarity_*sample);times_.push_back(time);};
     WFBaseline                   SubtractBaseline(int min=-1, int max=-1);

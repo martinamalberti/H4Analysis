@@ -55,6 +55,7 @@ struct TreeVars
   float* t_b_rms;
   int  t_CFD;
   int  t_LED;
+  int  t_TED;
 
   std::vector<TrackPar> *t_trackFitResult;
   int t_ntracks;
@@ -128,7 +129,7 @@ int main(int argc, char** argv)
   std::cout << "Loading trees ..." << std::endl; 
   TChain* chain1 = new TChain("h4","h4");
   for (unsigned int iRun = runMin; iRun < runMax+1; iRun++){
-    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Nov2018/ntuples/v1/"+ std::to_string(int(iRun))+".root";
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Nov2018/ntuples/v3/"+ std::to_string(int(iRun))+".root";
     std::cout << fileName << std::endl;
    
     chain1 -> Add(fileName.c_str());
@@ -157,7 +158,7 @@ int main(int argc, char** argv)
   theta[0] = 0;
   theta[1] = 0; 
   if (runMin >= 1361 && runMax < 1382 ){
-    theta[0] = 0;
+    theta[0] = 0.;
     theta[1] = 80.*TMath::Pi()/180.;
   }
   else if (runMin >= 1389 && runMax < 1412 ){
@@ -204,6 +205,7 @@ int main(int argc, char** argv)
   TProfile*    p_eff_vs_posY_Ref   = new TProfile("p_eff_vs_posY_Ref","p_eff_vs_posY_Ref", 200, ymin, ymax, 0, 1);
   TProfile*    p_timeRef_vs_ampRef = new TProfile("p_timeRef_vs_ampRef","p_timeRef_vs_ampRef", 100, 0, 1, 0, 200);
   TProfile2D*  p2_ampRef_vs_posXY  = new TProfile2D("p2_ampRef_vs_posXY","p2_ampRef_vs_posXY", 200, xmin, xmax, 200, ymin, ymax, 0, 1);
+  TProfile2D*  p2_timeRef_vs_posXY = new TProfile2D("p2_timeRef_vs_posXY","p2_timeRef_vs_posXY", 200, xmin, xmax, 200, ymin, ymax, 0, 200);
   TProfile*    p_ampRef_vs_posX    = new TProfile("p_ampRef_vs_posX","p_ampRef_vs_posX", 100, -50, 50, 0, 1);
   TProfile*    p_ampRef_vs_posY    = new TProfile("p_ampRef_vs_posY","p_ampRef_vs_posY", 100, -50, 50, 0, 1);
 
@@ -217,6 +219,7 @@ int main(int argc, char** argv)
   TH1F*  h_ampL_nocuts[NBARS];
   TH1F*  h_ampL[NBARS];
   TH1F*  h_timeL[NBARS];
+  TH1F*  h_totL[NBARS];
   TH1F*  h_dtimeMaximumL[NBARS];
 
   TProfile2D*  p2_ampL_vs_posXY[NBARS];
@@ -228,6 +231,7 @@ int main(int argc, char** argv)
   TH1F*  h_ampR_nocuts[NBARS];
   TH1F*  h_ampR[NBARS];
   TH1F*  h_timeR[NBARS];
+  TH1F*  h_totR[NBARS];
   TH1F*  h_dtimeMaximumR[NBARS];
 
   TProfile2D*  p2_ampR_vs_posXY[NBARS];
@@ -351,11 +355,13 @@ int main(int argc, char** argv)
     h_ampL_nocuts[iBar] = new TH1F(Form("h_ampL_nocuts_BAR%d", iBar), Form("h_ampL_nocuts_BAR%d",iBar), 1000, 0., 1.0);
     h_ampL[iBar]        = new TH1F(Form("h_ampL_BAR%d", iBar), Form("h_ampL_BAR%d",iBar), 1000, 0., 1.0);
     h_timeL[iBar]       = new TH1F(Form("h_timeL_BAR%d",iBar),Form("h_timeL_BAR%d",iBar),400,0.,200.);
+    h_totL[iBar]        = new TH1F(Form("h_totL_BAR%d",iBar),Form("h_totL_BAR%d",iBar),400,0.,200.);
     h_dtimeMaximumL[iBar] = new TH1F(Form("h_dtimeMaximumL_BAR%d",iBar),Form("h_dtimeMaximumL_BAR%d",iBar),2000,0.,100.);
 
     h_ampR_nocuts[iBar] = new TH1F(Form("h_ampR_nocuts_BAR%d", iBar), Form("h_ampR_nocuts_BAR%d",iBar), 1000, 0., 1.0);
     h_ampR[iBar]        = new TH1F(Form("h_ampR_BAR%d", iBar), Form("h_ampR_BAR%d",iBar), 1000, 0., 1.0);
     h_timeR[iBar]       = new TH1F(Form("h_timeR_BAR%d",iBar),Form("h_timeR_BAR%d",iBar),400,0.,200.);
+    h_totR[iBar]        = new TH1F(Form("h_totR_BAR%d",iBar),Form("h_totR_BAR%d",iBar),400,0.,200.);
     h_dtimeMaximumR[iBar] = new TH1F(Form("h_dtimeMaximumR_BAR%d",iBar),Form("h_dtimeMaximumR_BAR%d",iBar),2000,0.,100.);
 
     p2_ampL_vs_posXY[iBar] = new TProfile2D(Form("p2_ampL_vs_posXY_BAR%d",iBar),Form("p2_ampL_vs_posXY_BAR%d",iBar), 100, xmin, xmax, 100, ymin, ymax, 0, 1);
@@ -500,6 +506,8 @@ int main(int argc, char** argv)
   float tL    = 0.;
   float tR    = 0.;
   float tAve  = 0.;
+  float totL  = 0.;
+  float totR  = 0.;
 
   float tMaximumL = 0;
   float tMaximumR = 0;
@@ -512,13 +520,23 @@ int main(int argc, char** argv)
   float tMaxCh  = 50.;
   float tMinRef = 25.;
   float tMaxRef = 50.;
+  
+  //float tMinCh  = 0.;
+  //float tMaxCh  = 200.;
+  //float tMinRef = 0.;
+  //float tMaxRef = 200.;
+
 
   if (timeChannelRef=="PTK2_0"){
     tMinRef = 35.;
     tMaxRef = 60.;
   }
 
-  float dtMaxCh = 1.0;
+  //float dtMaxCh = 1.0;
+  float dtMaxCh = 999999.;
+
+  float totMin = 40;
+  float totMax = 150;
 
   float extra_smearing_amp = 0.00;
   TRandom *gRandom = new TRandom();
@@ -567,6 +585,7 @@ int main(int argc, char** argv)
 	p_ampRef_vs_posX->Fill(posX,ampRef);
 	p_ampRef_vs_posY->Fill(posY,ampRef); 
 	p2_ampRef_vs_posXY ->Fill(posX, posY, ampRef);
+	p2_timeRef_vs_posXY->Fill(posX, posY, tRef);
       }
 
 
@@ -583,6 +602,10 @@ int main(int argc, char** argv)
 	tMaximumL = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]];
 	tMaximumR = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]];
 	
+	// time-over-threshold TED-LED
+	totL = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_TED] - tL;
+	totR = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_TED] - tR;
+
 	if ( ampL > cut_ampMinL[iBar]  && ampR > cut_ampMinR[iBar] ) {
 	  p2_eff_vs_posXY[iBar] ->Fill(posX, posY, 1.);
 	  if ( posY > cut_Ymin[iBar] && posY < cut_Ymax[iBar] ) p_eff_vs_posX[iBar] ->Fill(posX, 1.);
@@ -620,13 +643,18 @@ int main(int argc, char** argv)
 	if ( tL < tMinCh || tL > tMaxCh ) continue;
 	if ( tR < tMinCh || tR > tMaxCh ) continue;
 
+	h_totL[iBar] -> Fill(totL);
+        h_totR[iBar] -> Fill(totR);
+
 	h_dtimeMaximumL[iBar] ->Fill(tMaximumL - tL);
 	h_dtimeMaximumR[iBar] ->Fill(tMaximumR - tR);
 
 	if ( fabs(tL - tMaximumL) > dtMaxCh) continue;
 	if ( fabs(tR - tMaximumR) > dtMaxCh) continue;
 
-
+	
+	if ( totL < totMin || totL > totMax ) continue;
+	if ( totR < totMin || totR > totMax ) continue;
 
 	//-- time of Left, Right and average
 	tL = tL - tRef;
@@ -685,6 +713,11 @@ int main(int argc, char** argv)
     if ( fitFuncL_ampCorr[iBar] -> GetChisquare() == 0 ){
       p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSRI",0,1);
     }
+    if ( fitFuncL_ampCorr[iBar] -> GetChisquare()/fitFuncL_ampCorr[iBar] -> GetNDF() > 10 ){
+      fitFuncL_ampCorr[iBar] = new TF1(Form("fitFuncL_ampCorr_%d", iBar),"pol5");
+      p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSR",0,1);
+    }
+
 
     fitFuncR_ampCorr[iBar] = new TF1(Form("fitFuncR_ampCorr_%d", iBar),"pol6");
     fitFuncR_ampCorr[iBar] -> SetLineColor(kRed);
@@ -692,6 +725,13 @@ int main(int argc, char** argv)
     if ( fitFuncR_ampCorr[iBar] -> GetChisquare() == 0 ){
       p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRI",0,1);
     }
+    if ( fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 10 ){
+      fitFuncR_ampCorr[iBar] = new TF1(Form("fitFuncR_ampCorr_%d", iBar),"pol5");
+      p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSR",0,1);
+    }
+
+
+
   }
 
 
@@ -725,6 +765,8 @@ int main(int argc, char** argv)
 	tMaximumL = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]];
         tMaximumR = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]];
 
+        totL = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_TED] - tL;
+        totR = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_TED] - tR;
 
 	// -- select events
 	if ( posX < cut_Xmin[iBar] || posX > cut_Xmax[iBar] ) continue;
@@ -744,6 +786,9 @@ int main(int argc, char** argv)
 
 	if ( fabs(tL - tMaximumL) > dtMaxCh) continue;
 	if ( fabs(tR - tMaximumR) > dtMaxCh) continue;
+
+        if ( totL < totMin || totL > totMax ) continue;
+        if ( totR < totMin || totR > totMax ) continue;
 
 
 	// -- amplitude walk correction 
@@ -865,6 +910,8 @@ int main(int argc, char** argv)
 	tMaximumL = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]];
 	tMaximumR = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]];
 
+        totL = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_TED] - tL;
+        totR = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_TED] - tR;
 
         // -- select events
         if ( posX < cut_Xmin[iBar] || posX > cut_Xmax[iBar] ) continue;
@@ -885,6 +932,8 @@ int main(int argc, char** argv)
         if ( fabs(tL - tMaximumL) > dtMaxCh) continue;
         if ( fabs(tR - tMaximumR) > dtMaxCh) continue;
 
+        if ( totL < totMin || totL > totMax ) continue;
+        if ( totR < totMin || totR > totMax ) continue;
 
 	// -- amplitude walk correction
         tL = tL - tRef;
@@ -1010,6 +1059,8 @@ int main(int argc, char** argv)
         tMaximumL = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]];
         tMaximumR = treeVars.t_time_maximum[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]];
 
+        totL = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_TED] - tL;
+        totR = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_TED] - tR;
 
         // -- select events
         if ( posX < cut_Xmin[iBar] || posX > cut_Xmax[iBar] ) continue;
@@ -1030,6 +1081,8 @@ int main(int argc, char** argv)
         if ( fabs(tL - tMaximumL) > dtMaxCh) continue;
         if ( fabs(tR - tMaximumR) > dtMaxCh) continue;
 
+        if ( totL < totMin || totL > totMax ) continue;
+        if ( totR < totMin || totR > totMax ) continue;
 
         // -- amplitude walk correction
         tL = tL - tRef;
@@ -1476,6 +1529,7 @@ int main(int argc, char** argv)
   p_ampRef_vs_posX->Write();
   p_ampRef_vs_posY->Write();
   p2_ampRef_vs_posXY->Write();
+  p2_timeRef_vs_posXY->Write();
 
   for (int iBar = 0; iBar < NBARS; iBar++){
     
@@ -1486,6 +1540,7 @@ int main(int argc, char** argv)
     h_ampL_nocuts[iBar]->Write();
     h_ampL[iBar]->Write();
     h_timeL[iBar]->Write();
+    h_totL[iBar]->Write();
     h_dtimeMaximumL[iBar] ->Write();
     p2_ampL_vs_posXY[iBar]->Write();
     p_ampL_vs_posX[iBar]->Write();
@@ -1496,6 +1551,7 @@ int main(int argc, char** argv)
     h_ampR_nocuts[iBar]->Write();
     h_ampR[iBar]->Write();
     h_timeR[iBar]->Write();
+    h_totR[iBar]->Write();
     h_dtimeMaximumR[iBar] ->Write();
     p2_ampR_vs_posXY[iBar]->Write();
     p_ampR_vs_posX[iBar]->Write();
@@ -1663,6 +1719,7 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars){
   treeVars.t_b_rms = new float[360];
   treeVars.t_CFD = 0;
   treeVars.t_LED = 0;
+  treeVars.t_TED = 0;
 
   treeVars.t_channelId = new std::map<std::string,int>;
 
@@ -1684,6 +1741,7 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars){
   chain1 -> SetBranchStatus("b_rms",         1); chain1 -> SetBranchAddress("b_rms",        treeVars.t_b_rms);
   chain1 -> SetBranchStatus("CFD",           1); chain1 -> SetBranchAddress("CFD",          &treeVars.t_CFD);
   chain1 -> SetBranchStatus("LED",           1); chain1 -> SetBranchAddress("LED",          &treeVars.t_LED);
+  chain1 -> SetBranchStatus("TED",           1); chain1 -> SetBranchAddress("TED",          &treeVars.t_TED);
 
 
 

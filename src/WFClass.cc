@@ -195,6 +195,8 @@ WFFitResults WFClass::GetTimeCF(float frac, int nFitSamples, int min, int max)
 //----------Get leading edge time at a given threshold and in a given range---------------
 WFFitResults WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
 {
+    bool checkGoodSignal = false;
+
     //---check if signal window is valid
     if(min==max && max==-1 && sWinMin_==sWinMax_ && sWinMax_==-1)
         return WFFitResults{leThr_, -1000, -1, 0};
@@ -208,14 +210,23 @@ WFFitResults WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamples, i
         //---find first sample above thr
         leThr_ = thr;
         leSample_ = -1;
-        for(int iSample=sWinMin_; iSample<sWinMax_; ++iSample)
-        {
-            if(samples_.at(iSample) > leThr_) 
-            {
-                leSample_ = iSample;
-                break;
-            }
-        }
+	
+	if (checkGoodSignal)
+	  {
+	    leSample_ = GoodSignal(sWinMin_,sWinMax_,leThr_);
+	  }
+	else 
+	  {
+	    for(int iSample=sWinMin_; iSample<sWinMax_; ++iSample)
+	      {
+		if(samples_.at(iSample) > leThr_) 
+		  {
+		    leSample_ = iSample;
+		    break;
+		  }
+	      }
+	  }
+
         if(leSample_>0)
         {
             //---interpolate -- A+Bx = amp
@@ -334,6 +345,39 @@ float WFClass::GetModIntegral(int min, int max)
     }
     return integral;
 }
+
+
+//---------choose the longest signal and returns it if lenght > 50 samples (from R. Tramontano) ------------------------       
+int WFClass::GoodSignal(int min, int max,float thr)
+{
+  int jSample,firstSample=-1,lastSample=-1;
+  int intSample=-1, timeSample=-1, count;
+  for(int iSample=min; iSample<max; ++iSample)
+    {
+      if( samples_.at(iSample) > thr)
+	{
+	  count++;
+	  firstSample= iSample;
+	  for(jSample=iSample; jSample<max;++jSample)
+	    {
+	      if (samples_.at(jSample) < thr)
+		{
+                  lastSample = jSample;
+                  iSample = lastSample;
+                  break;
+		}
+	    }
+	  if(intSample < (lastSample-firstSample))
+	    {
+	      intSample = lastSample-firstSample;
+	      timeSample = firstSample;
+	    }
+	}
+    }
+  if (intSample > 50)return timeSample;
+  else return -1;
+}
+
 
 //**********Setters***********************************************************************
 
