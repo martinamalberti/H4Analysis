@@ -104,7 +104,7 @@ public:
     inline int                     GetSIntWinMin() {return sIntWinMin_;}
     inline int                     GetSIntWinMax() {return sIntWinMax_;}
     inline float                   GetFitAmpMax() {return fitAmpMax_;};
-    inline float                   GetFitTimeMax() {return fitTimeMax_*tUnit_;};
+    inline float                   GetFitTimeMax() {return fitTimeMax_;};
     inline float                   GetLEThr() {return leThr_;};
     inline float                   GetLETime() {return leTime_;};
     inline float                   GetLESlope() {return leSlope_;};
