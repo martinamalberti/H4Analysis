@@ -38,4 +38,5 @@ H4Tree::~H4Tree()
     delete[] digiGroup;
     delete[] digiChannel;
     delete[] digiSampleValue;
+    delete[] digiSampleTime;
 }

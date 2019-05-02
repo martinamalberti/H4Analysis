@@ -493,6 +493,15 @@ void WFClass::AddSample(float sample)
     samples_ = uncalibSamples_;
 };
 
+// ---- the times vector is filled with the time from digiSampleTime 
+void WFClass::AddSampleWithTime(float sample, float sampleTime)
+{
+    uncalibSamples_.push_back(polarity_*sample); 
+    times_.push_back( sampleTime );
+    samples_ = uncalibSamples_;
+};
+
+
 //---------estimate the baseline in a given range and then subtract it from the signal----
 WFBaseline WFClass::SubtractBaseline(int min, int max)
 {

@@ -15,7 +15,7 @@ float castUIntToFloat(unsigned int i) {
 }
 
 //----------Begin-------------------------------------------------------------------------
-bool FNALTrackReco::Begin(CfgManager& opts, uint64* index)
+bool FNALTrackReco::Begin(map<string, PluginBase*>& plugins, CfgManager& opts, uint64* index)
 {
     //---create a position tree
     bool storeTree = opts.OptExist(instanceName_+".storeTree") ?
@@ -33,7 +33,7 @@ bool FNALTrackReco::Begin(CfgManager& opts, uint64* index)
     return true;
 }
 
-bool FNALTrackReco::BeginLoop(int iLoop, CfgManager& opts)
+bool FNALTrackReco::BeginLoop(int iLoop, map<string, PluginBase*>& plugins, CfgManager& opts)
 {
     return true;
 }
@@ -58,8 +58,8 @@ bool FNALTrackReco::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugin
       if ( event.adcChannel[iADC] > 2 &&  event.adcChannel[iADC] < 7)
 	values[ event.adcChannel[iADC] - 3 ] = castUIntToFloat(event.adcData[iADC]);
     }
-        
-    
+
+
     TrackPar par;
     par.value.assign(values.begin(),values.begin()+4);
     par.covariance.assign(covariances.begin(),covariances.begin()+10);

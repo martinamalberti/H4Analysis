@@ -59,7 +59,7 @@ typedef std::unordered_map<const bgc_key_t, int, key_hash, key_equal> bgc_map_t;
     DATA(unsigned int,  nAdcChannels)           \
     DATA(unsigned int,  nTdcChannels)           \
     DATA(unsigned int,  nPatterns)              \
-    DATA(unsigned int,  nDigiSamples)
+    DATA(unsigned int,  nDigiSamples)               
 
 #define DATA_VECT_TABLE                                     \
     DATA(unsigned int, evtTimeBoard, nEvtTimes)             \
@@ -76,7 +76,8 @@ typedef std::unordered_map<const bgc_key_t, int, key_hash, key_equal> bgc_map_t;
     DATA(unsigned int, digiGroup, nDigiSamples)             \
     DATA(unsigned int, digiChannel, nDigiSamples)           \
     DATA(unsigned int, digiStartIndexCell, nDigiSamples)    \
-    DATA(int16_t,      digiSampleValue, nDigiSamples)
+    DATA(float       , digiSampleValue, nDigiSamples)       \
+    DATA(float       , digiSampleTime, nDigiSamples)
 
 #include "DynamicTTree/interface/DynamicTTreeInterface.h"
 

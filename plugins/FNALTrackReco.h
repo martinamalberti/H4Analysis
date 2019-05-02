@@ -19,10 +19,10 @@ public:
     ~FNALTrackReco() {};
    
     //---utils---
-    bool Begin(CfgManager& opts, uint64* index);
-    bool BeginLoop(int iLoop, CfgManager& opts);
-    bool ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins, CfgManager& opts);
-    
+    bool Begin(map<string, PluginBase*>& plugins, CfgManager& opts, uint64* index);
+    bool BeginLoop(int iLoop, map<string, PluginBase*>& plugins, CfgManager& opts);
+    bool ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins, CfgManager& opts);    
+
 private:
 
     TrackTree* trackTree_;
