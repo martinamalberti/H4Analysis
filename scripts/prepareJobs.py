@@ -28,7 +28,7 @@ currDir = os.getcwd()
 #print
 
 ##### creates directory and file list for job #######
-jobDir = currDir+'/jobs_condor_test/run'+args.run+'/'
+jobDir = currDir+'/jobs_condor/run'+args.run+'/'
 print 'Job dir :', jobDir
 os.system('mkdir '+jobDir)
 os.system('mkdir '+jobDir+'output/')
