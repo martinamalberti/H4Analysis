@@ -186,13 +186,6 @@ int main(int argc, char* argv[])
         cout << ">>> ERROR: plugin returned bad flag from Begin() call: " << plugin->GetInstanceName() << endl;
         exit(-1);
       }
-      //---Get plugin shared data
-      for(auto& shared : plugin->GetSharedData("", "TTree", true))
-      {
-        TTree* tree = (TTree*)shared.obj;
-        tree->SetMaxVirtualSize(10000);
-        // tree->SetDirectory(outROOT);
-      }
     }
     
     
@@ -231,12 +224,13 @@ int main(int argc, char* argv[])
       
       //---draw waveforms
       vector<string> channels = opts.GetOpt<vector<string> >("DigiReco.channelsNames");
+      std::string srcInstance = opts.GetOpt<string>("WFReco.srcInstanceName");
       for(auto& channel : channels)
       {
         TCanvas* c1 = new TCanvas(Form("%s",channel.c_str()),Form("%s",channel.c_str()));
         c1 -> cd();
         
-        auto shared_data = pluginMap["DigiReco"]->GetSharedData(std::string("DigiReco")+"_"+channel, "", false);
+        auto shared_data = pluginMap[srcInstance]->GetSharedData(srcInstance+"_"+channel, "", false);
         WFClass* WF = (WFClass*)shared_data.at(0).obj;
         
         auto samples = WF->GetSamples();

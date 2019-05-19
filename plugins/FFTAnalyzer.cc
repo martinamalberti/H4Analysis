@@ -32,11 +32,12 @@ bool FFTAnalyzer::Begin(map<string, PluginBase*>& plugins, CfgManager& opts, uin
             FFTs_[channel] = new FFTClass();
             RegisterSharedData(FFTs_[channel], channel, storeFFT);
         }
-        else
+        if(fftType_ == "F2T")
         {
             WFs_[channel] = new WFClass(1, opts.GetOpt<float>(channel+".tUnit"));
             RegisterSharedData(WFs_[channel], channel, storeFFT);
-            if(opts.OptExist(instanceName_+".subtractFFTNoise")){
+            if(opts.OptExist(instanceName_+".subtractFFTNoise"))
+            {
                 noiseTemplateFile_= TFile::Open(opts.GetOpt<string>(instanceName_+".noiseTemplateFile").c_str());
                 TString noiseTemplateHistoName (opts.GetOpt<string>(instanceName_+".noiseTemplateHisto"));
                 noiseTemplateHistoRe_ = (TH1F*) noiseTemplateFile_->Get(noiseTemplateHistoName+"_Re_tmpl");
@@ -49,7 +50,7 @@ bool FFTAnalyzer::Begin(map<string, PluginBase*>& plugins, CfgManager& opts, uin
             }
         }
     }
-
+    
     //---create and register templates istograms
     //   histograms are created with automatic binning alog Y axis
     if(fftType_ == "T2F" && opts.OptExist(instanceName_+".makeTemplates"))
@@ -59,14 +60,18 @@ bool FFTAnalyzer::Begin(map<string, PluginBase*>& plugins, CfgManager& opts, uin
         for(auto& tmpl : templatesNames_)
         {
             auto nSamples = opts.GetOpt<int>(channel+".nSamples");
-            templates2dHistos_[channel+tmpl] = new TH2F((channel+tmpl).c_str(),
-                                                        ("Template "+channel+" "+tmpl).c_str(),
-                                                        nSamples/2, 0, nSamples/2,
-                                                        10000, 0, 0);
-            templatesHistos_[channel+tmpl] = new TH1F((channel+"_"+tmpl+"_tmpl").c_str(),
-                                                      ("Template "+channel+" "+tmpl).c_str(),
-                                                      nSamples/2, 0, nSamples/2);
-            RegisterSharedData(templatesHistos_[channel+tmpl], channel+"_"+tmpl+"_tmpl", true);
+            // templates2dHistos_[channel+tmpl] = new TH2F((channel+tmpl).c_str(),
+            //                                             ("Template "+channel+" "+tmpl).c_str(),
+            //                                             nSamples/2, 0, nSamples/2,
+            //                                             10000, 0, 0);
+            // templatesHistos_[channel+tmpl] = new TH1F((channel+"_"+tmpl+"_tmpl").c_str(),
+            //                                           ("Template "+channel+" "+tmpl).c_str(),
+            //                                           nSamples/2, 0, nSamples/2);
+            // RegisterSharedData(templatesHistos_[channel+tmpl], channel+"_"+tmpl+"_tmpl", true);
+            templatesProfiles_[channel+tmpl] = new TProfile((channel+"_"+tmpl+"_prof").c_str(),
+                                                            ("Profile "+channel+" "+tmpl).c_str(),
+                                                            nSamples/2+1, -0.5, nSamples/2+1-0.5);
+            RegisterSharedData(templatesProfiles_[channel+tmpl], channel+"_"+tmpl+"_prof", true);
         }
     }
     
@@ -81,7 +86,7 @@ bool FFTAnalyzer::Begin(map<string, PluginBase*>& plugins, CfgManager& opts, uin
             if(point != channelsNames_.end())
             {
                 channelsMap_[channel] = point-channelsNames_.begin();
-                n_tot_ += opts.GetOpt<int>(channel+".nSamples");
+                n_tot_ += opts.GetOpt<int>(channel+".nSamples")/2+1;
             }
         }
             
@@ -138,9 +143,10 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
             auto wf = (WFClass*)plugins[srcInstance_]->GetSharedData(srcInstance_+"_"+channel, "", false).at(0).obj;
             auto samples = wf->GetSamples();
             auto samples_norm = *samples;
-            int n_samples = opts.OptExist(channel+".signalWin") ?
-                opts.GetOpt<int>(channel+".signalWin", 1) - opts.GetOpt<int>(channel+".signalWin", 0) :
-                samples->size();
+            // int n_samples = opts.OptExist(channel+".signalWin") ?
+            //   opts.GetOpt<int>(channel+".signalWin", 1) - opts.GetOpt<int>(channel+".signalWin", 0) :
+            //   samples->size();
+            int n_samples = samples->size();
             if(opts.OptExist(instanceName_+".normalizeInput") && opts.GetOpt<bool>(instanceName_+".normalizeInput"))
             {
                 float max = *std::max_element(samples_norm.begin(), samples_norm.end());
@@ -148,24 +154,33 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
                     sample /= max;
             }
             //---build the FFT
-            double iRe[n_samples], iIm[n_samples], oRe[n_samples], oIm[n_samples];
-            int first_sample = opts.GetOpt<int>(channel+".signalWin", 0);
-            int last_sample = opts.GetOpt<int>(channel+".signalWin", 1);
+            double oRe[n_samples/2+1], oIm[n_samples/2+1];
+            // int first_sample = opts.GetOpt<int>(channel+".signalWin", 0);
+            // int last_sample = opts.GetOpt<int>(channel+".signalWin", 1);
+            int first_sample = 0;
+            int last_sample = n_samples;
+            
+            
             auto fftr2c = TVirtualFFT::FFT(1, &n_samples, "C2CF M");
             for(unsigned int i=first_sample; i<last_sample; ++i)
             {
-                iRe[i-first_sample] = samples_norm[i];
-                iIm[i-first_sample] = 0.;
+              fftr2c->SetPoint(i, samples_norm[i]);
+              // std::cout << "iSample: " << i-first_sample << "   val: " << samples_norm[i] << std::endl;
             }
-            fftr2c->SetPointsComplex(iRe, iIm);
             fftr2c->Transform();
-            fftr2c->GetPointsComplex(oRe, oIm);
-            for(int i=0; i<n_samples; ++i)
+            
+            for(int i = 0; i < n_samples/2+1; ++i)
             {
-                oRe[i] /= n_samples;
-                oIm[i] /= n_samples;
+              double re, im;
+              fftr2c->GetPointComplex(i, re, im);
+              
+              oRe[i] = re;
+              oIm[i] = im;
+              // oRe[i] = re / n_samples;
+              // oIm[i] = im / n_samples;
             }
-            FFTs_[channel]->SetPointsComplex(n_samples, oRe, oIm);
+            FFTs_[channel]->SetPointsComplex(n_samples/2+1, oRe, oIm);
+            
             map<string, const double*> var_map;
             var_map["Re"] = oRe;
             var_map["Im"] = oIm;
@@ -177,10 +192,12 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
                 vector<double> x(int(opts.GetOpt<float>(channel+".maxPhaseFitFreq")*wf->GetTUnit()*n_samples));
                 generate(x.begin(), x.end(), [n=-1, wf, n_samples] () mutable { ++n; return n/(wf->GetTUnit()*n_samples); });   
                 TLinearFitter phase_fit(1, "x[0]", "");
-                for(int k=0; k<n_samples; ++k)
+                for(int k=0; k<n_samples/2+1; ++k)
                 {
-                    for(auto& tmpl : templatesNames_){
-                        templates2dHistos_[channel+tmpl]->Fill(k, var_map[tmpl][k]);
+                    for(auto& tmpl : templatesNames_)
+                    {
+                        // templates2dHistos_[channel+tmpl]->Fill(k, var_map[tmpl][k]);
+                        templatesProfiles_[channel+tmpl]->Fill(k, var_map[tmpl][k]);
                     }
                     if(fftTree_)
                     {
@@ -188,8 +205,8 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
                         current_ch_[index] = channelsMap_[channel];
                         re_[index] = oRe[index];
                         im_[index] = oIm[index];
-                        amplitudes_[index] = var_map["Ampl"][k];
-                        phases_[index] = var_map["Phase"][k];
+                        amplitudes_[index] = sqrt(oRe[index]*oRe[index]+oIm[index]*oIm[index]);
+                        phases_[index] = atan2(oIm[index],oRe[index]);
                         if(k>0 && var_map["Phase"][k] > var_map["Phase"][k-1])
                             shift -= 2*TMath::Pi();
                         phase_adj_[index] = shift;
@@ -207,18 +224,22 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
             delete fftr2c;
         }
         //---FFT from frequency to time domain /// F2T
-        else
+        else if(fftType_ == "F2T")
         {
             //---get FFT from source instance data and reset old WF
             WFs_[channel]->Reset();
             auto fft = (FFTClass*)plugins[srcInstance_]->GetSharedData(srcInstance_+"_"+channel, "", false).at(0).obj;
 
             //---build the FFT
-            int n_samples = fft->GetAmplitudes()->size()*2;
+            int n_samples = fft->GetAmplitudes()->size()*2-1;
             double data[n_samples];
             auto Re = fft->GetRe();
             auto Im = fft->GetIm();
             auto fftc2r = TVirtualFFT::FFT(1, &n_samples, "C2R");
+            
+            for(int i = 0; i < fft->GetAmplitudes()->size(); ++i)
+              fftc2r -> SetPoint(i, *(Re->data()+i), *(Im->data()+i) );
+            
             
             //---subtract FFT of noise from template before going back to time domain
             if(opts.OptExist(instanceName_+".subtractFFTNoise"))
@@ -233,7 +254,7 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
                     fftc2r->SetPoint(i,newRe,newIm);
                 }
             } 
-            else if(opts.OptExist(instanceName_+".frequencyCut"))
+            if(opts.OptExist(instanceName_+".frequencyCut"))
             {
                 for(int i=0;i<n_samples/2;++i)
                 {
@@ -246,30 +267,70 @@ bool FFTAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins,
                     }
                 }
             }
-            else
-                fftc2r->SetPointsComplex(Re->data(), Im->data());
+            if(opts.OptExist(instanceName_+".bandFilter"))
+            {
+                for(int i = 0; i < fft->GetAmplitudes()->size(); ++i)
+                {
+                    if( i >= opts.GetOpt<float>(instanceName_+".bandFilter",0) &&
+                        i <= opts.GetOpt<float>(instanceName_+".bandFilter",1) )
+                      fftc2r->SetPoint(i,0,0);
+                }
+            }
+            if(opts.OptExist(instanceName_+".bandPass"))
+            {
+                for(int i = 0; i < fft->GetAmplitudes()->size(); ++i)
+                {
+                    if( i < opts.GetOpt<float>(instanceName_+".bandPass",0) ||
+                        i > opts.GetOpt<float>(instanceName_+".bandPass",1) )
+                      fftc2r->SetPoint(i,0,0);
+                }
+            }
+            if(opts.OptExist(instanceName_+".lowPass"))
+            {
+                for(int i = 0; i < fft->GetAmplitudes()->size(); ++i)
+                {
+                    if( i > opts.GetOpt<float>(instanceName_+".lowPass",0) )
+                      fftc2r->SetPoint(i,0,0);
+                }
+            }
+            if(opts.OptExist(instanceName_+".highPass"))
+            {
+                for(int i = 0; i < fft->GetAmplitudes()->size(); ++i)
+                {
+                    if( i < opts.GetOpt<float>(instanceName_+".highPass",0) )
+                      fftc2r->SetPoint(i,0,0);
+                }
+            }
+            
             fftc2r->Transform();
             fftc2r->GetPoints(data);
-
+            
+            
             //---fill new WF
+            // std::cout << "\n\nn_samples: " << n_samples << std::endl;
             for(int iSample=0; iSample<n_samples; ++iSample)
-                WFs_[channel]->AddSample(data[iSample]/n_samples);
-
+            {
+              WFs_[channel]->AddSample(data[iSample]/n_samples);
+              // std::cout << "iSample: " << iSample << "   val: " << data[iSample]/n_samples << std::endl;
+            }
+            
             delete fftc2r;
         }
     }
+    
+    
     //---fill FFT tree
     if(fftTree_)
         fftTree_->Fill();
-
+    
     return true;
 }
 
 bool FFTAnalyzer::EndLoop(int iLoop, map<string, PluginBase*>& plugins, CfgManager& opts)
 {
-    for(auto& channel : channelsNames_)
-        for(auto& tmpl : templatesNames_)
-            GetIterativeProfile(templates2dHistos_[channel+tmpl], templatesHistos_[channel+tmpl]);
+    // for(auto& channel : channelsNames_)
+    //     for(auto& tmpl : templatesNames_)
+    //         GetIterativeProfile(templates2dHistos_[channel+tmpl], templatesHistos_[channel+tmpl]);
 
     return true;
 }

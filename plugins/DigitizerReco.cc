@@ -93,6 +93,8 @@ bool DigitizerReco::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugin
         unsigned int digiGr = opts.GetOpt<unsigned int>(channel+".digiGroup");
         unsigned int digiCh = opts.GetOpt<unsigned int>(channel+".digiChannel");
         int offset = event.digiMap.at(make_tuple(digiBd, digiGr, digiCh));
+        
+        std::vector<double> samples_old;
         for(int iSample=offset; iSample<offset+nSamples_[channel]; ++iSample)
         {
             //Set the start index cell
@@ -105,20 +107,80 @@ bool DigitizerReco::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugin
             {
                 evtStatus = false;
 		WFs_[channel]->AddSample(4095);
+                samples_old.push_back(4095);
             }
-            else{
-	      if ( opts.GetOpt<int>(instanceName_+".useDigiSampleTime") == 0  ) 
-                WFs_[channel]->AddSample(event.digiSampleValue[iSample]);
-	      else
-                WFs_[channel]->AddSampleWithTime(event.digiSampleValue[iSample], event.digiSampleTime[iSample]);
+            else
+            {
+	        if( opts.GetOpt<int>(instanceName_+".useDigiSampleTime") == 0 )
+                {
+                    WFs_[channel]->AddSample(event.digiSampleValue[iSample]);
+                    samples_old.push_back(event.digiSampleValue[iSample]);
+                }
+                else
+                {
+                    WFs_[channel]->AddSampleWithTime(event.digiSampleValue[iSample], event.digiSampleTime[iSample]);
+                    samples_old.push_back(event.digiSampleValue[iSample]);
+                }
 	    }
 	}
         if(opts.OptExist(channel+".useTrigRef") && opts.GetOpt<bool>(channel+".useTrigRef"))
             WFs_[channel]->SetTrigRef(trigRef);
         if(WFs_[channel]->GetCalibration())
             WFs_[channel]->ApplyCalibration();
-    }
+        if(opts.OptExist(channel+".DLED") && opts.GetOpt<int>(channel+".DLED") != 0)
+        {
+          auto times = WFs_[channel]->GetTimes();
+          auto tUnit = WFs_[channel]->GetTUnit();
+          int delay = opts.GetOpt<int>(channel+".DLED");
+          
+          std::vector<double> samples_new;
+          for(int jj = 0; jj < delay+1; ++jj)
+            samples_new.push_back(0.);
+          
+          int currentSample = 0;
+          for(unsigned int jSample = delay+1; jSample < samples_old.size(); ++jSample)
+          {
+            float time1 = jSample * tUnit;
+            int sampleBef1 = -1;
+            int sampleAft1 = -1;
+            
+            float time2 = (jSample-delay) * tUnit;
+            int sampleBef2 = -1;
+            int sampleAft2 = -1;
+            
+            for(unsigned int it = currentSample; it < samples_old.size(); ++it)
+            {
+              if( times->at(it) > time2 )
+              {
+                sampleBef2 = it-1;
+                sampleAft2 = it;
+                currentSample = it;
+                break;
+              }
+            }
+            for(unsigned int it = currentSample; it < samples_old.size(); ++it)
+            {
+              if( times->at(it) > time1 )
+              {
+                sampleBef1 = it-1;
+                sampleAft1 = it;
+                break;
+              }
+            }
 
+            float val1 = samples_old[sampleBef1] + (samples_old[sampleAft1]-samples_old[sampleBef1])/((*times)[sampleAft1]-(*times)[sampleBef1]) * (time1-(*times)[sampleBef1]);
+            float val2 = samples_old[sampleBef2] + (samples_old[sampleAft2]-samples_old[sampleBef2])/((*times)[sampleAft2]-(*times)[sampleBef2]) * (time2-(*times)[sampleBef2]);
+            samples_new.push_back(val1-val2);
+          }
+          
+          //---reset and create new WFs_          
+          WFs_[channel]->Reset();
+          
+          for(int jj = 0; jj < samples_new.size(); ++jj)
+            WFs_[channel]->AddSample(samples_new.at(jj));
+        }
+    }
+    
     if(!evtStatus)
         cout << ">>>DigiReco WARNING: bad amplitude detected" << endl;
 

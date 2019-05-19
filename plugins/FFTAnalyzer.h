@@ -4,8 +4,10 @@
 #include <iostream>
 #include <math.h>
 
+#include "TProfile.h"
 #include "TH2F.h"
 #include "TVirtualFFT.h"
+#include "TFFTRealComplex.h"
 
 #include "interface/utils.h"
 #include "interface/PluginBase.h"
@@ -46,6 +48,7 @@ private:
     vector<string>            templatesNames_;
     map<string, int>          channelsMap_;
     map<string, TH1F*>        templatesHistos_;
+    map<string, TProfile*>    templatesProfiles_;
     map<string, TH2F*>        templates2dHistos_;
     map<string, FFTClass*>    FFTs_;
     map<string, WFClass*>     WFs_;

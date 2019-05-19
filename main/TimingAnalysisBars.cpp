@@ -889,7 +889,7 @@ int main(int argc, char** argv)
     float mpv = (h_ampL_nocuts[iBar]->GetFunction(Form("fLandauL_BAR%d",iBar)))->GetParameter(1);
     fitFuncL_ampCorr[iBar] -> SetRange(0, 10*mpv);
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSR");
-    if (fitFuncL_ampCorr[iBar] -> GetChisquare()/fitFuncL_ampCorr[iBar] -> GetNDF() > 10 ){
+    if (fitFuncL_ampCorr[iBar] -> GetChisquare()/fitFuncL_ampCorr[iBar] -> GetNDF() > 5 ){
       p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSRW");
     }
 
@@ -898,7 +898,7 @@ int main(int argc, char** argv)
     mpv = (h_ampR_nocuts[iBar]->GetFunction(Form("fLandauR_BAR%d",iBar)))->GetParameter(1);
     fitFuncR_ampCorr[iBar] -> SetRange(0, 10*mpv);
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSR");
-    if (fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 10 ){
+    if (fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 5 ){
       p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRW");
     }
     
@@ -1214,10 +1214,6 @@ int main(int argc, char** argv)
     fitFuncDiff_posCorr[iBar] -> SetLineColor(kRed);
     p_tDiff_ampCorr_vs_posX[iBar] -> Fit(Form("fitFuncDiff_posCorr_%d",iBar),"QSR");
     chi2ndf = fitFuncDiff_posCorr[iBar] -> GetChisquare()/fitFuncDiff_posCorr[iBar] -> GetNDF();
-    if (chi2ndf > 4.){
-      fitFuncDiff_posCorr[iBar]->SetRange( mean - 1.0*rms , mean + 1.0*rms);
-      p_tDiff_ampCorr_vs_posX[iBar] -> Fit(Form("fitFuncDiff_posCorr_%d",iBar),"QSR");
-    }
   }
 
 
