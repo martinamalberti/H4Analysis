@@ -58,7 +58,7 @@ bool FNALTrackReco::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugin
       if ( event.adcChannel[iADC] > 2 &&  event.adcChannel[iADC] < 7)
 	values[ event.adcChannel[iADC] - 3 ] = castUIntToFloat(event.adcData[iADC]);
       if ( event.adcChannel[iADC] == 3)
-	trackTree_->X.push_back(castUIntToFloat(event.adcData[iADC]));
+       	trackTree_->X.push_back(castUIntToFloat(event.adcData[iADC]));
       if ( event.adcChannel[iADC] == 4)
 	trackTree_->Y.push_back(castUIntToFloat(event.adcData[iADC]));
 
