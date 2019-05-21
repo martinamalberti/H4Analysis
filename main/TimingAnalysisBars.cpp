@@ -109,6 +109,11 @@ int main(int argc, char** argv)
   float cut_maxTimeRef = opts.GetOpt<float>("Cuts.maxTimeRef");
   std::vector<float> cut_minTime = opts.GetOpt<std::vector<float> >("Cuts.minTime");
   std::vector<float> cut_maxTime = opts.GetOpt<std::vector<float> >("Cuts.maxTime");
+  for (int iBar = 0; iBar<3; iBar++){
+    cut_minTime[iBar] = 0;
+    cut_maxTime[iBar] = 200;
+ }
+
 
   float cut_XminRef = opts.GetOpt<float>("Cuts.XminRef");
   float cut_XmaxRef = opts.GetOpt<float>("Cuts.XmaxRef");
@@ -132,7 +137,8 @@ int main(int argc, char** argv)
   std::cout << "Loading trees ..." << std::endl; 
   TChain* chain1 = new TChain("h4","h4");
   for (unsigned int iRun = runMin; iRun < runMax+1; iRun++){
-    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
+    //    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     std::cout << fileName << std::endl;
     chain1 -> Add(fileName.c_str());
@@ -608,21 +614,23 @@ int main(int argc, char** argv)
   cut_ampMinR.clear();
   cut_ampMaxL.clear();
   cut_ampMaxR.clear();
-  float  maxamp = 0.90;
+  float  maxAmpSaturation = 0.90;
+  if (runMax < 6402) maxAmpSaturation = 0.50;
+  cout << " maxAmpSaturation = " << maxAmpSaturation <<endl;
   for (int iBar =0; iBar< NBARS; iBar++){
     fLandauL[iBar] = new TF1(Form("fLandauL_BAR%d",iBar),"landau",0, 1000);
     fLandauL[iBar]->SetRange(0.02,0.9);
     h_ampL_nocuts[iBar] -> Fit(fLandauL[iBar],"QR");  
     mipPeakL[iBar] = fLandauL[iBar]-> GetParameter(1);
     cut_ampMinL.push_back(0.85 * mipPeakL[iBar]);
-    maxamp = min(4*mipPeakL[iBar],float(0.9));
+    float maxamp = min(5*mipPeakL[iBar],maxAmpSaturation);
     cut_ampMaxL.push_back(maxamp);
     fLandauR[iBar] = new TF1(Form("fLandauR_BAR%d",iBar),"landau",0, 1000);
     fLandauR[iBar]->SetRange(0.02,0.9);
     h_ampR_nocuts[iBar] -> Fit(fLandauR[iBar],"QR");  
     mipPeakR[iBar] = fLandauR[iBar]-> GetParameter(1);
     cut_ampMinR.push_back(0.85 * mipPeakR[iBar]);
-    maxamp = min(4*mipPeakR[iBar],float(0.9));
+    maxamp = min(5*mipPeakR[iBar],maxAmpSaturation);
     cut_ampMaxR.push_back(maxamp);
   }
 
@@ -747,9 +755,9 @@ int main(int argc, char** argv)
   vector<float> tRmin ;
   vector<float> tRmax ;
 
+  /*
   float nSigma = 6;
-
-  TF1 *fG = new TF1("fG","gaus",-50, 50);
+  TF1 *fG = new TF1("fG","gaus",-200, 200);
   for (int iBar = 0; iBar < NBARS; iBar++){
     fG->SetParameter(1,h_tL[iBar]->GetMean()); 
     fG->SetParameter(2, 0.150); 
@@ -763,6 +771,29 @@ int main(int argc, char** argv)
     fG->SetParameter(2,0.150);
     fG->SetRange(h_tR[iBar]->GetMean()-1, h_tR[iBar]->GetMean()+1);  
     h_tR[iBar]->Fit("fG","QR");
+    float meanR = fG->GetParameter(1);
+    float sigmaR = fG->GetParameter(2);
+    tRmin.push_back(meanR-nSigma*sigmaR);
+    tRmax.push_back(meanR+nSigma*sigmaR);
+  }
+  */
+
+
+  float nSigma = 2;
+  TF1 *fG = new TF1("fG","gaus",-200, 200);
+  for (int iBar = 0; iBar < NBARS; iBar++){
+    fG->SetParameter(1,h_timeL[iBar]->GetMean()); 
+    fG->SetParameter(2, 2.); 
+    fG->SetRange(h_timeL[iBar]->GetMean()-5, h_timeL[iBar]->GetMean()+5); 
+    h_timeL[iBar]->Fit("fG","QR");
+    float meanL = fG->GetParameter(1);
+    float sigmaL = fG->GetParameter(2);
+    tLmin.push_back(meanL-nSigma*sigmaL);
+    tLmax.push_back(meanL+nSigma*sigmaL);
+    fG->SetParameter(1,h_timeR[iBar]->GetMean()); 
+    fG->SetParameter(2,2.);
+    fG->SetRange(h_timeR[iBar]->GetMean()-5, h_timeR[iBar]->GetMean()+5);  
+    h_timeR[iBar]->Fit("fG","QR");
     float meanR = fG->GetParameter(1);
     float sigmaR = fG->GetParameter(2);
     tRmin.push_back(meanR-nSigma*sigmaR);
@@ -826,16 +857,16 @@ int main(int argc, char** argv)
 	if ( tL < cut_minTime[iBar] || tL > cut_maxTime[iBar]) continue;
 	if ( tR < cut_minTime[iBar] || tR > cut_maxTime[iBar] ) continue;
 
+	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
 	//-- time of Left, Right and average
 	tL = tL - tRef;
 	tR = tR - tRef;
 	tAve  = (tL + tR)/2;
 	
-	//if ( tL < h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() || tL > h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) continue;
-	//if ( tR < h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() || tR > h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) continue;
-
-	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
-	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+	//if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	//if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
 
 
 	// --- SiPM Left
@@ -953,6 +984,9 @@ int main(int argc, char** argv)
 	if ( tL   < cut_minTime[iBar]  || tL   > cut_maxTime[iBar]  ) continue;
 	if ( tR   < cut_minTime[iBar]  || tR   > cut_maxTime[iBar]  ) continue;
 
+	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
 	// -- remove very noisy events
 	if (brmsRef > cut_brmsMaxRef) continue;
         if (brmsR > cut_brmsMaxTimeCh[iBar]) continue;
@@ -961,10 +995,8 @@ int main(int argc, char** argv)
 	tL = tL - tRef;
         tR = tR - tRef;
 
-	//if ( tL < h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() || tL > h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) continue;
-        //if ( tR < h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() || tR > h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) continue;
-	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
-	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+	//if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	//if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
 
 	// -- amplitude walk correction 
 	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
@@ -1102,18 +1134,19 @@ int main(int argc, char** argv)
         if ( tL   < cut_minTime[iBar]  || tL   > cut_maxTime[iBar]  ) continue;
         if ( tR   < cut_minTime[iBar]  || tR   > cut_maxTime[iBar]  ) continue;
 
+	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
 	// -- remove very noisy events
 	if (brmsRef > cut_brmsMaxRef) continue;
         if (brmsR > cut_brmsMaxTimeCh[iBar]) continue;
         if (brmsL > cut_brmsMaxTimeCh[iBar]) continue;
 
-
 	tL = tL - tRef;
         tR = tR - tRef;
-	//if ( tL < h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() || tL > h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) continue;
-        //if ( tR < h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() || tR > h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) continue;	
-	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
-	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
+	//if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	//if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
 
 	// -- amplitude walk correction
 	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
@@ -1195,7 +1228,7 @@ int main(int argc, char** argv)
     fitFuncAve_posCorr[iBar] = new TF1(Form("fitFuncAve_posCorr_%d", iBar),"pol4");
     mean = p_tAve_ampCorr_vs_posX[iBar] -> GetMean();
     rms  = p_tAve_ampCorr_vs_posX[iBar] -> GetRMS();
-    fitFuncAve_posCorr[iBar]->SetRange( mean - 2.5*rms , mean + 2.5*rms);
+    fitFuncAve_posCorr[iBar]->SetRange( mean - 3.0*rms , mean + 3.0*rms);
     fitFuncAve_posCorr[iBar] -> SetLineColor(kRed);
     p_tAve_ampCorr_vs_posX[iBar] -> Fit(Form("fitFuncAve_posCorr_%d",iBar),"QSR");
     chi2ndf = fitFuncAve_posCorr[iBar] -> GetChisquare()/fitFuncAve_posCorr[iBar] -> GetNDF();
@@ -1268,18 +1301,19 @@ int main(int argc, char** argv)
         if ( tL   < cut_minTime[iBar]  || tL   > cut_maxTime[iBar]  ) continue;
         if ( tR   < cut_minTime[iBar]  || tR   > cut_maxTime[iBar]  ) continue;
 
+	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
 	// -- remove very noisy events
 	if (brmsRef > cut_brmsMaxRef) continue;
         if (brmsR > cut_brmsMaxTimeCh[iBar]) continue;
         if (brmsL > cut_brmsMaxTimeCh[iBar]) continue;
 
-
         tL = tL - tRef;
         tR = tR - tRef;
-	//if ( tL < h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() || tL > h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) continue;
-        //if ( tR < h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() || tR > h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) continue;
-	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
-	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
+	//if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
+	//if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
 
         // -- amplitude walk correction
         float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
@@ -2076,9 +2110,9 @@ int main(int argc, char** argv)
 // ---- Initialize tree -------------------------------------------------------------------------------------
 void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   
-  treeVars.t_amp = new float[36];
-  treeVars.t_time = new float[360];
-  treeVars.t_b_rms = new float[36];
+  treeVars.t_amp = new float[1000];
+  treeVars.t_time = new float[1000];
+  treeVars.t_b_rms = new float[1000];
   treeVars.t_CFD = 0;
   treeVars.t_LED = 0;
 
@@ -2145,10 +2179,10 @@ void GetTimeResolution( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun)
   fitFun->SetLineWidth(1);
   fitFun->SetParameter(1,ht->GetMean());
   fitFun->SetParameter(2,ht->GetRMS());
-  //tmin = ht->GetMean()-2.0*sEff;
-  //tmax = ht->GetMean()+2.0*sEff;
-  tmin = ht->GetMean()-2.0*ht->GetRMS();
-  tmax = ht->GetMean()+2.0*ht->GetRMS();
+  tmin = ht->GetMean()-2.0*sEff;
+  tmax = ht->GetMean()+2.0*sEff;
+  //tmin = ht->GetMean()-2.0*ht->GetRMS();
+  //tmax = ht->GetMean()+2.0*ht->GetRMS();
   ht->Fit( fitFun, "QRS", "", tmin, tmax);
   sGaus = fitFun->GetParameter(2);
   
