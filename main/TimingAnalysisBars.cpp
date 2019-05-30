@@ -152,8 +152,8 @@ int main(int argc, char** argv)
     // -- check if this is a good run
     if ( !goodRuns.empty() && std::count(goodRuns.begin(), goodRuns.end(), int(iRun)) == false) continue;
     // -- check if file exists
-    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
-    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
+    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     std::cout << fileName << std::endl;
     chain1 -> Add(fileName.c_str());
