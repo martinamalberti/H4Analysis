@@ -152,8 +152,8 @@ int main(int argc, char** argv)
     // -- check if this is a good run
     if ( !goodRuns.empty() && std::count(goodRuns.begin(), goodRuns.end(), int(iRun)) == false) continue;
     // -- check if file exists
-    //    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
-    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
+    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     std::cout << fileName << std::endl;
     chain1 -> Add(fileName.c_str());
@@ -235,6 +235,7 @@ int main(int argc, char** argv)
   TH1F*  h_timeL[NBARS];
   TH2F*  h2_timeL_vs_brms[NBARS];
 
+  TH2D*        h2_ampL_vs_posXc[NBARS];
   TProfile2D*  p2_ampL_vs_posXY[NBARS];
   TProfile*    p_ampL_vs_posX[NBARS];
   TProfile*    p_ampL_vs_posXc[NBARS];
@@ -246,6 +247,7 @@ int main(int argc, char** argv)
   TH1F*  h_timeR[NBARS];
   TH2F*  h2_timeR_vs_brms[NBARS];
  
+  TH2D*        h2_ampR_vs_posXc[NBARS];
   TProfile2D*  p2_ampR_vs_posXY[NBARS];
   TProfile*    p_ampR_vs_posX[NBARS];
   TProfile*    p_ampR_vs_posXc[NBARS];
@@ -393,12 +395,14 @@ int main(int argc, char** argv)
     h_timeR[iBar]       = new TH1F(Form("h_timeR_BAR%d",iBar),Form("h_timeR_BAR%d",iBar),400,0.,200.);
     h2_timeR_vs_brms[iBar] = new TH2F(Form("h2_timeR_vs_brms_BAR%d",iBar),Form("h2_timeR_vs_brms_BAR%d",iBar),500,0.,500., 2000, 0, 200);
 
+    h2_ampL_vs_posXc[iBar] = new TH2D(Form("h2_ampL_vs_posXc_BAR%d",iBar),Form("h2_ampL_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 100, 0, 1);
     p2_ampL_vs_posXY[iBar] = new TProfile2D(Form("p2_ampL_vs_posXY_BAR%d",iBar),Form("p2_ampL_vs_posXY_BAR%d",iBar), 100, xmin, xmax, 100, ymin, ymax, 0, 1);
     p_ampL_vs_posX[iBar]   = new TProfile(Form("p_ampL_vs_posX_BAR%d",iBar),Form("p_ampL_vs_posX_BAR%d",iBar), 100, xmin, xmax, 0, 1);
     p_ampL_vs_posXc[iBar]  = new TProfile(Form("p_ampL_vs_posXc_BAR%d",iBar),Form("p_ampL_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 0, 1);
     p_ampL_vs_posY[iBar]   = new TProfile(Form("p_ampL_vs_posY_BAR%d",iBar),Form("p_ampL_vs_posY_BAR%d",iBar), 100, ymin, ymax, 0, 1);
     p_ampL_vs_tDiff[iBar]  = new TProfile(Form("p_ampL_vs_tDiff_BAR%d",iBar),Form("p_ampL_vs_tDiff_BAR%d",iBar), 400, -4, 4, 0, 1);
 
+    h2_ampR_vs_posXc[iBar] = new TH2D(Form("h2_ampR_vs_posXc_BAR%d",iBar),Form("h2_ampR_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 100, 0, 1);
     p2_ampR_vs_posXY[iBar] = new TProfile2D(Form("p2_ampR_vs_posXY_BAR%d",iBar),Form("p2_ampR_vs_posXY_BAR%d",iBar), 100, xmin, xmax, 100, ymin, ymax, 0, 1);
     p_ampR_vs_posX[iBar]   = new TProfile(Form("p_ampR_vs_posX_BAR%d",iBar),Form("p_ampR_vs_posX_BAR%d",iBar), 100, xmin, xmax, 0, 1);
     p_ampR_vs_posXc[iBar]  = new TProfile(Form("p_ampR_vs_posXc_BAR%d",iBar),Form("p_ampR_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 0, 1);
@@ -920,6 +924,7 @@ int main(int argc, char** argv)
 
 	// --- SiPM Left
 	h_ampL[iBar]  -> Fill(ampL);
+	h2_ampL_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]), ampL);
 	p2_ampL_vs_posXY[iBar] ->Fill(posX,posY,ampL);
 	p_ampL_vs_posX[iBar] ->Fill(posX,ampL);
 	p_ampL_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]),ampL);
@@ -936,6 +941,7 @@ int main(int argc, char** argv)
 
 	// --- SiPM Right
         h_ampR[iBar]  -> Fill(ampR);
+	h2_ampR_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]), ampR);
         p2_ampR_vs_posXY[iBar] ->Fill(posX,posY,ampR);
         p_ampR_vs_posX[iBar] ->Fill(posX,ampR);
         p_ampR_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]),ampR);
@@ -1983,6 +1989,7 @@ int main(int argc, char** argv)
     h_ampL[iBar]->Write();
     h_timeL[iBar]->Write();
     h2_timeL_vs_brms[iBar]->Write(); 
+    h2_ampL_vs_posXc[iBar]->Write();
     p2_ampL_vs_posXY[iBar]->Write();
     p_ampL_vs_posX[iBar]->Write();
     p_ampL_vs_posXc[iBar]->Write();
@@ -1993,6 +2000,7 @@ int main(int argc, char** argv)
     h_ampR[iBar]->Write();
     h_timeR[iBar]->Write();
     h2_timeR_vs_brms[iBar]->Write(); 
+    h2_ampR_vs_posXc[iBar]->Write();
     p2_ampR_vs_posXY[iBar]->Write();
     p_ampR_vs_posX[iBar]->Write();
     p_ampR_vs_posXc[iBar]->Write();
