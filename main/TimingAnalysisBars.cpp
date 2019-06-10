@@ -633,7 +633,8 @@ int main(int argc, char** argv)
   h_ampRef_nocuts->Fit("ffitRef","QR");
   float mipPeakRef = ffitRef-> GetParameter(1);  
   float cut_ampMinRef =  mipPeakRef - 2 * ffitRef-> GetParameter(2);
-  float cut_ampMaxRef = 0.90;
+  float cut_ampMaxRef =  mipPeakRef + 2 * ffitRef-> GetParameter(2);
+  //float cut_ampMaxRef = 0.90;
 
   // --  Find mip peak for each bar
   TF1 *fLandauL[NBARS];
@@ -655,14 +656,16 @@ int main(int argc, char** argv)
     mipPeakL[iBar] = fLandauL[iBar]-> GetParameter(1);
     cut_ampMinL.push_back(0.85 * mipPeakL[iBar]);
     float maxamp = min(5*mipPeakL[iBar],maxAmpSaturation);
-    cut_ampMaxL.push_back(maxamp);
+    //cut_ampMaxL.push_back(maxamp);
+    cut_ampMaxL.push_back(maxAmpSaturation);
     fLandauR[iBar] = new TF1(Form("fLandauR_BAR%d",iBar),"landau",0, 1000);
     fLandauR[iBar]->SetRange(0.02,0.9);
     h_ampR_nocuts[iBar] -> Fit(fLandauR[iBar],"QR");  
     mipPeakR[iBar] = fLandauR[iBar]-> GetParameter(1);
     cut_ampMinR.push_back(0.85 * mipPeakR[iBar]);
     maxamp = min(5*mipPeakR[iBar],maxAmpSaturation);
-    cut_ampMaxR.push_back(maxamp);
+    //    cut_ampMaxR.push_back(maxamp);
+    cut_ampMaxR.push_back(maxAmpSaturation);
   }
 
   cout << "Amplitude selections" <<endl;
@@ -749,11 +752,11 @@ int main(int argc, char** argv)
       }
       
       if ( ampRef > cut_ampMinRef  &&  ampRef < cut_ampMaxRef && tRef > cut_minTimeRef && tRef < cut_maxTimeRef ) {
-	p_timeRef_vs_ampRef->Fill(ampRef, tRef);
-	p_ampRef_vs_posX->Fill(posX,ampRef);
-	p_ampRef_vs_posY->Fill(posY,ampRef);
 	if (posX > cut_XminRef && posX < cut_XmaxRef && posY < cut_YmaxRef && posY >cut_YminRef &&
 	    posX > cut_Xmin[0] && posX < cut_Xmax[0] && posY < cut_Ymax[0] && posY >cut_Ymin[NBARS-1] ){
+	  p_timeRef_vs_ampRef->Fill(ampRef, tRef);
+	  p_ampRef_vs_posX->Fill(posX,ampRef);
+	  p_ampRef_vs_posY->Fill(posY,ampRef);
 	  p_timeRef_vs_posX->Fill(posX,tRef);
 	  p_timeRef_vs_posY->Fill(posY,tRef);
 	}
@@ -1526,7 +1529,7 @@ int main(int argc, char** argv)
   float resolEff;
   float resolGaus;
   float resolGausErr;
-  float resolMCP = 0.015; 
+  float resolMCP = 0.014; 
   int nMinEntries = 50;
 
   TF1 *fpol0_tL_ampCorr[NBARS]; 

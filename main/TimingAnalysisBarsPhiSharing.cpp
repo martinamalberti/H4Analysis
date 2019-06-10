@@ -660,8 +660,9 @@ int main(int argc, char** argv)
   ffitRef->SetRange(0.03,0.2); 
   h_ampRef_nocuts->Fit("ffitRef","QR");
   float mipPeakRef = ffitRef-> GetParameter(1);  
-  float cut_ampMinRef =  mipPeakRef - 2 * ffitRef-> GetParameter(2);
-  float cut_ampMaxRef = 0.90;
+  float cut_ampMinRef =  mipPeakRef - 2. * ffitRef-> GetParameter(2);
+  float cut_ampMaxRef =  mipPeakRef + 2. * ffitRef-> GetParameter(2);
+  //  float cut_ampMaxRef = 0.90;
 
   // --  Find mip peak for each bar
   TF1 *fLandauL[NBARS];
@@ -678,11 +679,14 @@ int main(int argc, char** argv)
   cout << " maxAmpSaturation = " << maxAmpSaturation <<endl;
   for (int iBar =0; iBar< NBARS; iBar++){
     fLandauL[iBar] = new TF1(Form("fLandauL_BAR%d",iBar),"landau",0, 1000);
-    //h_ampL_nocuts[iBar]->GetXaxis() ->SetRangeUser(0.02, maxAmpSaturation);
-    //int mbin = h_ampL_nocuts[iBar]->GetMaximumBin();
-    //float mamp = h_ampL_nocuts[iBar]->GetBinCenter(mbin);
-    fLandauL[iBar]->SetRange(0.100, maxAmpSaturation);
-    //fLandauL[iBar]->SetParameter(1, mamp);
+    if (runMax >= 8629 && runMax <= 8922){ // 45 deg
+      fLandauL[iBar]->SetRange(0.100, maxAmpSaturation);
+      fLandauL[iBar]->SetParameter(1, 0.120);
+    }
+    if ( runMax >= 8943 ){ // 90, 60, 30 deg, 2mm bar
+      fLandauL[iBar]->SetRange(0.060, maxAmpSaturation);
+      fLandauL[iBar]->SetParameter(1, 0.100);
+    }
     h_ampL_nocuts[iBar] -> Fit(fLandauL[iBar],"QR");  
     mipPeakL[iBar] = fLandauL[iBar]-> GetParameter(1);
     cut_ampMinL.push_back(cut_ampMinFraction * mipPeakL[iBar]);
@@ -690,23 +694,20 @@ int main(int argc, char** argv)
     //cut_ampMaxL.push_back(maxamp);
     cut_ampMaxL.push_back(maxAmpSaturation);
     fLandauR[iBar] = new TF1(Form("fLandauR_BAR%d",iBar),"landau",0, 1000);
-    //h_ampR_nocuts[iBar]->GetXaxis() ->SetRangeUser(0.02, maxAmpSaturation);
-    //mbin = h_ampR_nocuts[iBar]->GetMaximumBin();
-    //mamp = h_ampR_nocuts[iBar]->GetBinCenter(mbin);
-    //fLandauR[iBar]->SetRange(mamp - 0.02, maxAmpSaturation);
-    //fLandauR[iBar]->SetParameter(1, mamp);
-    fLandauR[iBar]->SetRange(0.100, maxAmpSaturation);
+    if (runMax >= 8629 && runMax <= 8922){ // 45 deg
+      fLandauR[iBar]->SetRange(0.100, maxAmpSaturation);
+      fLandauR[iBar]->SetParameter(1, 0.120);
+    }    
+    if ( runMax >= 8943 ){ // 90, 60, 30 deg, 2mm bar
+      fLandauR[iBar]->SetRange(0.060, maxAmpSaturation);
+      fLandauR[iBar]->SetParameter(1, 0.100);
+    }
     h_ampR_nocuts[iBar] -> Fit(fLandauR[iBar],"QR");  
     mipPeakR[iBar] = fLandauR[iBar]-> GetParameter(1);
     cut_ampMinR.push_back(cut_ampMinFraction * mipPeakR[iBar]);
     maxamp = min(5*mipPeakR[iBar],maxAmpSaturation);
     //cut_ampMaxR.push_back(maxamp);
     cut_ampMaxR.push_back(maxAmpSaturation);
-
-    // unzoom
-    h_ampL_nocuts[iBar]->GetXaxis()->SetRangeUser(0.,1.);
-    h_ampR_nocuts[iBar]->GetXaxis()->SetRangeUser(0.,1.);
-
   }
 
   cout << "Amplitude selections" <<endl;
@@ -792,11 +793,11 @@ int main(int argc, char** argv)
       }
       
       if ( ampRef > cut_ampMinRef  &&  ampRef < cut_ampMaxRef && tRef > cut_minTimeRef && tRef < cut_maxTimeRef ) {
-	p_timeRef_vs_ampRef->Fill(ampRef, tRef);
-	p_ampRef_vs_posX->Fill(posX,ampRef);
-	p_ampRef_vs_posY->Fill(posY,ampRef);
 	if (posX > cut_XminRef && posX < cut_XmaxRef && posY < cut_YmaxRef && posY >cut_YminRef &&
 	    posX > cut_Xmin[0] && posX < cut_Xmax[0] && posY < cut_Ymax[0] && posY >cut_Ymin[NBARS-1] ){
+	  p_timeRef_vs_ampRef->Fill(ampRef, tRef);
+	  p_ampRef_vs_posX->Fill(posX,ampRef);
+	  p_ampRef_vs_posY->Fill(posY,ampRef);
 	  p_timeRef_vs_posX->Fill(posX,tRef);
 	  p_timeRef_vs_posY->Fill(posY,tRef);
 	}
@@ -1115,7 +1116,10 @@ int main(int argc, char** argv)
 	// -- simple average
 	p_tAve_vs_tDiff[iBar] ->Fill(tDiff, tAve);
 	h_tAve_ampCorr[iBar]->Fill(tAve_ampCorr);
-        p_tAve_ampCorr_vs_posX[iBar]->Fill(posX,tAve_ampCorr);
+	if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() &&
+	     tL > h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) {
+	  p_tAve_ampCorr_vs_posX[iBar]->Fill(posX,tAve_ampCorr);
+	}
         p_tAve_ampCorr_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tAve_ampCorr);
         p_tAve_ampCorr_vs_posY[iBar]->Fill(posY,tAve_ampCorr);
         p_tAve_ampCorr_vs_tDiff[iBar]->Fill(tDiff, tAve_ampCorr);
@@ -1336,9 +1340,10 @@ int main(int argc, char** argv)
   float resolEff;
   float resolGaus;
   float resolGausErr;
+  //float resolMCP = 0.;
   //  float resolMCP = 0.014; 
   float resolMCP = 0.030; // estimated comparing tAve and tDiff in this run range 
-  if (runMin >= 9069 && runMax <= 9362) resolMCP = 20.;
+  //if (runMin >= 8943) resolMCP = 0.020;
   int nMinEntries = 50;
   
   TF1 *fpol0_tL_ampCorr[NBARS]; 
