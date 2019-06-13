@@ -187,9 +187,31 @@ int main(int argc, char** argv)
     NBINSX[iBar] = ceil ((x1 - x2)/xbinWidth) ;
     theta[iBar]  = (90. - xyangle) * TMath::Pi()/180.;
   }
-     
+   
   float ybinWidth = 0.2 ; // mm
   int NBINSY = ceil ((cut_Ymax[0]-cut_Ymin[NBARS-1])/ybinWidth );
+
+  float xbinWidthForAmpWalk =  5; // mm 
+  if (xyangle == 14){
+    xbinWidthForAmpWalk =  8;
+  }
+  int NBINSXAMPWALK[NBARS];
+  for (int iBar = 0; iBar < NBARS; iBar++){
+    float x1 = min(cut_Xmax[iBar], cut_XmaxRef);
+    float x2 = max(cut_Xmin[iBar], cut_XminRef);
+    if (x1 < x2){
+      cout << "Ref  xmin = " << cut_XminRef <<  "   xmax " << cut_XmaxRef <<endl;
+      cout << "BAR" << iBar << " xmin = " << cut_Xmin[iBar] <<  "   xmax " << cut_Xmax[iBar] <<endl;
+      cout << "Ref and bar not overlapping in x ... exiting!"<<endl;
+      return 0;
+    }
+    if ( fabs(x1 -x2) < xbinWidthForAmpWalk){
+      NBINSXAMPWALK[iBar] = 1;
+    }
+    else{
+      NBINSXAMPWALK[iBar] = ceil ((x1 - x2)/cos(theta[iBar])/xbinWidthForAmpWalk) ;
+    }
+  }
 
   int   nTimeBins = 8000;
   float dtminL[NBARS]   = {-20., -20., -20.};
@@ -272,12 +294,13 @@ int main(int argc, char** argv)
   TH1F*          h_tL[NBARS];
   TH2F*          h2_tL_vs_amp[NBARS];
   TProfile*      p_tL_vs_amp[NBARS];
-  TProfile*      p_tL_vs_posX[NBARS];
+  TProfile*      p_tL_vs_amp_binned[NBARS][1000];                                                                  TProfile*      p_tL_vs_posX[NBARS];
   TProfile*      p_tL_vs_posY[NBARS];
   TProfile*      p_tL_vs_tDiff[NBARS];
 
   TH1F*          h_tL_ampCorr[NBARS];
   TProfile*      p_tL_ampCorr_vs_amp[NBARS];
+  TProfile*      p_tL_ampCorr_vs_amp_binned[NBARS][1000];  
   TProfile*      p_tL_ampCorr_vs_posX[NBARS];
   TProfile*      p_tL_ampCorr_vs_posY[NBARS];
   TProfile*      p_tL_ampCorr_vs_tDiff[NBARS];
@@ -291,12 +314,14 @@ int main(int argc, char** argv)
   TH1F*          h_tR[NBARS];
   TH2F*          h2_tR_vs_amp[NBARS];
   TProfile*      p_tR_vs_amp[NBARS];
+  TProfile*      p_tR_vs_amp_binned[NBARS][1000];
   TProfile*      p_tR_vs_posX[NBARS];
   TProfile*      p_tR_vs_posY[NBARS];
   TProfile*      p_tR_vs_tDiff[NBARS];
 
   TH1F*          h_tR_ampCorr[NBARS];
   TProfile*      p_tR_ampCorr_vs_amp[NBARS];
+  TProfile*      p_tR_ampCorr_vs_amp_binned[NBARS][1000];  
   TProfile*      p_tR_ampCorr_vs_posX[NBARS];
   TProfile*      p_tR_ampCorr_vs_posY[NBARS];
   TProfile*      p_tR_ampCorr_vs_tDiff[NBARS];
@@ -488,6 +513,18 @@ int main(int argc, char** argv)
       h_tDiff_ampCorr_binX[iBar][ibin] = new TH1F(Form("h_tDiff_ampCorr_binX_%d_BAR%d",ibin, iBar),Form("h_tDiff_ampCorr_binX_%d_BAR%d",ibin,iBar), int(nbinsHistoX/2), -4, 4);
       h_tDiff_ampCorr_posCorr_binX[iBar][ibin] = new TH1F(Form("h_tDiff_ampCorr_posCorr_binX_%d_BAR%d",ibin, iBar),Form("h_tDiff_ampCorr_posCorr_binX_%d_BAR%d",ibin,iBar), int(nbinsHistoX/2), -4, 4);
     }
+
+
+
+    // binned amp walk corr                                                                                                                     
+    for (int ibin = 0; ibin < NBINSXAMPWALK[iBar]; ibin++){
+      p_tL_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tL_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tL_vs_amp_binXc_%d_BAR%d",ibin,iBar), nAmpBins, 0., 1.,dtminL[iBar], dtmaxL[iBar]);
+      p_tR_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tR_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tR_vs_amp_binXc_%d_BAR%d",ibin,iBar),  nAmpBins, 0., 1.,dtminR[iBar], dtmaxR[iBar]);
+      p_tL_ampCorr_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tL_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tL_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar), nAmpBins, 0., 1.,dtminL[iBar], dtmaxL[iBar]);
+      p_tR_ampCorr_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tR_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tR_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar), nAmpBins, 0., 1.,dtminR[iBar], dtmaxR[iBar]);
+    }
+
+
 
   }
 
@@ -950,6 +987,8 @@ int main(int argc, char** argv)
         if ( tL > h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) 
 	{
 	  p_tL_vs_amp[iBar]->Fill(ampL,tL);
+	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+          p_tL_vs_amp_binned[iBar][xcbinamp]->Fill(ampL,tL);
 	}
 	p2_tL_vs_posXY[iBar] ->Fill(posX,posY,tL);
 	p_tL_vs_posX[iBar]->Fill(posX,tL);
@@ -967,6 +1006,8 @@ int main(int argc, char** argv)
 	if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) 
 	{
 	  p_tR_vs_amp[iBar]->Fill(ampR,tR);
+	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+          p_tR_vs_amp_binned[iBar][xcbinamp] ->Fill(ampR,tR);
         }
 	p2_tR_vs_posXY[iBar] ->Fill(posX,posY,tR);
         p_tR_vs_posX[iBar]->Fill(posX,tR);
@@ -989,6 +1030,8 @@ int main(int argc, char** argv)
   // --- Amplitude walk corrections
   TF1*  fitFuncL_ampCorr[NBARS];  
   TF1*  fitFuncR_ampCorr[NBARS];  
+  TF1*  fitFuncL_ampCorr_binned[NBARS][1000];
+  TF1*  fitFuncR_ampCorr_binned[NBARS][1000];
 
   for (int iBar = 0 ; iBar < NBARS; iBar++){
     fitFuncL_ampCorr[iBar] = new TF1(Form("fitFuncL_ampCorr_%d", iBar),fitFunction.c_str());
@@ -1010,6 +1053,26 @@ int main(int argc, char** argv)
     if (fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 5 ){
       p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRW");
     }
+
+
+    // amp corr binned in X
+    for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++){
+
+      fitFuncL_ampCorr_binned[iBar][ibin] = new TF1(Form("fitFuncL_ampCorr_%d_%d",ibin,  iBar),fitFunction.c_str());
+      fitFuncL_ampCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      p_tL_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncL_ampCorr_%d_%d",ibin, iBar),"QSR");
+      if (fitFuncL_ampCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncL_ampCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
+        p_tL_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncL_ampCorr_%d_%d",ibin, iBar),"QSRW");
+      }
+
+      fitFuncR_ampCorr_binned[iBar][ibin] = new TF1(Form("fitFuncR_ampCorr_%d_%d", ibin, iBar),fitFunction.c_str());
+      fitFuncR_ampCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      p_tR_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncR_ampCorr_%d_%d",ibin,iBar),"QSR");
+      if (fitFuncR_ampCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncR_ampCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
+        p_tR_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncR_ampCorr_%d_%d",ibin,iBar),"QSRW");
+      }
+    }
+
     
   }
 
@@ -1074,10 +1137,15 @@ int main(int argc, char** argv)
         tR = tR - tRef;
 
 	// -- amplitude walk correction 
+	int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+        //float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
+        //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
+	float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL);
+        float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR);
 	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
 	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ; 
-	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL); 
-	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR);
+	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL); 
+	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR);
 	float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
 	float tDiff = tR_corr - tL_corr;
 
@@ -1091,8 +1159,11 @@ int main(int argc, char** argv)
 	h_tL_ampCorr[iBar]->Fill(tL_corr);
         p_tL_ampCorr_vs_amp[iBar]->Fill(ampL,tL_corr);
         p_tL_ampCorr_vs_posX[iBar]->Fill(posX,tL_corr);
-	if ( tL > h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() )
+	if ( tL > h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ){
 	  p_tL_ampCorr_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tL_corr);
+	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+          p_tL_ampCorr_vs_amp_binned[iBar][xcbinamp] ->Fill(ampL,tL_corr);
+	}
         p_tL_ampCorr_vs_posY[iBar]->Fill(posY,tL_corr);
         p_tL_ampCorr_vs_tDiff[iBar]->Fill(tDiff, tL_corr);
 
@@ -1103,8 +1174,11 @@ int main(int argc, char** argv)
 	h_tR_ampCorr[iBar]->Fill(tR_corr);
         p_tR_ampCorr_vs_amp[iBar]->Fill(ampR,tR_corr);
         p_tR_ampCorr_vs_posX[iBar]->Fill(posX,tR_corr);
-	if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() )
+	if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) {
 	  p_tR_ampCorr_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tR_corr);
+	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+          p_tR_ampCorr_vs_amp_binned[iBar][xcbinamp] ->Fill(ampR,tR_corr);
+	}
         p_tR_ampCorr_vs_posY[iBar]->Fill(posY,tR_corr);
         p_tR_ampCorr_vs_tDiff[iBar]->Fill(tDiff, tR_corr);
 
@@ -1236,10 +1310,15 @@ int main(int argc, char** argv)
         tR = tR - tRef;
 
         // -- amplitude walk correction
+        int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+        //float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
+        //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
+        float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) ;
+        float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) ;
         //float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
 	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
-	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
-	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
+	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
+	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
         float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
         float tDiff = tR_corr - tL_corr;
  
@@ -1341,9 +1420,8 @@ int main(int argc, char** argv)
   float resolGaus;
   float resolGausErr;
   //float resolMCP = 0.;
-  //  float resolMCP = 0.014; 
+  //float resolMCP = 0.014; 
   float resolMCP = 0.030; // estimated comparing tAve and tDiff in this run range 
-  //if (runMin >= 8943) resolMCP = 0.020;
   int nMinEntries = 50;
   
   TF1 *fpol0_tL_ampCorr[NBARS]; 
@@ -1761,17 +1839,20 @@ int main(int argc, char** argv)
         tL = tL - tRef;
         tR = tR - tRef;
 
-        // -- amplitude walk correction
+        // -- amplitude walk correction 
+	int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+        float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
+        float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
         //float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
 	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
-	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
-	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
+	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
+	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
         float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
         float tDiff = tR_corr - tL_corr;
  
 	// -- correction for residual dependence on tDiff
-	//float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) + fitFuncAve_tDiffCorr[iBar]->Eval( p_tAve_ampCorr_vs_tDiff[iBar]->GetMean() ) ;
-	float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) ;
+	float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) + fitFuncAve_tDiffCorr[iBar]->Eval( p_tAve_ampCorr_vs_tDiff[iBar]->GetMean() ) ;
+	//float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) ;
 
 	// weights and times to combine bars
         w[iBar] =  0.5*(ampL+ampR);
@@ -2295,6 +2376,10 @@ int main(int argc, char** argv)
     h_tL[iBar]->Write();
     h2_tL_vs_amp[iBar]->Write();
     p_tL_vs_amp[iBar]->Write();
+    for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++) {
+      p_tL_vs_amp_binned[iBar][ibin]->Write();
+      p_tL_ampCorr_vs_amp_binned[iBar][ibin]->Write();
+    }
     p_tL_vs_posX[iBar]->Write();
     p_tL_vs_posY[iBar]->Write();
     p_tL_vs_tDiff[iBar]->Write();
@@ -2312,6 +2397,10 @@ int main(int argc, char** argv)
     h_tR[iBar]->Write();
     h2_tR_vs_amp[iBar]->Write();
     p_tR_vs_amp[iBar]->Write();
+    for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++) {
+      p_tR_vs_amp_binned[iBar][ibin]->Write();
+      p_tR_ampCorr_vs_amp_binned[iBar][ibin]->Write();
+    }
     p_tR_vs_posX[iBar]->Write();
     p_tR_vs_posY[iBar]->Write();
     p_tR_vs_tDiff[iBar]->Write();

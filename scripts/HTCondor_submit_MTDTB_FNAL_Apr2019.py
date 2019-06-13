@@ -7,9 +7,9 @@ import math
 
 
 # runs to be recosntructed
-runmin = 6293
+runmin = 6369
 runmax = 10747
-goodrunsfile = '/afs/cern.ch/user/a/abenagli/public/good_runs.txt' 
+goodrunsfile = '/afs/cern.ch/user/m/malberti/public/MTDTB_FNAL_April2019/good_runs.txt' 
 with open(goodrunsfile) as f:
   goodrunslist = [ int(i) for i in f ]
 
@@ -26,7 +26,7 @@ for run in range(runmin, (runmax+1)):
                 command = './prepareJobs.py -r ' + str(run) + \
                           ' -b /afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/' + \
                           ' -e ./bin/H4Reco' + \
-                          ' -c cfg/MTDTB_FNAL_Apr2019/MTDTB_FNAL_Apr2019.cfg' 
+                          ' -c cfg/MTDTB_FNAL_Apr2019/MTDTB_FNAL_Apr2019_DLED.cfg' 
                 print command
                 os.system(command)
                 
