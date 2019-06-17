@@ -152,7 +152,6 @@ int main(int argc, char** argv)
     // -- check if this is a good run
     if ( !goodRuns.empty() && std::count(goodRuns.begin(), goodRuns.end(), int(iRun)) == false) continue;
     // -- check if file exists
-    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v1/"+ std::to_string(int(iRun))+".root";
     std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     std::cout << fileName << std::endl;
@@ -188,10 +187,7 @@ int main(int argc, char** argv)
   }
      
 
-  float xbinWidthForAmpWalk =  5; // mm
-  if (xyangle == 14){
-    xbinWidthForAmpWalk =  8; 
-  }
+  float xbinWidthForAmpWalk =  999.; // mm
   int NBINSXAMPWALK[NBARS];
   for (int iBar = 0; iBar < NBARS; iBar++){
     float x1 = min(cut_Xmax[iBar], cut_XmaxRef);
@@ -211,6 +207,8 @@ int main(int argc, char** argv)
   }
 
   int   nTimeBins = 3000;
+  if (runMax < 7135 ) nTimeBins = 1000;
+    
   float dtminL[NBARS]   = {-12., -12., -12.};
   float dtmaxL[NBARS]   = {  3.,   3.,   3.};
   float dtminR[NBARS]   = {-12., -12., -12.};
@@ -295,6 +293,7 @@ int main(int argc, char** argv)
   TProfile*      p_tL_vs_amp[NBARS];
   TProfile*      p_tL_vs_amp_binned[NBARS][1000];
   TProfile*      p_tL_vs_posX[NBARS];
+  TProfile*      p_tL_vs_posXc[NBARS];
   TProfile*      p_tL_vs_posY[NBARS];
   TProfile*      p_tL_vs_tDiff[NBARS];
 
@@ -316,6 +315,7 @@ int main(int argc, char** argv)
   TProfile*      p_tR_vs_amp[NBARS];
   TProfile*      p_tR_vs_amp_binned[NBARS][1000];
   TProfile*      p_tR_vs_posX[NBARS];
+  TProfile*      p_tR_vs_posXc[NBARS];
   TProfile*      p_tR_vs_posY[NBARS];
   TProfile*      p_tR_vs_tDiff[NBARS];
 
@@ -457,6 +457,7 @@ int main(int argc, char** argv)
     h2_tL_vs_amp[iBar]          = new TH2F(Form("h2_tL_vs_amp_BAR%d",iBar),Form("h2_tL_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., 200, dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_amp[iBar]           = new TProfile(Form("p_tL_vs_amp_BAR%d",iBar),Form("p_tL_vs_amp_BAR%d",iBar), nAmpBins, 0., 1.,dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_posX[iBar]          = new TProfile(Form("p_tL_vs_posX_BAR%d",iBar),Form("p_tL_vs_posX_BAR%d",iBar), 100, xmin, xmax,dtminL[iBar], dtmaxL[iBar]);
+    p_tL_vs_posXc[iBar]         = new TProfile(Form("p_tL_vs_posXc_BAR%d",iBar),Form("p_tL_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]),dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_posY[iBar]          = new TProfile(Form("p_tL_vs_posY_BAR%d",iBar),Form("p_tL_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_tDiff[iBar]         = new TProfile(Form("p_tL_vs_tDiff_BAR%d",iBar),Form("p_tL_vs_tDiff_BAR%d",iBar), 100, -4, 4, dtminL[iBar], dtmaxL[iBar]);
 
@@ -474,7 +475,8 @@ int main(int argc, char** argv)
     h2_tR_vs_amp[iBar]          = new TH2F(Form("h2_tR_vs_amp_BAR%d",iBar),Form("h2_tR_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., 200, dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_amp[iBar]           = new TProfile(Form("p_tR_vs_amp_BAR%d",iBar),Form("p_tR_vs_amp_BAR%d",iBar), nAmpBins, 0., 1.,dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_posX[iBar]          = new TProfile(Form("p_tR_vs_posX_BAR%d",iBar),Form("p_tR_vs_posX_BAR%d",iBar), 100, xmin, xmax,dtminR[iBar], dtmaxR[iBar]);
-    p_tR_vs_posY[iBar]          = new TProfile(Form("p_tR_vs_posY_BAR%d",iBar),Form("p_tR_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminR[iBar], dtmaxR[iBar]);
+    p_tR_vs_posXc[iBar]         = new TProfile(Form("p_tR_vs_posXc_BAR%d",iBar),Form("p_tR_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]),dtminR[iBar], dtmaxR[iBar]);
+p_tR_vs_posY[iBar]          = new TProfile(Form("p_tR_vs_posY_BAR%d",iBar),Form("p_tR_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_tDiff[iBar]         = new TProfile(Form("p_tR_vs_tDiff_BAR%d",iBar),Form("p_tR_vs_tDiff_BAR%d",iBar), 100, -4, 4,dtminR[iBar], dtmaxR[iBar]);
 
     h_tR_ampCorr[iBar]          = new TH1F(Form("h_tR_ampCorr_BAR%d",iBar),Form("h_tR_ampCorr_BAR%d",iBar), nTimeBins, dtminR[iBar], dtmaxR[iBar]);
@@ -706,21 +708,21 @@ int main(int argc, char** argv)
   cout << " maxAmpSaturation = " << maxAmpSaturation <<endl;
   for (int iBar =0; iBar< NBARS; iBar++){
     fLandauL[iBar] = new TF1(Form("fLandauL_BAR%d",iBar),"landau",0, 1000);
-    fLandauL[iBar]->SetRange(0.02,0.9);
+    fLandauL[iBar]->SetRange(0.01,0.9);
     h_ampL_nocuts[iBar] -> Fit(fLandauL[iBar],"QR");  
     mipPeakL[iBar] = fLandauL[iBar]-> GetParameter(1);
     cut_ampMinL.push_back(0.85 * mipPeakL[iBar]);
     float maxamp = min(5*mipPeakL[iBar],maxAmpSaturation);
-    cut_ampMaxL.push_back(maxamp);
-    //cut_ampMaxL.push_back(maxAmpSaturation);
+    //cut_ampMaxL.push_back(maxamp);
+    cut_ampMaxL.push_back(maxAmpSaturation);
     fLandauR[iBar] = new TF1(Form("fLandauR_BAR%d",iBar),"landau",0, 1000);
-    fLandauR[iBar]->SetRange(0.02,0.9);
+    fLandauR[iBar]->SetRange(0.01,0.9);
     h_ampR_nocuts[iBar] -> Fit(fLandauR[iBar],"QR");  
     mipPeakR[iBar] = fLandauR[iBar]-> GetParameter(1);
     cut_ampMinR.push_back(0.85 * mipPeakR[iBar]);
     maxamp = min(5*mipPeakR[iBar],maxAmpSaturation);
-    cut_ampMaxR.push_back(maxamp);
-    //cut_ampMaxR.push_back(maxAmpSaturation);
+    //cut_ampMaxR.push_back(maxamp);
+    cut_ampMaxR.push_back(maxAmpSaturation);
   }
 
   cout << "Amplitude selections" <<endl;
@@ -970,6 +972,7 @@ int main(int argc, char** argv)
 	}
 	p2_tL_vs_posXY[iBar] ->Fill(posX,posY,tL);
 	p_tL_vs_posX[iBar]->Fill(posX,tL);
+	p_tL_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tL);
 	p_tL_vs_posY[iBar]->Fill(posY,tL);
 	
 
@@ -990,6 +993,7 @@ int main(int argc, char** argv)
 	}
         p2_tR_vs_posXY[iBar] ->Fill(posX,posY,tR);
         p_tR_vs_posX[iBar]->Fill(posX,tR);
+        p_tR_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tR);
         p_tR_vs_posY[iBar]->Fill(posY,tR);
         
 	// -- tDiff
@@ -2191,6 +2195,7 @@ int main(int argc, char** argv)
       p_tL_ampCorr_vs_amp_binned[iBar][ibin]->Write();
     }
     p_tL_vs_posX[iBar]->Write();
+    p_tL_vs_posXc[iBar]->Write();
     p_tL_vs_posY[iBar]->Write();
     p_tL_vs_tDiff[iBar]->Write();
     
@@ -2212,6 +2217,7 @@ int main(int argc, char** argv)
       p_tR_ampCorr_vs_amp_binned[iBar][ibin]->Write();
     }
     p_tR_vs_posX[iBar]->Write();
+    p_tR_vs_posXc[iBar]->Write();
     p_tR_vs_posY[iBar]->Write();
     p_tR_vs_tDiff[iBar]->Write();
     

@@ -191,10 +191,7 @@ int main(int argc, char** argv)
   float ybinWidth = 0.2 ; // mm
   int NBINSY = ceil ((cut_Ymax[0]-cut_Ymin[NBARS-1])/ybinWidth );
 
-  float xbinWidthForAmpWalk =  5; // mm 
-  if (xyangle == 14){
-    xbinWidthForAmpWalk =  8;
-  }
+  float xbinWidthForAmpWalk =  999; // mm 
   int NBINSXAMPWALK[NBARS];
   for (int iBar = 0; iBar < NBARS; iBar++){
     float x1 = min(cut_Xmax[iBar], cut_XmaxRef);
@@ -1137,15 +1134,15 @@ int main(int argc, char** argv)
         tR = tR - tRef;
 
 	// -- amplitude walk correction 
-	int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+	//int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
         //float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
         //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
-	float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL);
-        float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR);
+	//float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL);
+        //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR);
 	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ; 
 	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ; 
-	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL); 
-	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR);
+	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL); 
+	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR);
 	float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
 	float tDiff = tR_corr - tL_corr;
 
@@ -1310,15 +1307,15 @@ int main(int argc, char** argv)
         tR = tR - tRef;
 
         // -- amplitude walk correction
-        int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+        //int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
         //float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
         //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
-        float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) ;
-        float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) ;
+        //float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) ;
+        //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) ;
         //float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
 	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
-	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
-	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
+	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
+	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
         float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
         float tDiff = tR_corr - tL_corr;
  
@@ -1840,19 +1837,19 @@ int main(int argc, char** argv)
         tR = tR - tRef;
 
         // -- amplitude walk correction 
-	int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
-        float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
-        float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
+	//int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
+        //float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean());
+        //float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
         //float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) + fitFuncL_ampCorr[iBar]->Eval(h_ampL[iBar]->GetMean()) ;
 	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) + fitFuncR_ampCorr[iBar]->Eval(h_ampR[iBar]->GetMean()) ;
-	//float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
-	//float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
+	float tL_corr = tL - fitFuncL_ampCorr[iBar]->Eval(ampL) ;
+	float tR_corr = tR - fitFuncR_ampCorr[iBar]->Eval(ampR) ;
         float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
         float tDiff = tR_corr - tL_corr;
  
 	// -- correction for residual dependence on tDiff
-	float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) + fitFuncAve_tDiffCorr[iBar]->Eval( p_tAve_ampCorr_vs_tDiff[iBar]->GetMean() ) ;
-	//float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) ;
+	//float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) + fitFuncAve_tDiffCorr[iBar]->Eval( p_tAve_ampCorr_vs_tDiff[iBar]->GetMean() ) ;
+	float tAve_ampCorr_tDiffCorr = tAve_ampCorr - fitFuncAve_tDiffCorr[iBar]->Eval(tDiff) ;
 
 	// weights and times to combine bars
         w[iBar] =  0.5*(ampL+ampR);
@@ -1883,8 +1880,6 @@ int main(int argc, char** argv)
       // resolution weighted sum 
       for ( int iBar = 0; iBar < NBARS; iBar++){
 	if ( posY > cut_Ymin[iBar] && posY < cut_Ymax[iBar] && w[iBar] > 0) {
-	  //wr[iBar] = 1./(f_tRes[iBar]->Eval(posY)*f_tRes[iBar]->Eval(posY));
-	  //float tRes = sqrt( pow(g_tResolGausAve_ampCorr_tDiffCorr_vs_posY[iBar]->Eval(posY), 2) + pow(resolMCP*1000.,2) );
 	  float tRes = g_tResolGausAve_ampCorr_tDiffCorr_vs_posY[iBar]->Eval(posY)  ;
 	  wr[iBar] = 1./(tRes*tRes);
 	}
@@ -1960,7 +1955,7 @@ int main(int argc, char** argv)
 	p_tAveAmpWSum_ampCorr_tDiffCorr_vs_posY ->Fill(posY,tAmpWSum_ampCorr_tDiffCorr);
       }
 
-      //if ( (w[0]!=0 && w[1]!=0) || (w[1]!=0 && w[2]!=0) ){
+      //if ( (w[0]!=0 && w[1]!=0) || (w[1]!=0 && w[2]!=0) )
       {
 	h_tAveResWSum_ampCorr->Fill(tResWSum_ampCorr);
 	h_tAveResWSum_ampCorr_tDiffCorr->Fill(tResWSum_ampCorr_tDiffCorr);
