@@ -188,6 +188,7 @@ int main(int argc, char** argv)
      
 
   float xbinWidthForAmpWalk =  999.; // mm
+  //float xbinWidthForAmpWalk =  5.; // mm
   int NBINSXAMPWALK[NBARS];
   for (int iBar = 0; iBar < NBARS; iBar++){
     float x1 = min(cut_Xmax[iBar], cut_XmaxRef);
@@ -708,7 +709,10 @@ p_tR_vs_posY[iBar]          = new TProfile(Form("p_tR_vs_posY_BAR%d",iBar),Form(
   cout << " maxAmpSaturation = " << maxAmpSaturation <<endl;
   for (int iBar =0; iBar< NBARS; iBar++){
     fLandauL[iBar] = new TF1(Form("fLandauL_BAR%d",iBar),"landau",0, 1000);
-    fLandauL[iBar]->SetRange(0.01,0.9);
+    fLandauL[iBar]->SetRange(0.01,0.88);
+    //fLandauL[iBar]->SetRange(0.06,0.88);
+    int maxbin = h_ampL_nocuts[iBar] -> GetMaximumBin();
+    fLandauL[iBar]->SetParameter(1, h_ampL_nocuts[iBar] -> GetBinCenter(maxbin));
     h_ampL_nocuts[iBar] -> Fit(fLandauL[iBar],"QR");  
     mipPeakL[iBar] = fLandauL[iBar]-> GetParameter(1);
     cut_ampMinL.push_back(0.85 * mipPeakL[iBar]);
@@ -716,7 +720,10 @@ p_tR_vs_posY[iBar]          = new TProfile(Form("p_tR_vs_posY_BAR%d",iBar),Form(
     //cut_ampMaxL.push_back(maxamp);
     cut_ampMaxL.push_back(maxAmpSaturation);
     fLandauR[iBar] = new TF1(Form("fLandauR_BAR%d",iBar),"landau",0, 1000);
-    fLandauR[iBar]->SetRange(0.01,0.9);
+    fLandauR[iBar]->SetRange(0.01,0.88);
+    //fLandauR[iBar]->SetRange(0.06,0.88);
+    maxbin = h_ampR_nocuts[iBar] -> GetMaximumBin();
+    fLandauR[iBar]->SetParameter(1, h_ampR_nocuts[iBar] -> GetBinCenter(maxbin));
     h_ampR_nocuts[iBar] -> Fit(fLandauR[iBar],"QR");  
     mipPeakR[iBar] = fLandauR[iBar]-> GetParameter(1);
     cut_ampMinR.push_back(0.85 * mipPeakR[iBar]);

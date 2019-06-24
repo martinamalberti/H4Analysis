@@ -618,6 +618,8 @@ int main(int argc, char** argv)
   TGraphErrors *g_nEventsRatio_vs_posY = new TGraphErrors();
   g_nEventsRatio_vs_posY->SetName("g_nEventsRatio_vs_posY");
 
+  TH2F *h2_ampRatio = new TH2F("h2_ampRatio","h2_ampRatio", 1000, -50, 50, 1000, -2, 2);
+
 
   float ampRef = 0;
   float tRef = 0;
@@ -929,9 +931,13 @@ int main(int argc, char** argv)
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[ampChannelRef]];
 
 
+      float amp0 = 0.5*(treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[0] ]] + treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[0] ]] );
+      float amp1 = 0.5*(treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[1] ]] + treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[1] ]] );
+      h2_ampRatio->Fill(posY, (amp0-amp1)/(amp0+amp1));
+
       // -- loop over bars
       for (int iBar = 0; iBar < NBARS; iBar++){
-
+	
 	ampL = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV ;
 	ampR = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV ;
 	
@@ -1020,7 +1026,8 @@ int main(int argc, char** argv)
         p_tAve_vs_posY[iBar]->Fill(posY,tAve);
                                                     
       } // -- end loop over bars
-      
+
+
     }// -- end first loop over events
   
   
@@ -1861,6 +1868,7 @@ int main(int argc, char** argv)
       
       if (w[0] == 0 && w[1] == 0 && w[2] == 0) continue;
 
+
       // amp weighted sum            
       float wsum = w[0]+w[1]+w[2];
       if (wsum!=0){
@@ -2335,6 +2343,8 @@ int main(int argc, char** argv)
   p_timeRef_vs_posY->Write();
   p2_ampRef_vs_posXY->Write();
   p2_timeRef_vs_posXY->Write();
+
+  h2_ampRatio-> Write();
 
   for (int iBar = 0; iBar < NBARS; iBar++){
     
