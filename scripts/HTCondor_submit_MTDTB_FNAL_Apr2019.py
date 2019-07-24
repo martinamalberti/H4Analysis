@@ -9,6 +9,8 @@ import math
 # runs to be recosntructed
 runmin = 6369
 runmax = 10747
+#runmin = 8173
+#runmax = 8443
 goodrunsfile = '/afs/cern.ch/user/m/malberti/public/MTDTB_FNAL_April2019/good_runs.txt' 
 with open(goodrunsfile) as f:
   goodrunslist = [ int(i) for i in f ]
