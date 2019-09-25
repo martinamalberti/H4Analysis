@@ -51,6 +51,8 @@ struct TreeVars
   float* t_b_rms;
   int  t_CFD;
   int  t_LED;
+  int t_CFD10;
+  int t_CFD80;
 
   std::vector<TrackPar> *t_trackFitResult;
   int t_ntracks;
@@ -155,8 +157,10 @@ int main(int argc, char** argv)
     if ( !goodRuns.empty() && std::count(goodRuns.begin(), goodRuns.end(), int(iRun)) == false) continue;
     // -- check if file exists
     //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
-    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v5/"+ std::to_string(int(iRun))+".root";
-    //std::string fileName = "/afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/ntuples/v5/"+ std::to_string(int(iRun))+".root";
+    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v5/"+ std::to_string(int(iRun))+".root"; // DLED4
+    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v6/"+ std::to_string(int(iRun))+".root"; //DLED2
+    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v7/"+ std::to_string(int(iRun))+".root"; //DLED4
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v8/"+ std::to_string(int(iRun))+".root"; //DLED2
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     std::cout << fileName << std::endl;
     chain1 -> Add(fileName.c_str());
@@ -192,7 +196,8 @@ int main(int argc, char** argv)
      
 
   float xbinWidthForAmpWalk =  999.; // mm
-  //float xbinWidthForAmpWalk =  5.; // mm
+  //float xbinWidthForAmpWalk =  10.; // used in xy scans
+  //float xbinWidthForAmpWalk =   5.; // used in material scans
   int NBINSXAMPWALK[NBARS];
   for (int iBar = 0; iBar < NBARS; iBar++){
     float x1 = min(cut_Xmax[iBar], cut_XmaxRef);
@@ -268,6 +273,8 @@ int main(int argc, char** argv)
   TProfile*    p_ampL_vs_posXc[NBARS];
   TProfile*    p_ampL_vs_posY[NBARS];
   TProfile*    p_ampL_vs_tDiff[NBARS];
+  TH1F*  h_risetimeL[NBARS];
+  TProfile *p_risetimeL_vs_posXc[NBARS];
 
   TH1F*  h_ampR_nocuts[NBARS];
   TH1F*  h_ampR[NBARS];
@@ -282,6 +289,11 @@ int main(int argc, char** argv)
   TProfile*    p_ampR_vs_posXc[NBARS];
   TProfile*    p_ampR_vs_posY[NBARS];
   TProfile*    p_ampR_vs_tDiff[NBARS];
+  TH1F*  h_risetimeR[NBARS];
+  TProfile *p_risetimeR_vs_posXc[NBARS];
+
+  TH1F *h_ampDiff[NBARS];
+  TH1F *h_pulseIntDiff[NBARS];
 
   TH2F* h2_tDiff_vs_posX[NBARS];
   TH2F* h2_tDiff_ampCorr_vs_posX[NBARS];
@@ -304,6 +316,8 @@ int main(int argc, char** argv)
   TProfile*      p_tL_vs_posY[NBARS];
   TProfile*      p_tL_vs_tDiff[NBARS];
   TProfile*      p_tL_vs_pulseInt[NBARS];
+  TProfile*      p_tL_vs_pulseInt_binned[NBARS][1000];
+  TProfile2D*    p2_tL_vs_amp_vs_posXc[NBARS];
 
   TH1F*          h_tL_ampCorr[NBARS];
   TProfile*      p_tL_ampCorr_vs_amp[NBARS];
@@ -322,6 +336,8 @@ int main(int argc, char** argv)
   TH1F*          h_tL_pulseIntCorr_binX[NBARS][1000];
   TProfile*      p_tL_pulseIntCorr_vs_posXc[NBARS];
 
+
+  
   // -- right   
   TProfile2D*    p2_tR_vs_posXY[NBARS];
 
@@ -334,6 +350,8 @@ int main(int argc, char** argv)
   TProfile*      p_tR_vs_posY[NBARS];
   TProfile*      p_tR_vs_tDiff[NBARS];
   TProfile*      p_tR_vs_pulseInt[NBARS];
+  TProfile*      p_tR_vs_pulseInt_binned[NBARS][1000];
+  TProfile2D*    p2_tR_vs_amp_vs_posXc[NBARS];
 
   TH1F*          h_tR_ampCorr[NBARS];
   TProfile*      p_tR_ampCorr_vs_amp[NBARS];
@@ -479,6 +497,8 @@ int main(int argc, char** argv)
     h_brms_timeL[iBar]   = new TH1F(Form("h_brms_timeL_BAR%d",iBar),Form("h_brms_timeL_BAR%d",iBar),400,0.,200.);
     h2_timeL_vs_brms[iBar] = new TH2F(Form("h2_timeL_vs_brms_BAR%d",iBar),Form("h2_timeL_vs_brms_BAR%d",iBar),500,0.,500., 2000, 0, 200);
     h2_pulseIntL_vs_amp[iBar] = new TH2F(Form("h2_pulseIntL_vs_amp_BAR%d",iBar),Form("h2_pulseIntL_vs_amp_BAR%d",iBar),500,0.,1., 2500, 0, 250);
+    h_risetimeL[iBar]         = new TH1F(Form("h_risetimeL_BAR%d",iBar),Form("h_risetimeL_BAR%d",iBar),1000,-2.,2.);
+    p_risetimeL_vs_posXc[iBar] = new TProfile(Form("p_risetimeL_vs_posXc_BAR%d",iBar),Form("h_risetimeL_vs_posXc_BAR%d",iBar),100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), -2.,2.);
 
     h_ampR_nocuts[iBar] = new TH1F(Form("h_ampR_nocuts_BAR%d", iBar), Form("h_ampR_nocuts_BAR%d",iBar), 500, 0., 1.0);
     h_ampR[iBar]        = new TH1F(Form("h_ampR_BAR%d", iBar), Form("h_ampR_BAR%d",iBar), 500, 0., 1.0);
@@ -487,6 +507,8 @@ int main(int argc, char** argv)
     h_brms_timeR[iBar]   = new TH1F(Form("h_brms_timeR_BAR%d",iBar),Form("h_brms_timeR_BAR%d",iBar),400,0.,200.);
     h2_timeR_vs_brms[iBar] = new TH2F(Form("h2_timeR_vs_brms_BAR%d",iBar),Form("h2_timeR_vs_brms_BAR%d",iBar),500,0.,500., 2000, 0, 200);
     h2_pulseIntR_vs_amp[iBar] = new TH2F(Form("h2_pulseIntR_vs_amp_BAR%d",iBar),Form("h2_pulseIntR_vs_amp_BAR%d",iBar),500,0.,1., 2500, 0, 250);
+    h_risetimeR[iBar]      = new TH1F(Form("h_risetimeR_BAR%d",iBar),Form("h_risetimeR_BAR%d",iBar),1000,-2.,2.);
+    p_risetimeR_vs_posXc[iBar] = new TProfile(Form("p_risetimeR_vs_posXc_BAR%d",iBar),Form("h_risetimeR_vs_posXc_BAR%d",iBar),100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), -2.,2.);
 
     h2_ampL_vs_posXc[iBar] = new TH2D(Form("h2_ampL_vs_posXc_BAR%d",iBar),Form("h2_ampL_vs_posXc_BAR%d",iBar), 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), 100, 0, 1);
     p2_ampL_vs_posXY[iBar] = new TProfile2D(Form("p2_ampL_vs_posXY_BAR%d",iBar),Form("p2_ampL_vs_posXY_BAR%d",iBar), 100, xmin, xmax, 100, ymin, ymax, 0, 1);
@@ -502,6 +524,10 @@ int main(int argc, char** argv)
     p_ampR_vs_posY[iBar]   = new TProfile(Form("p_ampR_vs_posY_BAR%d",iBar),Form("p_ampR_vs_posY_BAR%d",iBar), 100, ymin, ymax, 0, 1);
     p_ampR_vs_tDiff[iBar]  = new TProfile(Form("p_ampR_vs_tDiff_BAR%d",iBar),Form("p_ampR_vs_tDiff_BAR%d",iBar), 400, -4, 4, 0, 1);
 
+
+    h_ampDiff[iBar]      = new TH1F(Form("h_ampDiff_BAR%d", iBar), Form("h_ampDiff_BAR%d",iBar), 500, -1.0, 1.0);
+    h_pulseIntDiff[iBar] = new TH1F(Form("h_pulseIntDiff_BAR%d", iBar), Form("h_pulseIntDiff_BAR%d",iBar), 500, -1.0, 1.0);
+
     // -- tLeft
     p2_tL_vs_posXY[iBar]        = new TProfile2D(Form("p2_tL_vs_posXY_BAR%d",iBar),Form("p2_tL_vs_posXY_BAR%d",iBar), 400, xmin, xmax, 200, ymin, ymax, dtminL[iBar], dtmaxL[iBar]);
 
@@ -513,6 +539,7 @@ int main(int argc, char** argv)
     p_tL_vs_posY[iBar]          = new TProfile(Form("p_tL_vs_posY_BAR%d",iBar),Form("p_tL_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_tDiff[iBar]         = new TProfile(Form("p_tL_vs_tDiff_BAR%d",iBar),Form("p_tL_vs_tDiff_BAR%d",iBar), 100, -4, 4, dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_pulseInt[iBar]      = new TProfile(Form("p_tL_vs_pulseInt_BAR%d",iBar),Form("p_tL_vs_pulseInt_BAR%d",iBar), nAmpBins*5, 0., 250.,dtminL[iBar], dtmaxL[iBar]);
+    p2_tL_vs_amp_vs_posXc[iBar]  = new TProfile2D(Form("p2_tL_vs_amp_vs_posXc_BAR%d",iBar),Form("p2_tL_vs_amp_vs_posXc_BAR%d",iBar), nAmpBins, 0., 1., 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), dtminL[iBar], dtmaxL[iBar]);
 
     h_tL_ampCorr[iBar]          = new TH1F(Form("h_tL_ampCorr_BAR%d",iBar),Form("h_tL_ampCorr_BAR%d",iBar), nTimeBins, dtminL[iBar], dtmaxL[iBar]);
     p_tL_ampCorr_vs_amp[iBar]   = new TProfile(Form("p_tL_ampCorr_vs_amp_BAR%d",iBar),Form("p_tL_ampCorr_vs_amp_BAR%d",iBar), nAmpBins, 0., 1.,dtminL[iBar], dtmaxL[iBar]);
@@ -539,6 +566,7 @@ int main(int argc, char** argv)
     p_tR_vs_posY[iBar]          = new TProfile(Form("p_tR_vs_posY_BAR%d",iBar),Form("p_tR_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_tDiff[iBar]         = new TProfile(Form("p_tR_vs_tDiff_BAR%d",iBar),Form("p_tR_vs_tDiff_BAR%d",iBar), 100, -4, 4,dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_pulseInt[iBar]      = new TProfile(Form("p_tR_vs_pulseInt_BAR%d",iBar),Form("p_tR_vs_pulseInt_BAR%d",iBar), nAmpBins*5, 0., 250.,dtminR[iBar], dtmaxR[iBar]);
+    p2_tR_vs_amp_vs_posXc[iBar]  = new TProfile2D(Form("p2_tR_vs_amp_vs_posXc_BAR%d",iBar),Form("p2_tR_vs_amp_vs_posXc_BAR%d",iBar), nAmpBins, 0., 1., 100, xmin/cos(theta[iBar]), xmax/cos(theta[iBar]), dtminR[iBar], dtmaxR[iBar]);
 
     h_tR_ampCorr[iBar]          = new TH1F(Form("h_tR_ampCorr_BAR%d",iBar),Form("h_tR_ampCorr_BAR%d",iBar), nTimeBins, dtminR[iBar], dtmaxR[iBar]);
     p_tR_ampCorr_vs_amp[iBar]   = new TProfile(Form("p_tR_ampCorr_vs_amp_BAR%d",iBar),Form("p_tR_ampCorr_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., dtminR[iBar], dtmaxR[iBar]);
@@ -706,6 +734,9 @@ int main(int argc, char** argv)
       p_tR_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tR_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tR_vs_amp_binXc_%d_BAR%d",ibin,iBar), nAmpBins, 0., 1.,dtminR[iBar], dtmaxR[iBar]);
       p_tL_ampCorr_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tL_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tL_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar), nAmpBins, 0., 1.,dtminL[iBar], dtmaxL[iBar]);
       p_tR_ampCorr_vs_amp_binned[iBar][ibin] = new TProfile(Form("p_tR_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar),Form("p_tR_ampCorr_vs_amp_binXc_%d_BAR%d",ibin,iBar), nAmpBins, 0., 1.,dtminR[iBar], dtmaxR[iBar]);
+
+      p_tL_vs_pulseInt_binned[iBar][ibin] = new TProfile(Form("p_tL_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar),Form("p_tL_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar), nAmpBins*5, 0., 250., dtminL[iBar], dtmaxL[iBar]);
+      p_tR_vs_pulseInt_binned[iBar][ibin] = new TProfile(Form("p_tR_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar),Form("p_tR_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar), nAmpBins*5, 0., 250., dtminR[iBar], dtmaxR[iBar]);
     }
 
 
@@ -722,6 +753,7 @@ int main(int argc, char** argv)
   float ampR  = 0.;
   float pulseIntL = 0;
   float pulseIntR = 0;
+  float pulseIntAve = 0;
   float tL    = 0.;
   float tR    = 0.;
   float tAve  = 0.;
@@ -903,7 +935,6 @@ int main(int argc, char** argv)
 
       if ( ampRef > cut_ampMinRef  &&  ampRef < cut_ampMaxRef ){
 	h_ampRef->Fill(ampRef);
-	//h_timeRef->Fill(tRef);
       }
       
       if ( ampRef > cut_ampMinRef){
@@ -1034,6 +1065,14 @@ int main(int argc, char** argv)
 
 	pulseIntL = treeVars.t_charge_sig[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV;
 	pulseIntR = treeVars.t_charge_sig[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV;
+	pulseIntAve = 0.5 *(pulseIntL+pulseIntR);
+	
+	float t2 = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_CFD80];
+        float t1 = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_CFD10];
+        float rtL = t2 - t1;
+        t2 = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_CFD80];
+        t1 = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_CFD10];
+        float rtR = t2 - t1;
 	
 	// -- select events
         if ( posX < cut_XminRef || posX > cut_XmaxRef ) continue;
@@ -1067,6 +1106,11 @@ int main(int argc, char** argv)
 	tR = tR - tRef;
 	tAve  = (tL + tR)/2;
 
+
+
+	h_ampDiff[iBar] -> Fill( (ampL-ampR)/((ampL+ampR)/2) );
+	h_pulseIntDiff[iBar] -> Fill( (pulseIntL-pulseIntR)/((pulseIntL+pulseIntR)/2) );
+
 	// --- SiPM Left
 	h_ampL[iBar]  -> Fill(ampL);
 	h_pulseIntL[iBar]  -> Fill(pulseIntL);
@@ -1084,12 +1128,16 @@ int main(int argc, char** argv)
 	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
 	  p_tL_vs_amp_binned[iBar][xcbinamp]->Fill(ampL,tL);
 	  p_tL_vs_pulseInt[iBar]->Fill(pulseIntL,tL);
+	  p_tL_vs_pulseInt_binned[iBar][xcbinamp]->Fill(pulseIntL,tL);
+	  //p_tL_vs_pulseInt[iBar]->Fill(pulseIntAve,tL);
 	}
+	p2_tL_vs_amp_vs_posXc[iBar]  ->Fill(ampL, posX/cos(theta[iBar]), tL);
 	p2_tL_vs_posXY[iBar] ->Fill(posX,posY,tL);
 	p_tL_vs_posX[iBar]->Fill(posX,tL);
 	p_tL_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tL);
 	p_tL_vs_posY[iBar]->Fill(posY,tL);
-	
+	h_risetimeL[iBar] ->Fill(rtL);
+	p_risetimeL_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]),rtL);
 
 	// --- SiPM Right
         h_ampR[iBar]  -> Fill(ampR);
@@ -1108,12 +1156,17 @@ int main(int argc, char** argv)
 	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
 	  p_tR_vs_amp_binned[iBar][xcbinamp] ->Fill(ampR,tR);
 	  p_tR_vs_pulseInt[iBar]->Fill(pulseIntR,tR);
+	  p_tR_vs_pulseInt_binned[iBar][xcbinamp]->Fill(pulseIntR,tR);
+	  //p_tR_vs_pulseInt[iBar]->Fill(pulseIntAve,tR);
 	}
+	p2_tR_vs_amp_vs_posXc[iBar] ->Fill(ampR, posX/cos(theta[iBar]), tR);
         p2_tR_vs_posXY[iBar] ->Fill(posX,posY,tR);
         p_tR_vs_posX[iBar]->Fill(posX,tR);
         p_tR_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tR);
         p_tR_vs_posY[iBar]->Fill(posY,tR);
-        
+        h_risetimeR[iBar] ->Fill(rtR);
+	p_risetimeR_vs_posXc[iBar] ->Fill(posX/cos(theta[iBar]),rtR);
+
 	// -- tDiff
 	h_tDiff[iBar]->Fill(tR-tL);
 	p_tDiff_vs_posX[iBar]->Fill(posX,tR-tL);
@@ -1184,6 +1237,9 @@ int main(int argc, char** argv)
   TF1*  fitFuncL_pulseIntCorr[NBARS];
   TF1*  fitFuncR_pulseIntCorr[NBARS];
 
+  TF1*  fitFuncL_pulseIntCorr_binned[NBARS][1000];  
+  TF1*  fitFuncR_pulseIntCorr_binned[NBARS][1000];  
+
   for (int iBar = 0 ; iBar < NBARS; iBar++){
     fitFuncL_pulseIntCorr[iBar] = new TF1(Form("fitFuncL_pulseIntCorr_%d", iBar),"pol4", 0, 1000);
     fitFuncL_pulseIntCorr[iBar] -> SetLineColor(kRed);
@@ -1197,6 +1253,27 @@ int main(int argc, char** argv)
     p_tR_vs_pulseInt[iBar] -> Fit(Form("fitFuncR_pulseIntCorr_%d",iBar),"QSR");
     if (fitFuncR_pulseIntCorr[iBar] -> GetChisquare()/fitFuncR_pulseIntCorr[iBar] -> GetNDF() > 5 ){
       p_tR_vs_pulseInt[iBar] -> Fit(Form("fitFuncR_pulseIntCorr_%d",iBar),"QSRW");
+    }
+
+
+    // amp corr binned in X
+    for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++){
+
+      fitFuncL_pulseIntCorr_binned[iBar][ibin] = new TF1(Form("fitFuncL_pulseIntCorr_%d_%d",ibin,  iBar),fitFunction.c_str(), 0, 1000);
+      fitFuncL_pulseIntCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      p_tL_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncL_pulseIntCorr_%d_%d",ibin, iBar),"QSRW");
+      p_tL_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncL_pulseIntCorr_%d_%d",ibin, iBar),"QSR");
+      if (fitFuncL_pulseIntCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncL_pulseIntCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
+	p_tL_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncL_pulseIntCorr_%d_%d",ibin, iBar),"QSRW");
+      }
+      
+      fitFuncR_pulseIntCorr_binned[iBar][ibin] = new TF1(Form("fitFuncR_pulseIntCorr_%d_%d", ibin, iBar),fitFunction.c_str(), 0, 1000);
+      fitFuncR_pulseIntCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      p_tR_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncR_pulseIntCorr_%d_%d",ibin,iBar),"QSRW");
+      p_tR_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncR_pulseIntCorr_%d_%d",ibin,iBar),"QSR");
+      if (fitFuncR_pulseIntCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncR_pulseIntCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
+	p_tR_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncR_pulseIntCorr_%d_%d",ibin,iBar),"QSRW");
+      }
     }
 
   }
@@ -1234,6 +1311,7 @@ int main(int argc, char** argv)
 
 	pulseIntL = treeVars.t_charge_sig[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV;
         pulseIntR = treeVars.t_charge_sig[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV;
+	pulseIntAve = 0.5 *(pulseIntL+pulseIntR); 
 
 	// -- select events
         if ( posX < cut_XminRef || posX > cut_XmaxRef ) continue;
@@ -1272,8 +1350,10 @@ int main(int argc, char** argv)
 	float tDiff_ampCorr = tR_corr - tL_corr;
 	
 	// -- amp walk correction vs pulse integral
-	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr[iBar]->Eval(pulseIntL) + fitFuncL_pulseIntCorr[iBar]->Eval(h_pulseIntL[iBar]->GetMean());
-        float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr[iBar]->Eval(pulseIntR) + fitFuncR_pulseIntCorr[iBar]->Eval(h_pulseIntR[iBar]->GetMean());
+	//float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr[iBar]->Eval(pulseIntL) + fitFuncL_pulseIntCorr[iBar]->Eval(h_pulseIntL[iBar]->GetMean());
+	//float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr[iBar]->Eval(pulseIntR) + fitFuncR_pulseIntCorr[iBar]->Eval(h_pulseIntR[iBar]->GetMean());
+	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntL) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntL[iBar]->GetMean());
+	float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntR) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntR[iBar]->GetMean());
 	float tAve_pulseIntCorr = ( tL_pulseIntCorr + tR_pulseIntCorr)/2 ;
         float tDiff_pulseIntCorr = tR_pulseIntCorr - tL_pulseIntCorr;
 
@@ -1327,7 +1407,7 @@ int main(int argc, char** argv)
         p_tR_ampCorr_vs_tDiff[iBar]->Fill(tDiff_ampCorr, tR_corr);
 
 	h_tR_pulseIntCorr[iBar]->Fill(tR_pulseIntCorr);
-        p_tR_pulseIntCorr_vs_amp[iBar]->Fill(ampL,tR_pulseIntCorr);
+        p_tR_pulseIntCorr_vs_amp[iBar]->Fill(ampR,tR_pulseIntCorr);
         p_tR_pulseIntCorr_vs_posX[iBar]->Fill(posX,tR_pulseIntCorr);
         if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) {
           p_tR_pulseIntCorr_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tR_pulseIntCorr);
@@ -1612,6 +1692,7 @@ int main(int argc, char** argv)
 
 	pulseIntL = treeVars.t_charge_sig[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV;
         pulseIntR = treeVars.t_charge_sig[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV;
+	pulseIntAve = 0.5 * (pulseIntL + pulseIntR);
 
         // -- select events
         if ( posX < cut_XminRef || posX > cut_XmaxRef ) continue;
@@ -1654,9 +1735,11 @@ int main(int argc, char** argv)
         float tAveAmpW_ampCorr = wL*tL_corr + wR*tR_corr;
 
 	// -- amp walk correction vs pulse integral
-	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr[iBar]->Eval(pulseIntL) + fitFuncL_pulseIntCorr[iBar]->Eval(h_pulseIntL[iBar]->GetMean());
-        float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr[iBar]->Eval(pulseIntR) + fitFuncR_pulseIntCorr[iBar]->Eval(h_pulseIntR[iBar]->GetMean());
-	float tAve_pulseIntCorr = ( tL_pulseIntCorr + tR_pulseIntCorr)/2 ;
+	//float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr[iBar]->Eval(pulseIntL) + fitFuncL_pulseIntCorr[iBar]->Eval(h_pulseIntL[iBar]->GetMean());
+        //float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr[iBar]->Eval(pulseIntR) + fitFuncR_pulseIntCorr[iBar]->Eval(h_pulseIntR[iBar]->GetMean());
+	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntL) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntL[iBar]->GetMean());
+        float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntR) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntR[iBar]->GetMean());
+	float tAve_pulseIntCorr = ( tL_pulseIntCorr + tR_pulseIntCorr )/2 ;
         float tDiff_pulseIntCorr = tR_pulseIntCorr - tL_pulseIntCorr;
 
 	// -- resol weighted average
@@ -2623,6 +2706,8 @@ int main(int argc, char** argv)
     p_ampL_vs_posXc[iBar]->Write();
     p_ampL_vs_posY[iBar]->Write();
     p_ampL_vs_tDiff[iBar]->Write();
+    h_risetimeL[iBar]->Write();
+    p_risetimeL_vs_posXc[iBar]->Write();
 
     h_ampR_nocuts[iBar]->Write();
     h_ampR[iBar]->Write();
@@ -2637,7 +2722,11 @@ int main(int argc, char** argv)
     p_ampR_vs_posXc[iBar]->Write();
     p_ampR_vs_posY[iBar]->Write();
     p_ampR_vs_tDiff[iBar]->Write();
+    h_risetimeR[iBar]->Write();
+    p_risetimeR_vs_posXc[iBar]->Write();
 
+    h_ampDiff[iBar] -> Write();
+    h_pulseIntDiff[iBar] -> Write();
 
     // -- left
     p2_tL_vs_posXY[iBar]->Write();
@@ -2649,12 +2738,14 @@ int main(int argc, char** argv)
     for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++) {
       p_tL_vs_amp_binned[iBar][ibin]->Write();
       p_tL_ampCorr_vs_amp_binned[iBar][ibin]->Write();
+      p_tL_vs_pulseInt_binned[iBar][ibin]->Write();
     }
     p_tL_vs_posX[iBar]->Write();
     p_tL_vs_posXc[iBar]->Write();
     p_tL_vs_posY[iBar]->Write();
     p_tL_vs_tDiff[iBar]->Write();
-    
+    p2_tL_vs_amp_vs_posXc[iBar] -> Write();
+
     h_tL_ampCorr[iBar]->Write();
     p_tL_ampCorr_vs_amp[iBar]->Write();
     p_tL_ampCorr_vs_posX[iBar]->Write();
@@ -2679,12 +2770,14 @@ int main(int argc, char** argv)
     for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++) {
       p_tR_vs_amp_binned[iBar][ibin]->Write();
       p_tR_ampCorr_vs_amp_binned[iBar][ibin]->Write();
+      p_tR_vs_pulseInt_binned[iBar][ibin]->Write();
     }
     p_tR_vs_posX[iBar]->Write();
     p_tR_vs_posXc[iBar]->Write();
     p_tR_vs_posY[iBar]->Write();
     p_tR_vs_tDiff[iBar]->Write();
-    
+    p2_tR_vs_amp_vs_posXc[iBar] -> Write();
+
     h_tR_ampCorr[iBar]->Write();
     p_tR_ampCorr_vs_amp[iBar]->Write();
     p_tR_ampCorr_vs_posX[iBar]->Write();
@@ -2879,6 +2972,8 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   treeVars.t_b_rms = new float[1000];
   treeVars.t_CFD = 0;
   treeVars.t_LED = 0;
+  treeVars.t_CFD10 = 0;
+  treeVars.t_CFD80 = 0;
 
   treeVars.t_channelId = new std::map<std::string,int>;
 
@@ -2895,6 +2990,8 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   chain1 -> SetBranchStatus("time",          1); chain1 -> SetBranchAddress("time",         treeVars.t_time);
   chain1 -> SetBranchStatus("b_rms",         1); chain1 -> SetBranchAddress("b_rms",         treeVars.t_b_rms);
   chain1 -> SetBranchStatus("CFD",           1); chain1 -> SetBranchAddress("CFD",          &treeVars.t_CFD);
+  chain1 -> SetBranchStatus("CFD10",         1); chain1 -> SetBranchAddress("CFD10",        &treeVars.t_CFD10);
+  chain1 -> SetBranchStatus("CFD80",         1); chain1 -> SetBranchAddress("CFD80",        &treeVars.t_CFD80);
 
   cout << "Using threshold " << threshold << "  --> time : " << Form("LED%.0f",threshold) <<endl;
   chain1 -> SetBranchStatus(Form("LED%.0f",threshold),        1); chain1 -> SetBranchAddress(Form("LED%.0f",threshold),       &treeVars.t_LED);
