@@ -98,7 +98,7 @@ for ich, ch in enumerate(channels):
         gDiff[thr][ch].SetMarkerColor(1+i)
         gDiff[thr][ch].SetMarkerSize(0.7)
         gDiff[thr][ch].Draw('psame')
-        tPowDiff[ch][thr] = ROOT.TLatex( 0.15, 0.85-i*0.05, '#sigma_{t} ~  x^{%.2f +/- %.2f}'%( (gDiff[thr][ch].GetFunction('fitDiff')).GetParameter(0), (gDiff[thr][ch].GetFunction('fitDiff')).GetParError(0)))
+        tPowDiff[ch][thr] = ROOT.TLatex( 0.15, 0.85-i*0.05, '#sigma_{t} ~  x^{-(%.2f +/- %.2f)}'%( (gDiff[thr][ch].GetFunction('fitDiff')).GetParameter(0), (gDiff[thr][ch].GetFunction('fitDiff')).GetParError(0)))
         tPowDiff[ch][thr].SetNDC()
         tPowDiff[ch][thr].SetTextSize(0.045)
         tPowDiff[ch][thr].SetTextColor(1+i)

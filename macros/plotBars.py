@@ -32,7 +32,14 @@ subfolder = sys.argv[4]
 #filename = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle%s_2mm.root'%(Vbias, thr, angle)
 #filename = '../v4/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
 #filename = '../v4/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
-filename = '../v4/biasScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
+#filename = '../v4/biasScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle
+
+#filename = '../v5/output_3bars_Vbias%s_thr%sADC_xyangle%s_binnedAmpWalk.root'%(Vbias, thr, angle)
+#filename = '../v5/barCenter/output_3bars_Vbias%s_thr%sADC_xyangle%s_barCenter.root'%(Vbias, thr, angle)
+#filename = '../v5/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs7639-7679.root'%(Vbias, thr, angle)
+#filename = '../v5/barCenter/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs7639-7679_barCenter.root'%(Vbias, thr, angle)
+
+#filename = '../v7/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
 
 sigmaPTK = 0.014
             
@@ -112,8 +119,14 @@ histograms = {'h_beamXY'        : ['x(mm)', 'y(mm)'],
               'p_tL_vs_amp'     : ['amplitude (V)','t_{left} - t_{MCP} (ns)'],
               'p_tR_vs_amp'     : ['amplitude (V)','t_{right} - t_{MCP} (ns)'],
 
+              'p_tL_vs_pulseInt'     : ['pulse integral (V*ns)','t_{left} - t_{MCP} (ns)'],
+              'p_tR_vs_pulseInt'     : ['pulse integral (V*ns)','t_{right} - t_{MCP} (ns)'],
+
               'p_tL_ampCorr_vs_amp'      : ['amplitude (V)','t_{left} - t_{MCP} (ns)'],
               'p_tR_ampCorr_vs_amp'      : ['amplitude (V)','t_{right} - t_{MCP} (ns)'],
+
+              #'p_risetimeL_vs_posXc'   : ['x (mm)','risetime (ns)'],
+              #'p_risetimeR_vs_posXc'   : ['x (mm)','risetime (ns)']
 
 }
 
@@ -125,6 +138,8 @@ histograms1 = {'h_tL'            : ['t_{left} - t_{MCP} (ns)', 'events'],
                'h_tR_ampCorr'    : ['t_{right} - t_{MCP} (ns)', 'events'],
                'h_tAve_ampCorr'  : ['t_{ave} - t_{MCP} (ns)', 'events'],
                'h_tDiff_ampCorr' : ['t_{right} - t_{left} (ns)', 'events'],
+               'h_tAve_pulseIntCorr'  : ['t_{ave} - t_{MCP} (ns)', 'events'],
+               'h_tDiff_pulseIntCorr' : ['t_{right} - t_{left} (ns)', 'events'],
                
                'p_tL_ampCorr_vs_posX'     : ['x (mm)','t_{left} - t_{MCP} (ns)'],
                'p_tR_ampCorr_vs_posX'     : ['x (mm)','t_{right} - t_{MCP} (ns)'],
@@ -132,8 +147,9 @@ histograms1 = {'h_tL'            : ['t_{left} - t_{MCP} (ns)', 'events'],
                
                'p_tL_ampCorr_vs_tDiff'    : ['t_{right} - t_{left} (ns)','t_{left} - t_{MCP} (ns)'],
                'p_tR_ampCorr_vs_tDiff'    : ['t_{right} - t_{left} (ns)','t_{right} - t_{MCP} (ns)'],
-               'p_tAve_ampCorr_vs_tDiff'  : ['t_{right} - t_{left} (ns)','t_{ave} - t_{MCP} (ns)']
-}
+               'p_tAve_ampCorr_vs_tDiff'  : ['t_{right} - t_{left} (ns)','t_{ave} - t_{MCP} (ns)'],
+
+              }
 
 
 c = {}
@@ -166,7 +182,6 @@ for ih, hname in enumerate(['h_beamXY','h_ampRef_nocuts','h_timeRef', 'h_brmsRef
     c[hname].SetTicky()
 
     # get histograms
-    print hname
     h[hname] = f.Get(hname)
 
     #set histograms attributes
@@ -235,6 +250,8 @@ for hname, attr in  histograms.items():
   
     for ich, channel in enumerate(channels):
         hnameCh= hname + '_' + channel
+        if ('rise' in hnameCh): print hnameCh
+
         # prepare canvas
         cname = hnameCh.replace('h_','').replace('h2_','').replace('p_t','t').replace('p2_','')
 
@@ -284,7 +301,10 @@ for hname, attr in  histograms.items():
             h[hnameCh].SetMarkerStyle(20)
             h[hnameCh].SetMarkerSize(0.5)
             if ('vs_amp' in hnameCh):
-                h[hnameCh].GetXaxis().SetRangeUser( h[hnameCh].GetMean()-2*h[hnameCh].GetRMS(), 1.0)
+                h[hnameCh].GetXaxis().SetRangeUser( h[hnameCh].GetMean()-3*h[hnameCh].GetRMS(),  1)
+                h[hnameCh].GetYaxis().SetRangeUser( h[hnameCh].GetMean(2)-5.0*h[hnameCh].GetRMS(2), h[hnameCh].GetMean(2)+3.*h[hnameCh].GetRMS(2))
+            if ('vs_pulseInt' in hnameCh):
+                h[hnameCh].GetXaxis().SetRangeUser( h[hnameCh].GetMean()-5*h[hnameCh].GetRMS(),  h[hnameCh].GetMean()+5*h[hnameCh].GetRMS())
                 h[hnameCh].GetYaxis().SetRangeUser( h[hnameCh].GetMean(2)-5.0*h[hnameCh].GetRMS(2), h[hnameCh].GetMean(2)+3.*h[hnameCh].GetRMS(2))
             if ('vs_posX' in hnameCh):
                 bmin = h[hnameCh].FindFirstBinAbove(0)
@@ -319,8 +339,14 @@ for hname, attr in  histograms.items():
             xmax = 40
             h[hnameCh].GetXaxis().SetRangeUser( xmin, xmax )
             h[hnameCh].GetYaxis().SetRangeUser( ymin, ymax )
-                               
-      
+
+        if ('risetime' in hnameCh):
+            xmin =  h[hnameCh].GetMean()-30.
+            xmax =  h[hnameCh].GetMean()+30.
+            h[hnameCh].GetXaxis().SetRangeUser( xmin, xmax )
+            h[hnameCh].GetYaxis().SetRangeUser( 0.2, 1 )
+
+            
         #draw histos        
         c[hnameCh].cd()
 
@@ -433,8 +459,11 @@ for ich,channel in enumerate(channels):
 
     for ih, hname in enumerate(['h_tAve_ampCorr', 'p_tAve_ampCorr_vs_posX', 'p_tAve_ampCorr_vs_tDiff', 'p_tAve_ampCorr_vs_posXc', 'g_tResolGausAve_ampCorr',
                                 'h_tAve_ampCorr_tDiffCorr', 'p_tAve_ampCorr_tDiffCorr_vs_posX', 'p_tAve_ampCorr_tDiffCorr_vs_tDiff', 'p_tAve_ampCorr_tDiffCorr_vs_posXc', 'g_tResolGausAve_ampCorr_tDiffCorr',
-                                'h_tAve_ampCorr_posCorr', 'p_tAve_ampCorr_posCorr_vs_posX', 'p_tAve_ampCorr_posCorr_vs_tDiff', 'p_tAve_ampCorr_posCorr_vs_posXc', 'g_tResolGausAve_ampCorr_posCorr']):
-
+                                'h_tAve_ampCorr_posCorr', 'p_tAve_ampCorr_posCorr_vs_posX', 'p_tAve_ampCorr_posCorr_vs_tDiff', 'p_tAve_ampCorr_posCorr_vs_posXc', 'g_tResolGausAve_ampCorr_posCorr',
+                                'h_tAve_pulseIntCorr', 'p_tAve_pulseIntCorr_vs_posX', 'p_tAve_pulseIntCorr_vs_tDiff', 'p_tAve_pulseIntCorr_vs_posXc', 'g_tResolGausAve_pulseIntCorr',
+                                'h_tAve_pulseIntCorr_posCorr', 'p_tAve_pulseIntCorr_posCorr_vs_posX', 'p_tAve_pulseIntCorr_posCorr_vs_tDiff', 'p_tAve_pulseIntCorr_posCorr_vs_posXc', 'g_tResolGausAve_pulseIntCorr_posCorr'
+    ]):
+     
 
         hnameCh= hname + '_' + channel
         hnameChL= hnameCh.replace('AveResW','Ave').replace('AveAmpW','Ave').replace('Ave','L').replace('_tDiffCorr','').replace('_posCorr','')
@@ -449,6 +478,7 @@ for ich,channel in enumerate(channels):
             c[hnameCh].SetGridy()
 
         # get histograms
+        print hnameCh
         h[hnameCh]  = f.Get(hnameCh)
         h[hnameChL] = f.Get(hnameChL)
         h[hnameChR] = f.Get(hnameChR)
@@ -486,19 +516,21 @@ for ich,channel in enumerate(channels):
             resolEff   = ROOT.TMath.Sqrt(sigmaEff*sigmaEff - sigmaPTK*sigmaPTK)*1000.
             print '%s, resol_gaus = %.1f ps, eff_sigma = %.1f ps'%(channel, resolGaus, resolEff)
 
-            fitfunL     = h[hnameChL].GetFunction('fitFunL_ampCorr_%s'%channel)            
+            fitfunL     = h[hnameChL].GetFunction(hnameChL.replace('h_tL','fitFunL'))            
             fitfunL.SetLineColor(ROOT.kBlue)
             sigmaGausL  = fitfunL.GetParameter(2)
             sigmaEffL   = f.Get('h_effectiveSigmaL_ampCorr_%s'%channel).GetMean()
+            if ('pulseIntCorr' in hnameChL):  sigmaEffL   = f.Get('h_effectiveSigmaL_pulseIntCorr_%s'%channel).GetMean()
             resolGausL  = ROOT.TMath.Sqrt(sigmaGausL*sigmaGausL - sigmaPTK*sigmaPTK)*1000.
             resolGausErrL = fitfunL.GetParError(2)*1000.*sigmaGausL*1000./resolGausL
             resolEffL   = ROOT.TMath.Sqrt(sigmaEffL*sigmaEffL - sigmaPTK*sigmaPTK)*1000.
             print '%s, resol_gaus = %.1f ps, eff_sigma = %.1f ps'%(channel, resolGausL, resolEffL)
 
-            fitfunR     = h[hnameChR].GetFunction('fitFunR_ampCorr_%s'%channel)            
+            fitfunR     = h[hnameChR].GetFunction(hnameChR.replace('h_tR','fitFunR'))            
             fitfunR.SetLineColor(ROOT.kRed)
             sigmaGausR  = fitfunR.GetParameter(2)
             sigmaEffR   = f.Get('h_effectiveSigmaR_ampCorr_%s'%channel).GetMean()
+            if ('pulseIntCorr' in hnameChR): sigmaEffR   = f.Get('h_effectiveSigmaR_pulseIntCorr_%s'%channel).GetMean()
             resolGausR  = ROOT.TMath.Sqrt(sigmaGausR*sigmaGausR - sigmaPTK*sigmaPTK)*1000.
             resolGausErrR = fitfunR.GetParError(2)*1000.*sigmaGausR*1000./resolGausR
             resolEffR   = ROOT.TMath.Sqrt(sigmaEffR*sigmaEffR - sigmaPTK*sigmaPTK)*1000.
@@ -609,8 +641,9 @@ for ich,channel in enumerate(channels):
 
     for ih, hname in enumerate([#'h_tDiff_ampCorr', 'p_tDiff_ampCorr_vs_posX', 'p_tDiff_ampCorr_vs_posXc', 'g_tResolGausDiff_ampCorr',
                                 #'g_tResolGausDiff', 'g_tResolGausDiff_posCorr',
-                                'h_tDiff_ampCorr_posCorr', 'p_tDiff_ampCorr_posCorr_vs_posX', 'p_tDiff_ampCorr_posCorr_vs_posXc',
-                                'g_tResolGausDiff_ampCorr_posCorr']):
+                                'h_tDiff_ampCorr_posCorr', 'p_tDiff_ampCorr_posCorr_vs_posX', 'p_tDiff_ampCorr_posCorr_vs_posXc', 'g_tResolGausDiff_ampCorr_posCorr',
+                                'h_tDiff_pulseIntCorr_posCorr', 'p_tDiff_pulseIntCorr_posCorr_vs_posX', 'p_tDiff_pulseIntCorr_posCorr_vs_posXc', 'g_tResolGausDiff_pulseIntCorr_posCorr'
+    ]):
 
 
         hnameCh= hname + '_' + channel

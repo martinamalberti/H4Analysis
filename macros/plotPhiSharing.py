@@ -31,11 +31,11 @@ thr = sys.argv[2]
 angle = sys.argv[3]
 subfolder = sys.argv[4]
 
-filename = '../v4/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
+filename = '../v7/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
 f = ROOT.TFile.Open(filename)
 
 
-filenameRef = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle90_runs7639-7679.root'%(Vbias, thr)
+filenameRef = '../v7/output_3bars_Vbias%s_thr%sADC_xyangle90_runs7639-7679.root'%(Vbias, thr)
 fRef = ROOT.TFile.Open(filenameRef)
 
 
@@ -45,12 +45,13 @@ tChType.SetNDC()
 tChType.SetTextSize(0.035)
 
 g = {}
-g['BAR0'] = f.Get('g_tResolGausAve_ampCorr_vs_posY_BAR0')
-g['BAR1'] = f.Get('g_tResolGausAve_ampCorr_vs_posY_BAR1')
-g['BAR2'] = f.Get('g_tResolGausAve_ampCorr_vs_posY_BAR2')
-g['COMB'] = f.Get('g_tResolGausSum_ampCorr_vs_posY')
-g['COMBW1'] = f.Get('g_tResolGausAmpWSum_ampCorr_vs_posY')
-g['COMBW2'] = f.Get('g_tResolGausResWSum_ampCorr_vs_posY')
+g['BAR0'] = f.Get('g_tResolGausAve_ampCorr_posCorr_vs_posY_BAR0')
+g['BAR1'] = f.Get('g_tResolGausAve_ampCorr_posCorr_vs_posY_BAR1')
+g['BAR2'] = f.Get('g_tResolGausAve_ampCorr_posCorr_vs_posY_BAR2')
+g['COMB'] = f.Get('g_tResolGausAveSum_ampCorr_posCorr_vs_posY')
+g['COMBW1'] = f.Get('g_tResolGausAmpWSum_ampCorr_posCorr_vs_posY')
+g['COMBW2'] = f.Get('g_tResolGausResWSum_ampCorr_posCorr_vs_posY')
+
 
 gnorm = {}
 gnorm['BAR0'] = ROOT.TGraphErrors()
@@ -214,21 +215,21 @@ tResRef90 = {}
 tResRef45 = {}
 for ch in ['BAR0','BAR1','BAR2']:
     # run at normal incidence
-    hAve90 = fRef.Get('h_tAve_ampCorr_%s'%ch)
-    funAve90 = hAve90.GetFunction('fitFunAve_ampCorr_%s'%ch)
+    hAve90 = fRef.Get('h_tAve_ampCorr_posCorr_%s'%ch)
+    funAve90 = hAve90.GetFunction('fitFunAve_ampCorr_posCorr_%s'%ch)
     hDiff90 = fRef.Get('h_tDiff_ampCorr_posCorr_%s'%ch)
     funDiff90 = hDiff90.GetFunction('fitFunDiff_ampCorr_posCorr_%s'%ch)
     tResRef90[ch] = math.sqrt( funAve90.GetParameter(2)*funAve90.GetParameter(2) - funDiff90.GetParameter(2)*funDiff90.GetParameter(2)/4. )
     tRes90[ch]    = math.sqrt( funAve90.GetParameter(2)*funAve90.GetParameter(2) - tResRef90[ch]*tResRef90[ch])
     # run at 45 deg
-    hAve45   = f.Get('h_tAve_ampCorr_%s'%ch)
-    funAve45 = hAve45.GetFunction('fitFunAve_ampCorr_%s'%ch)
+    hAve45   = f.Get('h_tAve_ampCorr_posCorr_%s'%ch)
+    funAve45 = hAve45.GetFunction('fitFunAve_ampCorr_posCorr_%s'%ch)
     hDiff45  = f.Get('h_tDiff_ampCorr_posCorr_%s'%ch)
     funDiff45 = hDiff45.GetFunction('fitFunDiff_ampCorr_posCorr_%s'%ch)
     tResRef45[ch] = math.sqrt( funAve45.GetParameter(2)*funAve45.GetParameter(2) - funDiff45.GetParameter(2)*funDiff45.GetParameter(2)/4. )
     tRes45[ch]    = math.sqrt( funAve45.GetParameter(2)*funAve45.GetParameter(2) - tResRef45[ch]*tResRef45[ch])
-    print 'normal incidence:', funAve90.GetParameter(2), tRes90[ch],   tResRef90[ch] 
-    print ' 45 deg         :', funAve45.GetParameter(2), tRes45[ch],   tResRef45[ch] 
+    print ' 90 deg         :', funAve90.GetParameter(2)*1000, tRes90[ch]*1000,   tResRef90[ch]*1000 
+    print ' 45 deg         :', funAve45.GetParameter(2)*1000, tRes45[ch]*1000,   tResRef45[ch]*1000 
 
 tnorm = 1000.*(tRes90['BAR0'] + tRes90['BAR1'] + tRes90['BAR2']) / 3 # average time resolution of the three bars at normal incidence 
 tnorm2 = 1000.*(tRes45['BAR0'] + tRes45['BAR1'] + tRes45['BAR2']) / 3 # average time resolution of the three bars at normal incidence 
@@ -236,7 +237,7 @@ sigmaRef90 = 1000.* ( tResRef90['BAR0'] + tResRef90['BAR1'] +  tResRef90['BAR2']
 sigmaRef45 = 1000.* ( tResRef45['BAR0'] + tResRef45['BAR1'] +  tResRef45['BAR2']) /3 
 print 'Estimated MCP time resolution (normal incidence) = %.01f ps'%sigmaRef90
 print 'Estimated MCP time resolution (45 deg incidence) = %.01f ps'%sigmaRef45
-print 'Time resolution at normal incidence = %.01f ps'%tnorm
+print 'Time resolution at 90 deg incidence = %.01f ps'%tnorm
 print 'Time resolution at 45 deg incidence = %.01f ps'%tnorm2
 
 
@@ -250,10 +251,8 @@ for b in ['BAR0','BAR1','BAR2', 'COMB', 'COMBW1', 'COMBW2']:
         sigma = ROOT.Double(0)
         g[b].GetPoint(i, x, sigma)
         if (sigma <= 0): continue
-        #sigma = math.sqrt(sigma*sigma - sigmaRef45*sigmaRef45 + 30.*30.)
-        #sigma = math.sqrt(sigma*sigma)
+        #sigma = math.sqrt(sigma*sigma - sigmaRef45*sigmaRef45)
         xerr = g[b].GetErrorX(i)
-        print tnorm, sigma
         sigmaerr =  sigma/tnorm * math.sqrt(pow(g[b].GetErrorY(i)/sigma,2) + pow(2./tnorm,2))
         gnorm[b].SetPoint(i, x, sigma/tnorm)
         gnorm[b].SetPointError(i, xerr, sigmaerr)

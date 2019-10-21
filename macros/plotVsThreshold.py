@@ -22,21 +22,31 @@ ROOT.gStyle.SetTitleOffset(1.05,'Y')
 #ROOT.gStyle.SetTitleSize(0.04,'Y')
 ROOT.gErrorIgnoreLevel = ROOT.kWarning;
 
-useTdiff = False
+useTdiff = True
+inputDir = '../v7/biasScan/'
+
+ampCorrType = 'ampCorr'
+#ampCorrType = 'pulseIntCorr'
+
+barRegion = ''
+#barRegion = 'barCenter'
+#barRegion = 'barEdge'
 
 angle = sys.argv[1]
 outdir = sys.argv[2]
 
 Vbreak = 66
 
+#Vbias = [72]
 Vbias = [72, 71, 70, 69, 68]
 #Vbias = [43, 42, 41, 40, 39]
-thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 500, 700, 1000]# ADC
-#thresholds = [20, 50, 100, 200, 300, 400, 500, 700, 1000, 2000] # ADC
+#thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]# ADC
+thresholds = [20, 30, 50, 70 , 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]# ADC
 
 
-PDE = { 72 : 38, 71 : 35, 70 : 30, 69 : 23, 68 : 15,
-        43 : 35, 42 : 30, 41 : 27, 40 : 23, 39 : 17
+
+PDE = { 72 : 38, 71 : 35, 70 : 30, 69 : 23, 68 : 15, # from slide 5 of https://indico.cern.ch/event/758017/contributions/3172748/attachments/1731615/2798893/18_10_10_CERNTB_H4_Results_on_crystal_bars.pdf
+        43 : 35, 42 : 30, 41 : 27, 40 : 23, 39 : 17  # from 
 }
 
 kAdcToV = 1000./4096
@@ -86,36 +96,38 @@ for vb in Vbias:
         s_eff[vb][th] = {}
         s_gaus[vb][th] = {}
         s_gaus_err[vb][th] = {}
-        
-        #fname = '../v1/output_3bars_Vbias%s_thr%sADC_xyangle90_runs6369-6401.root'%(vb, th)
-        #fname = '../v1/output_3bars_Vbias%s_thr%sADC_xyangle90_runs6872-6913.root'%(vb, th)
-        #fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle90_runs6369-6401.root'%(vb, th)
-        #fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle90_runs6872-6913.root'%(vb, th)
-        #fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle90_runs7498-7516.root'%(vb, th)
-        #fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle90_runs7639-7679.root'%(vb, th)
-        #fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle90_runs7850-7877.root'%(vb, th)
-        #fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(vb, th, angle)
-        #fname = '../v4/biasScan/output_1bar_Vbias%s_thr%sADC_%smm.root'%(vb, th, angle)
-        fname = '../v4/biasScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(vb, th, angle)
+        # xyangle scan
+        #if (barRegion == ''):
+        #    fname = '%s/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(inputDir,vb, th, angle)
+        #if (barRegion == 'barCenter'): fname = '%s/barCenter/output_3bars_Vbias%s_thr%sADC_xyangle%s_barCenter.root'%(inputDir, vb, th, angle)
+        #if (barRegion == 'barEdge'): fname = '%s/barEdge/output_3bars_Vbias%s_thr%sADC_xyangle%s_barEdge.root'%(inputDir, vb, th, angle)
+        #if (angle == '90'):
+        #    fname = fname.replace('xyangle90','xyangle90_runs7639-7679')
+        fname = '%s/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(inputDir,vb, th, angle)
+        if (angle == '4' or angle == '3' or angle == '2'):
+            fname = '%s/output_1bar_Vbias%s_thr%sADC_%smm.root'%(inputDir,vb, th, angle)
+        print fname
         if (os.path.isfile(fname) ==  False): continue
         f = ROOT.TFile.Open(fname)
-
+               
         for channel in channels:
             #get sigmaEff, sigmaGauss
-            sigmaEff   = f.Get('h_effectiveSigmaAve_ampCorr_posCorr_%s'%channel).GetMean()
-            h = f.Get('h_tAve_ampCorr_posCorr_'+ channel)
-            fitfun = h.GetFunction('fitFunAve_ampCorr_posCorr_%s'%channel)
+            sigmaEff   = f.Get('h_effectiveSigmaAve_%s_posCorr_%s'%(ampCorrType,channel)).GetMean()
+            h = f.Get('h_tAve_%s_posCorr_%s'%(ampCorrType,channel))
+            fitfun = h.GetFunction('fitFunAve_%s_posCorr_%s'%(ampCorrType,channel))
             if (useTdiff):
-                sigmaEff   = f.Get('h_effectiveSigmaDiff_ampCorr_posCorr_%s'%channel).GetMean()
-                h = f.Get('h_tDiff_ampCorr_posCorr_'+ channel)
-                fitfun = h.GetFunction('fitFunDiff_ampCorr_posCorr_%s'%channel)
-            if (fitfun == None):
-                continue
-            
-            sigmaGaus  = fitfun.GetParameter(2)
-            esigmaGaus = fitfun.GetParError(2)
+                sigmaEff   = f.Get('h_effectiveSigmaDiff_%s_posCorr_%s'%(ampCorrType,channel)).GetMean()
+                h = f.Get('h_tDiff_%s_posCorr_%s'%(ampCorrType,channel))
+                fitfun = h.GetFunction('fitFunDiff_%s_posCorr_%s'%(ampCorrType,channel))
 
-            
+            if (fitfun != None):            
+                sigmaGaus  = fitfun.GetParameter(2)
+                esigmaGaus = fitfun.GetParError(2)
+            else:
+                sigmaGaus  =  99999.
+                esigmaGaus  =  99999.
+                
+                
             if (useTdiff):
                 resolGaus = sigmaGaus*1000./2
                 resolEff  = sigmaEff*1000./2
@@ -128,7 +140,7 @@ for vb in Vbias:
             s_eff[vb][th][channel]  = resolEff
             s_gaus[vb][th][channel] = resolGaus
             s_gaus_err[vb][th][channel] = max(esigmaGaus*1000., 2.)
-            #print channel, th, '    sigma_gaus = %.1f      sigma_eff = %.1f'%(s_gaus[vb][th][channel],  s_eff[vb][th][channel])
+            print channel, th, '    sigma_gaus = %.1f      sigma_eff = %.1f'%(s_gaus[vb][th][channel],  s_eff[vb][th][channel])
                        
         
 
@@ -139,6 +151,7 @@ for vb in Vbias:
     bestThreshold[vb] = {}
     print vb
     for ch in channels:
+        print vb, ch, th
         l = [ s_gaus[vb][th][ch] for th in thresholds ]
         bestIndex = l.index(min(l))
         bestThreshold[vb][ch] = thresholds[bestIndex]
@@ -202,7 +215,7 @@ canvasPde = {}
 canvasTh = {}
 hdummyVb = ROOT.TH2F('','',10, 0, 8,100,0,100)
 hdummyPde = ROOT.TH2F('','',10,5,55,100,0,100)
-hdummyTh = ROOT.TH2F('','',100,4, (thresholds[-1]+1000)*kAdcToV,100,0,100)
+hdummyTh = ROOT.TH2F('','',100,0, (thresholds[-1]+100)*kAdcToV,100,0,100)
     
 legVb = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
 legVb.SetBorderSize(0)
@@ -240,7 +253,7 @@ for channel in channels:
             g_VbiasScan[th][channel].SetMarkerStyle(20)
             g_VbiasScan[th][channel].Draw('plsame')
             if (channel == 'BAR0' and g_VbiasScan[th][channel].GetN()>0):
-                legVb.AddEntry(g_VbiasScan[th][channel], 'LE threshold = %.0f mV'%(th*kAdcToV), 'PL')
+                legVb.AddEntry(g_VbiasScan[th][channel], 'threshold = %.0f mV'%(th*kAdcToV), 'PL')
     legVb.Draw('same')
     tChType[channel].Draw()
     canvasVb[channel].SaveAs(outdir+'/'+canvasVb[channel].GetName()+'.png')
@@ -283,13 +296,13 @@ for channel in channels:
         canvasTh[channel] = ROOT.TCanvas('scan_LEthresholds_%s_xyangle%s'%(channel, angle),'scan_LEthresholds_%s_xyangle%s'%(channel,angle))
     canvasTh[channel].SetGridx()
     canvasTh[channel].SetGridy()
-    canvasTh[channel].SetLogx()
+    #canvasTh[channel].SetLogx()
     hdummyTh.Draw()
-    hdummyTh.GetXaxis().SetTitle('LE threshold (mV)')
+    hdummyTh.GetXaxis().SetTitle('threshold (mV)')
     hdummyTh.GetYaxis().SetTitle('time resolution (ps)')
     for i,vb in enumerate(Vbias):
-        print channel
-        l = [g_thrScan[vb][channel].GetY()[i] for i in range(0, g_thrScan[vb][channel].GetN())]
+        print channel, i
+        l = [g_thrScan[vb][channel].GetY()[j] for j in range(0, g_thrScan[vb][channel].GetN())]
         indexBest = l.index(min(l))
         print channel, vb, 'Best threshold: %s ADC  --> sigma_t = %.1f ps'%(thresholds[indexBest], g_thrScan[vb][channel].GetY()[indexBest])
         if (g_thrScan[vb][channel]):
@@ -308,18 +321,61 @@ for channel in channels:
     else:
         canvasTh[channel].SaveAs(outdir+'/'+canvasTh[channel].GetName()+'.png')
         canvasTh[channel].SaveAs(outdir+'/'+canvasTh[channel].GetName()+'.pdf')
-    #raw_input('ok?')
+    raw_input('ok?')
 
 
+#vs thr - all channels, only Vbias max
+legThrAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+legThrAll.SetBorderSize(0)
+
+if (angle == '4' or angle == '3' or angle == '2'):
+    canvasThAll = ROOT.TCanvas('scan_LEthresholds_Vbias%d_%smm_FBK'%(Vbias[0], angle),'scan_LEthresholds_Vbias%d_%smm_FBK'%(Vbias[0],angle))
+else:
+    canvasThAll = ROOT.TCanvas('scan_LEthresholds_Vbias%d_xyangle%s_HPK'%(Vbias[0], angle),'scan_LEthresholds_Vbias%d_xyangle%s_HPK'%(Vbias[0],angle))
+canvasThAll.SetGridx()
+canvasThAll.SetGridy()
+hdummyTh.Draw()
+hdummyTh.GetXaxis().SetTitle('threshold (mV)')
+hdummyTh.GetYaxis().SetTitle('time resolution (ps)')
+for ich,channel in enumerate(channels):
+    vb = Vbias[0]
+    if (g_thrScan[vb][channel]):
+        g_thrScan[vb][channel].SetMarkerStyle(20+ich)
+        g_thrScan[vb][channel].SetMarkerSize(1.0)
+        g_thrScan[vb][channel].SetMarkerColor(ROOT.kBlue+ich)
+        g_thrScan[vb][channel].SetLineColor(ROOT.kBlue+ich)
+        g_thrScan[vb][channel].SetLineStyle(1)
+        g_thrScan[vb][channel].SetLineWidth(1)
+        #g_thrScan[vb][channel].SetLineColor(i+1)
+        #g_thrScan[vb][channel].SetLineWidth(2)
+        #g_thrScan[vb][channel].SetMarkerColor(i+1)
+        #g_thrScan[vb][channel].SetMarkerStyle(20)
+        g_thrScan[vb][channel].Draw('plsame')
+        legThrAll.AddEntry(g_thrScan[vb][channel], '%s'%channel, 'PL')
+        tChType[channel].Draw()
+legThrAll.Draw('same')
+tChType[channel].Draw()
+if (useTdiff):
+    canvasThAll.SaveAs(outdir+'/'+canvasThAll.GetName()+'_tDiff.png')
+    canvasThAll.SaveAs(outdir+'/'+canvasThAll.GetName()+'_tDiff.pdf')
+else:
+    canvasThAll.SaveAs(outdir+'/'+canvasThAll.GetName()+'.png')
+    canvasThAll.SaveAs(outdir+'/'+canvasThAll.GetName()+'.pdf')
+raw_input('ok?')
+
+
+
+
+    
 
 # vs bias - all channels , for optimal threshold
 legVbAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
 legVbAll.SetBorderSize(0)
 
 if (angle == '4' or angle == '3' or angle == '2'):
-    canvasVbAll = ROOT.TCanvas('scan_Vbias_LEthrOpt_%smm'%angle,'scan_Vbias_LEthrOpt_%smm'%angle)
+    canvasVbAll = ROOT.TCanvas('scan_Vbias_LEthrOpt_%smm_FBK'%angle,'scan_Vbias_LEthrOpt_%smm_FBK'%angle)
 else:
-    canvasVbAll = ROOT.TCanvas('scan_Vbias_LEthrOpt_xyangle%s'%angle,'scan_Vbias_LEthrOpt_angle%s'%angle)
+    canvasVbAll = ROOT.TCanvas('scan_Vbias_LEthrOpt_xyangle%s_HPK'%angle,'scan_Vbias_LEthrOpt_angle%s_HPK'%angle)
 canvasVbAll.SetGridx()
 canvasVbAll.SetGridy()
 hdummyVb.Draw()
@@ -333,8 +389,8 @@ for ich, channel in enumerate(channels):
         g_VbiasScan_opt[channel].SetLineWidth(1)
         g_VbiasScan_opt[channel].Draw('plsame')
         legVbAll.AddEntry(g_VbiasScan_opt[channel], '%s'%channel, 'PL')
-        legVbAll.Draw('same')
         tChType[channel].Draw()
+legVbAll.Draw('same')
 canvasVbAll.SaveAs(outdir+'/'+canvasVbAll.GetName()+'.png')
 canvasVbAll.SaveAs(outdir+'/'+canvasVbAll.GetName()+'.pdf')
 
@@ -343,9 +399,9 @@ legPdeAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
 legPdeAll.SetBorderSize(0)
 tPde = {}
 if (angle == '4' or angle == '3' or angle == '2'):
-    canvasPdeAll = ROOT.TCanvas('scan_PDE_LEthrOpt_%smm'%angle,'scan_PDE_LEthrOpt_%smm'%angle)
+    canvasPdeAll = ROOT.TCanvas('scan_PDE_LEthrOpt_%smm_FBK'%angle,'scan_PDE_LEthrOpt_%smm_FBK'%angle)
 else:
-    canvasPdeAll = ROOT.TCanvas('scan_PDE_LEthrOpt_xyangle%s'%angle,'scan_PDE_LEthrOpt_xyangle%s'%angle)
+    canvasPdeAll = ROOT.TCanvas('scan_PDE_LEthrOpt_xyangle%s_HPK'%angle,'scan_PDE_LEthrOpt_xyangle%s_HPK'%angle)
 canvasPdeAll.SetGridx()
 canvasPdeAll.SetGridy()
 hdummyPde.Draw()

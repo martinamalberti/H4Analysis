@@ -24,7 +24,12 @@ ROOT.gStyle.SetTitleOffset(1.1,'X')
 ROOT.gStyle.SetTitleOffset(1.2,'Y')
 ROOT.gErrorIgnoreLevel = ROOT.kWarning;
 
+
 outdir = sys.argv[1]
+
+#ampCorrType = 'ampCorr'
+ampCorrType = 'pulseIntCorr'
+
 
 if (outdir != './'):
     os.system('mkdir %s'%outdir)
@@ -33,7 +38,7 @@ shutil.copy('index.php', '%s'%outdir)
 
 thickness = [2, 3, 4]
 channels = ['BAR%s'%i for i in range(0,1)]
-thresholds = [50, 100, 200, 300, 400, 500, 700, 1000, 2000]
+thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]
 vb = 43
 
 f = {}
@@ -66,16 +71,16 @@ for t in thickness:
         sigmatAve_err[t][th] = {}
         sigmatDiff[t][th] = {}
         sigmatDiff_err[t][th] = {}
-        fname = '../v4/output_1bar_Vbias%s_thr%sADC_%smm.root'%(vb, th, t)
+        fname = '../v7/output_1bar_Vbias%s_thr%sADC_%smm.root'%(vb, th, t)
         if (os.path.isfile(fname) ==  False):
             print 'File %s', fname, 'not found!'
             continue
         ff = ROOT.TFile.Open(fname)
         for channel in channels:
             # tAve
-            sigmaEff = ff.Get('h_effectiveSigmaAve_ampCorr_posCorr_%s'%channel).GetMean()
-            h = ff.Get('h_tAve_ampCorr_posCorr_'+ channel)
-            fitfun = h.GetFunction('fitFunAve_ampCorr_posCorr_%s'%channel)
+            sigmaEff = ff.Get('h_effectiveSigmaAve_%s_posCorr_%s'%(ampCorrType, channel)).GetMean()
+            h = ff.Get('h_tAve_%s_posCorr_%s'%(ampCorrType, channel))
+            fitfun = h.GetFunction('fitFunAve_%s_posCorr_%s'%(ampCorrType, channel))
             if (fitfun == None):
                 continue
             sigmaGaus  = fitfun.GetParameter(2)
@@ -86,8 +91,8 @@ for t in thickness:
             sigmatAve_err[t][th][channel] = esigmaGaus*1000.
 
             # tDiff
-            h = ff.Get('h_tDiff_ampCorr_posCorr_'+ channel)
-            fitfun = h.GetFunction('fitFunDiff_ampCorr_posCorr_%s'%channel)
+            h = ff.Get('h_tDiff_%s_posCorr_%s'%(ampCorrType, channel))
+            fitfun = h.GetFunction('fitFunDiff_%s_posCorr_%s'%(ampCorrType, channel))
             if (fitfun == None):
                 continue
             sigmaGaus  = fitfun.GetParameter(2)
@@ -125,12 +130,12 @@ for t in thickness:
     h2_ampL_vs_posXc[t] = {}
     h2_ampR_vs_posXc[t] = {}
     for ch in channels:
-        fname = '../v4/output_1bar_Vbias43_thr%dADC_%smm.root'%(bestThresholdDiff[t][ch], t)
+        fname = '../v7/output_1bar_Vbias43_thr%dADC_%smm.root'%(bestThresholdDiff[t][ch], t)
         f[t][ch] = ROOT.TFile.Open(fname)
         gR[t][ch] = f[t][ch].Get('g_tResolGausR_ampCorr_%s'%ch)
         gL[t][ch] = f[t][ch].Get('g_tResolGausL_ampCorr_%s'%ch)
-        pR[t][ch] = f[t][ch].Get('p_tR_ampCorr_vs_posXc_%s'%ch)
-        pL[t][ch] = f[t][ch].Get('p_tL_ampCorr_vs_posXc_%s'%ch)
+        pR[t][ch] = f[t][ch].Get('p_tR_%s_vs_posXc_%s'%(ampCorrType, ch))
+        pL[t][ch] = f[t][ch].Get('p_tL_%s_vs_posXc_%s'%(ampCorrType, ch))
         h_ampR[t][ch] = f[t][ch].Get('h_ampR_%s'%ch)
         h_ampL[t][ch] = f[t][ch].Get('h_ampL_%s'%ch)
         h2_ampR_vs_posXc[t][ch] = f[t][ch].Get('h2_ampR_vs_posXc_%s'%ch)
@@ -208,7 +213,8 @@ for ch in channels:
         thr = bestThresholdDiff[t][ch]
         tResDiff[ch][t] = sigmatDiff[t][thr][ch]
         errDiff = math.sqrt(sigmatDiff_err[t][thr][ch]*sigmatDiff_err[t][thr][ch] + err * err)
-                 
+        print ch, t, thr,  tResDiff[ch][t]
+        
         thr = bestThresholdAve[t][ch]
         tResAve[ch][t] = sigmatAve[t][thr][ch]
         errAve = math.sqrt(sigmatAve_err[t][thr][ch]*sigmatAve_err[t][thr][ch] + err * err)
@@ -332,8 +338,8 @@ for ch in channels:
         hsliceL[1].Draw()
         hsliceR[1].Draw('same')
         tChType.Draw()
-        ccc.SaveAs(ccc.GetName()+'.png')
-        ccc.SaveAs(ccc.GetName()+'.pdf')
+        ccc.SaveAs(outdir+'/'+ccc.GetName()+'.png')
+        ccc.SaveAs(outdir+'/'+ccc.GetName()+'.pdf')
         
         
 for ch in channels:
@@ -481,12 +487,12 @@ for ch in channels:
     gDiff_vs_thickness[ch].Fit(fitDiff[ch],'Q')
 
 
-    tPowAve[ch] = ROOT.TLatex( 0.15, 0.23, 'tAve ~  x^{%.2f +/- %.2f}'%(fitAve[ch].GetParameter(0), fitAve[ch].GetParError(0)))
+    tPowAve[ch] = ROOT.TLatex( 0.15, 0.23, '#sigma_{tAve} ~  x^{- (%.2f +/- %.2f)}'%(fitAve[ch].GetParameter(0), fitAve[ch].GetParError(0)))
     tPowAve[ch].SetNDC()
     tPowAve[ch].SetTextSize(0.035)
     tPowAve[ch].Draw()
 
-    tPowDiff[ch] = ROOT.TLatex( 0.15, 0.15, 'tDiff ~ x^{%.2f +/- %.2f}'%(fitDiff[ch].GetParameter(0), fitDiff[ch].GetParError(0)))
+    tPowDiff[ch] = ROOT.TLatex( 0.15, 0.15, '#sigma_{tDiff/2} ~ x^{- (%.2f +/- %.2f)}'%(fitDiff[ch].GetParameter(0), fitDiff[ch].GetParError(0)))
     tPowDiff[ch].SetNDC()
     tPowDiff[ch].SetTextSize(0.035)
     tPowDiff[ch].Draw()

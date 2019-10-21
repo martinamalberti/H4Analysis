@@ -23,7 +23,16 @@ ROOT.gStyle.SetTitleSize(0.04,'Y')
 ROOT.gStyle.SetTitleOffset(1.1,'X')
 ROOT.gStyle.SetTitleOffset(1.2,'Y')
 
+ROOT.gErrorIgnoreLevel = ROOT.kWarning;
+
 outdir = sys.argv[1]
+
+#ampCorrType = 'ampCorr'
+ampCorrType = 'pulseIntCorr'
+
+barRegion = ''
+#barRegion = 'barCenter'
+#barRegion = 'barEdge'
 
 if (outdir != './'):
     os.system('mkdir %s'%outdir)
@@ -33,11 +42,12 @@ shutil.copy('index.php', '%s'%outdir)
 angles0 = [90, 60, 53, 45, 37, 30, 20, 14]
 angles  = [90-a for a in angles0]
 channels = ['BAR%s'%i for i in range(0,3)]
-thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 500, 700, 1000, 2000]
+thresholds = [50, 70, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]
+#thresholds = [20, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000]
 vb = 72
 
 bestThreshold = -1 # -1 to use optimal threshold for each point
-#bestThreshold = 1000 # 
+#bestThreshold = 200 # 
 
 f = {}
 gAve = {}
@@ -69,20 +79,23 @@ for angle in angles:
         sigmatAve_err[angle][th] = {}
         sigmatDiff[angle][th] = {}
         sigmatDiff_err[angle][th] = {}
-        fname = '../v4/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(vb, th, 90-angle)
+        if (barRegion == ''):
+            #fname = '../v7/output_3bars_Vbias%s_thr%sADC_xyangle%s_binnedAmpWalkCorr.root'%(vb, th, 90-angle)
+            fname = '../v7/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(vb, th, 90-angle)
+        if (barRegion == 'barCenter'): fname = '../v7/barCenter/output_3bars_Vbias%s_thr%sADC_xyangle%s_barCenter.root'%(vb, th, 90-angle)
+        if (barRegion == 'barEdge'): fname = '../v7/barEdge/output_3bars_Vbias%s_thr%sADC_xyangle%s_barEdge.root'%(vb, th, 90-angle)
         if (angle == 0):
-            fname = fname.replace('.root','_runs7639-7679.root')
-            #fname = fname.replace('.root','_runs6369-6401.root')
-            #fname = fname.replace('.root','_runs6872-6913.root')
+            fname = fname.replace('xyangle90','xyangle90_runs7639-7679')
+        print fname
         if (os.path.isfile(fname) ==  False):
             print 'File %s', fname, 'not found!'
             continue
         ff = ROOT.TFile.Open(fname)
         for channel in channels:
             # tAve
-            sigmaEff = ff.Get('h_effectiveSigmaAve_ampCorr_posCorr_%s'%channel).GetMean()
-            h = ff.Get('h_tAve_ampCorr_posCorr_'+ channel)
-            fitfun = h.GetFunction('fitFunAve_ampCorr_posCorr_%s'%channel)
+            sigmaEff = ff.Get('h_effectiveSigmaAve_%s_posCorr_%s'%(ampCorrType,channel)).GetMean()
+            h = ff.Get('h_tAve_%s_posCorr_%s'%(ampCorrType,channel))
+            fitfun = h.GetFunction('fitFunAve_%s_posCorr_%s'%(ampCorrType,channel))
             if (fitfun == None):
                 continue
             sigmaGaus  = fitfun.GetParameter(2)
@@ -93,8 +106,8 @@ for angle in angles:
             sigmatAve_err[angle][th][channel] = esigmaGaus*1000.
 
             # tDiff
-            h = ff.Get('h_tDiff_ampCorr_posCorr_'+ channel)
-            fitfun = h.GetFunction('fitFunDiff_ampCorr_posCorr_%s'%channel)
+            h = ff.Get('h_tDiff_%s_posCorr_%s'%(ampCorrType,channel))
+            fitfun = h.GetFunction('fitFunDiff_%s_posCorr_%s'%(ampCorrType,channel))
             if (fitfun == None):
                 continue
             sigmaGaus  = fitfun.GetParameter(2)
@@ -110,6 +123,7 @@ for angle in angles:
     bestThresholdAve[angle] = {}
     bestThresholdDiff[angle] = {}
     for ch in channels:
+        print angle, th, ch 
         l = [ sigmatAve[angle][th][ch] for th in thresholds ]
         bestIndexAve = l.index(min(l))
         bestThresholdAve[angle][ch] = thresholds[bestIndexAve]
@@ -117,7 +131,6 @@ for angle in angles:
         bestIndexDiff = ll.index(min(ll))
         if (bestThreshold == -1):
             bestThresholdDiff[angle][ch] = thresholds[bestIndexDiff]
-            print ch, angle,  bestThresholdAve[angle][ch], bestThresholdDiff[angle][ch]
         else:
             bestThresholdAve[angle][ch] = bestThreshold
             bestThresholdDiff[angle][ch] = bestThreshold
@@ -134,18 +147,18 @@ for angle in angles:
     h2_ampL_vs_posXc[angle] = {}
     h2_ampR_vs_posXc[angle] = {}
     for ch in channels:
-        fname = '../v4/output_3bars_Vbias72_thr%dADC_xyangle%s.root'%(bestThresholdDiff[angle][ch], 90-angle)
+        if (barRegion == ''):
+            #fname = '../v7/output_3bars_Vbias%s_thr%sADC_xyangle%s_binnedAmpWalkCorr.root'%(vb, th, 90-angle)
+            fname = '../v7/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(vb, th, 90-angle)
+        if (barRegion == 'barCenter'): fname = '../v7/barCenter/output_3bars_Vbias%s_thr%sADC_xyangle%s_barCenter.root'%(vb, th, 90-angle)
+        if (barRegion == 'barEdge'): fname = '../v7/barEdge/output_3bars_Vbias%s_thr%sADC_xyangle%s_barEdge.root'%(vb, th, 90-angle)
         if (angle == 0):
-            fname = fname.replace('.root','_runs7639-7679.root')
-            #fname = fname.replace('.root','_runs6369-6401.root')
-            #fname = fname.replace('.root','_runs6872-6913.root')
+            fname = fname.replace('xyangle90','xyangle90_runs7639-7679')
         f[angle][ch] = ROOT.TFile.Open(fname)
-        gR[angle][ch] = f[angle][ch].Get('g_tResolGausR_ampCorr_%s'%ch)
-        gL[angle][ch] = f[angle][ch].Get('g_tResolGausL_ampCorr_%s'%ch)
-        pR[angle][ch] = f[angle][ch].Get('p_tR_ampCorr_vs_posXc_%s'%ch)
-        pL[angle][ch] = f[angle][ch].Get('p_tL_ampCorr_vs_posXc_%s'%ch)
-        #pR[angle][ch] = f[angle][ch].Get('p_tR_vs_posXc_%s'%ch)
-        #pL[angle][ch] = f[angle][ch].Get('p_tL_vs_posXc_%s'%ch)
+        gR[angle][ch] = f[angle][ch].Get('g_tResolGausR_%s_%s'%(ampCorrType,ch) )
+        gL[angle][ch] = f[angle][ch].Get('g_tResolGausL_%s_%s'%(ampCorrType,ch) )
+        pR[angle][ch] = f[angle][ch].Get('p_tR_%s_vs_posXc_%s'%(ampCorrType,ch) )
+        pL[angle][ch] = f[angle][ch].Get('p_tL_%s_vs_posXc_%s'%(ampCorrType,ch) )
         h_ampR[angle][ch] = f[angle][ch].Get('h_ampR_%s'%ch)
         h_ampL[angle][ch] = f[angle][ch].Get('h_ampL_%s'%ch)
         h2_ampR_vs_posXc[angle][ch] = f[angle][ch].Get('h2_ampR_vs_posXc_%s'%ch)
@@ -230,18 +243,19 @@ for ch in channels:
         thr = bestThresholdDiff[angle][ch]
         tResDiff[ch][angle] = sigmatDiff[angle][thr][ch]
         errDiff = math.sqrt(sigmatDiff_err[angle][thr][ch]*sigmatDiff_err[angle][thr][ch] + err * err)
+
+        print ch, angle, tResDiff[ch][angle], thr
         
         thr = bestThresholdAve[angle][ch]
         tResAve[ch][angle] = sigmatAve[angle][thr][ch]
         errAve = math.sqrt(sigmatAve_err[angle][thr][ch]*sigmatAve_err[angle][thr][ch] + err * err)
        
 
-        #if (sigmatAve[angle][thr][ch]>sigmatDiff[angle][thr][ch]):
+        #if (sigmatAve[angle][thr][ch]>=sigmatDiff[angle][thr][ch]):
         #    sigmaRef = math.sqrt(sigmatAve[angle][thr][ch]*sigmatAve[angle][thr][ch] - sigmatDiff[angle][thr][ch]*sigmatDiff[angle][thr][ch])
         #else:
-        #    sigmaRef = 0
+        #    sigmaRef = 0.
         #print ch, angle, 'sigma_MCP = %.1f ps'%(sigmaRef)
-
         #tResL[ch][angle] = math.sqrt(tResL[ch][angle]*tResL[ch][angle]-sigmaRef*sigmaRef)
         #tResR[ch][angle] = math.sqrt(tResR[ch][angle]*tResR[ch][angle]-sigmaRef*sigmaRef)
 
@@ -258,14 +272,15 @@ for ch in channels:
                 
         # graphs time resol vs slantTickness
         slantTickness = 3. / math.cos((angle) * math.pi / 180.)
+        #if (angle == 14) : slantTickness = 3. / math.cos((15.8) * math.pi / 180.)
         
         gAve_vs_slantTickness[ch].SetPoint(i, slantTickness, tResAve[ch][angle])
         gDiff_vs_slantTickness[ch].SetPoint(i, slantTickness, tResDiff[ch][angle])
         gL_vs_slantTickness[ch].SetPoint(i, slantTickness, tResL[ch][angle])
         gR_vs_slantTickness[ch].SetPoint(i, slantTickness, tResR[ch][angle])
 
-        #errSl = 3./ pow(math.cos((angle) * math.pi / 180.), 2) * math.sin((angle) * math.pi / 180.) * 1 * math.pi / 180.
-        errSl = 0
+        errSl = 3./ pow(math.cos((angle) * math.pi / 180.), 2) * math.sin((angle) * math.pi / 180.) * 2. * math.pi / 180.
+        #errSl = 0
         
         gAve_vs_slantTickness[ch].SetPointError(i, errSl, errAve )
         gDiff_vs_slantTickness[ch].SetPointError(i, errSl, errDiff )
@@ -321,7 +336,7 @@ for ch in channels:
         slopeR[ch][angle] =  slopeR[ch][angle] - 0
         slopeL[ch][angle] =  slopeL[ch][angle] - 0
         
-        dtof = math.sin( angle * math.pi / 180.)/ 0.299792 # ps/mm
+        dtof = math.sin( (angle) * math.pi / 180.)/ 0.299792 # ps/mm
         #dtof = 0
         #print dtof, slopeR[ch][angle], slopeL[ch][angle]
         
@@ -381,7 +396,7 @@ for ch in channels:
         hsliceL[1].GetYaxis().SetRangeUser(meany-0.1, meany+0.1)
         hsliceL[1].GetXaxis().SetRangeUser(hsliceL[1].GetMean()-2*hsliceL[1].GetRMS(),hsliceL[1].GetMean()+2*hsliceL[1].GetRMS() )
         hsliceL[1].GetXaxis().SetTitle('x (mm)')
-        hsliceL[1].GetYaxis().SetTitle('amplitude (mV)')
+        hsliceL[1].GetYaxis().SetTitle('amplitude (V)')
         hsliceL[1].Draw()
         hsliceR[1].Draw('same')
         tChType.Draw()
@@ -546,11 +561,6 @@ for ch in channels:
     fitAve[ch].SetLineStyle(2)
     fitAve[ch].SetParameter(1, 70)
     fitAve[ch].SetParameter(0, 0.3)
-    gAve_vs_slantTickness[ch].RemovePoint(1)
-    #gAve_vs_slantTickness[ch].RemovePoint(3)
-    #gAve_vs_slantTickness[ch].RemovePoint(5)
-    #gAve_vs_slantTickness[ch].RemovePoint(2)
-    #gAve_vs_slantTickness[ch].RemovePoint(2)
     gAve_vs_slantTickness[ch].Fit(fitAve[ch],'Q')
 
        
@@ -560,13 +570,13 @@ for ch in channels:
     fitDiff[ch].SetParameter(0, 0.5)
     gDiff_vs_slantTickness[ch].Fit(fitDiff[ch],'Q')
 
-
-    tPowAve[ch] = ROOT.TLatex( 0.15, 0.23, 'tAve ~  x^{%.2f +/- %.2f}'%(fitAve[ch].GetParameter(0), fitAve[ch].GetParError(0)))
+    
+    tPowAve[ch] = ROOT.TLatex( 0.15, 0.23, 'tAve ~  x^{-(%.2f +/- %.2f)}'%(fitAve[ch].GetParameter(0), fitAve[ch].GetParError(0)))
     tPowAve[ch].SetNDC()
     tPowAve[ch].SetTextSize(0.035)
     tPowAve[ch].Draw()
 
-    tPowDiff[ch] = ROOT.TLatex( 0.15, 0.15, 'tDiff ~ x^{%.2f +/- %.2f}'%(fitDiff[ch].GetParameter(0), fitDiff[ch].GetParError(0)))
+    tPowDiff[ch] = ROOT.TLatex( 0.15, 0.15, 'tDiff ~ x^{-(%.2f +/- %.2f)}'%(fitDiff[ch].GetParameter(0), fitDiff[ch].GetParError(0)))
     tPowDiff[ch].SetNDC()
     tPowDiff[ch].SetTextSize(0.035)
     tPowDiff[ch].Draw()
@@ -585,15 +595,14 @@ for ch in channels:
     
     print 'diff   : [0] = %.2f +/- %.2f'%(fitDiff[ch].GetParameter(0), fitDiff[ch].GetParError(0))
     print '         [1] = %.2f +/- %.2f'%(fitDiff[ch].GetParameter(1), fitDiff[ch].GetParError(1))
-    
-
+      
 
     
     for c in canvas0[ch], canvas1[ch], canvas2[ch], canvas3[ch], canvas4[ch]:
         c.SaveAs(outdir+'/'+c.GetName()+'.png')
         c.SaveAs(outdir+'/'+c.GetName()+'.pdf')
 
-    raw_input('ok?')
+    #raw_input('ok?')
 
 
 
@@ -617,7 +626,7 @@ for i,ch in enumerate(channels):
     legAll.AddEntry(gAmpSlopeL_vs_angle[ch],'%s - downstream'%ch,'PL')
 legAll.Draw('same')
 tChType.Draw()
-raw_input('ok?')
+#raw_input('ok?')
 canvasAmpSlope.SaveAs(outdir+'/'+canvasAmpSlope.GetName()+'.png')
 canvasAmpSlope.SaveAs(outdir+'/'+canvasAmpSlope.GetName()+'.pdf')
 
@@ -636,7 +645,7 @@ for i,ch in enumerate(channels):
     gDelayR_vs_angle[ch].Draw('psame')
 legAll.Draw('same')
 tChType.Draw()
-raw_input('ok?')
+#raw_input('ok?')
 canvasTimeSlope.SaveAs(outdir+'/'+canvasTimeSlope.GetName()+'.png')
 canvasTimeSlope.SaveAs(outdir+'/'+canvasTimeSlope.GetName()+'.pdf')
     
