@@ -1,0 +1,6 @@
+executable            = analysis.sh
+arguments             = $(cfg)
+output                = /afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/analysis_scripts/jobs_material/$(ClusterId).$(ProcId).out
+error                 = /afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/analysis_scripts/jobs_material/job.$(ClusterId).$(ProcId).err
+log                   = /afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/analysis_scripts/jobs_material/job.$(ClusterId).$(ProcId).log
+queue cfg from list_cfg_analysis_material.txt

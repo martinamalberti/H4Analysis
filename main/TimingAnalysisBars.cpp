@@ -65,7 +65,8 @@ struct TreeVars
 /**********************/
 
 void InitTreeVars(TTree* chain1, TreeVars& treeVars, float threshold);
-void GetTimeResolution( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun);
+void GetTimeResolution2( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun);
+void GetTimeResolution( TH1F *ht, TF1* fitFun, float &resolEff, float &resolGaus, float &resolGausErr, float resolRef);
 
 // ====== *** MAIN *** ======
 int main(int argc, char** argv)
@@ -159,8 +160,8 @@ int main(int argc, char** argv)
     //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v4/"+ std::to_string(int(iRun))+".root";
     //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v5/"+ std::to_string(int(iRun))+".root"; // DLED4
     //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v6/"+ std::to_string(int(iRun))+".root"; //DLED2
-    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v7/"+ std::to_string(int(iRun))+".root"; //DLED4
-    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v8/"+ std::to_string(int(iRun))+".root"; //DLED2
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v7/"+ std::to_string(int(iRun))+".root"; //DLED4
+    //std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v8/"+ std::to_string(int(iRun))+".root"; //DLED2
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     std::cout << fileName << std::endl;
     chain1 -> Add(fileName.c_str());
@@ -195,9 +196,9 @@ int main(int argc, char** argv)
   }
      
 
-  float xbinWidthForAmpWalk =  999.; // mm
+  //float xbinWidthForAmpWalk =  999.; // mm
   //float xbinWidthForAmpWalk =  10.; // used in xy scans
-  //float xbinWidthForAmpWalk =   5.; // used in material scans
+  float xbinWidthForAmpWalk =   5.; // used in material scans
   int NBINSXAMPWALK[NBARS];
   for (int iBar = 0; iBar < NBARS; iBar++){
     float x1 = min(cut_Xmax[iBar], cut_XmaxRef);
@@ -1188,15 +1189,16 @@ int main(int argc, char** argv)
   // --- Amplitude walk corrections
   TF1*  fitFuncL_ampCorr[NBARS];  
   TF1*  fitFuncR_ampCorr[NBARS];  
-
   TF1*  fitFuncL_ampCorr_binned[NBARS][1000];  
   TF1*  fitFuncR_ampCorr_binned[NBARS][1000];  
+  float mpvL[NBARS];
+  float mpvR[NBARS];
 
   for (int iBar = 0 ; iBar < NBARS; iBar++){
     fitFuncL_ampCorr[iBar] = new TF1(Form("fitFuncL_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncL_ampCorr[iBar] -> SetLineColor(kRed);
-    float mpv = (h_ampL_nocuts[iBar]->GetFunction(Form("fLandauL_BAR%d",iBar)))->GetParameter(1);
-    fitFuncL_ampCorr[iBar] -> SetRange(0, 10*mpv);
+    mpvL[iBar] = (h_ampL_nocuts[iBar]->GetFunction(Form("fLandauL_BAR%d",iBar)))->GetParameter(1);
+    fitFuncL_ampCorr[iBar] -> SetRange(0, 4*mpvL[iBar]);
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSR");
     if (fitFuncL_ampCorr[iBar] -> GetChisquare()/fitFuncL_ampCorr[iBar] -> GetNDF() > 5 ){
       p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSRW");
@@ -1204,8 +1206,8 @@ int main(int argc, char** argv)
 
     fitFuncR_ampCorr[iBar] = new TF1(Form("fitFuncR_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncR_ampCorr[iBar] -> SetLineColor(kRed);
-    mpv = (h_ampR_nocuts[iBar]->GetFunction(Form("fLandauR_BAR%d",iBar)))->GetParameter(1);
-    fitFuncR_ampCorr[iBar] -> SetRange(0, 10*mpv);
+    mpvR[iBar] = (h_ampR_nocuts[iBar]->GetFunction(Form("fLandauR_BAR%d",iBar)))->GetParameter(1);
+    fitFuncR_ampCorr[iBar] -> SetRange(0, 4*mpvR[iBar]);
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSR");
     if (fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 5 ){
       p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRW");
@@ -1217,6 +1219,7 @@ int main(int argc, char** argv)
 
       fitFuncL_ampCorr_binned[iBar][ibin] = new TF1(Form("fitFuncL_ampCorr_%d_%d",ibin,  iBar),fitFunction.c_str());
       fitFuncL_ampCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      fitFuncL_ampCorr_binned[iBar][ibin] -> SetRange(0, 4*mpvL[iBar]);
       p_tL_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncL_ampCorr_%d_%d",ibin, iBar),"QSR");
       if (fitFuncL_ampCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncL_ampCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
 	p_tL_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncL_ampCorr_%d_%d",ibin, iBar),"QSRW");
@@ -1224,6 +1227,7 @@ int main(int argc, char** argv)
       
       fitFuncR_ampCorr_binned[iBar][ibin] = new TF1(Form("fitFuncR_ampCorr_%d_%d", ibin, iBar),fitFunction.c_str());
       fitFuncR_ampCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      fitFuncR_ampCorr_binned[iBar][ibin] -> SetRange(0, 4*mpvR[iBar]);
       p_tR_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncR_ampCorr_%d_%d",ibin,iBar),"QSR");
       if (fitFuncR_ampCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncR_ampCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
 	p_tR_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncR_ampCorr_%d_%d",ibin,iBar),"QSRW");
@@ -1236,20 +1240,32 @@ int main(int argc, char** argv)
   // -- amp walk corrections vs pulse integral
   TF1*  fitFuncL_pulseIntCorr[NBARS];
   TF1*  fitFuncR_pulseIntCorr[NBARS];
-
   TF1*  fitFuncL_pulseIntCorr_binned[NBARS][1000];  
   TF1*  fitFuncR_pulseIntCorr_binned[NBARS][1000];  
 
+  TF1 *fLandauIntL[NBARS];
+  TF1 *fLandauIntR[NBARS];
+  float mpvIntL[NBARS];
+  float mpvIntR[NBARS];
+
   for (int iBar = 0 ; iBar < NBARS; iBar++){
+    fLandauIntL[iBar] = new TF1(Form("fLandauIntL_BAR%d",iBar),"landau", 0, 1000);
+    h_pulseIntL[iBar]->Fit(fLandauIntL[iBar],"QR");
+    mpvIntL[iBar] = h_pulseIntL[iBar]->GetFunction(Form("fLandauIntL_BAR%d",iBar))->GetParameter(1);
     fitFuncL_pulseIntCorr[iBar] = new TF1(Form("fitFuncL_pulseIntCorr_%d", iBar),"pol4", 0, 1000);
     fitFuncL_pulseIntCorr[iBar] -> SetLineColor(kRed);
+    fitFuncL_pulseIntCorr[iBar] -> SetRange(0, mpvIntL[iBar]*4);
     p_tL_vs_pulseInt[iBar] -> Fit(Form("fitFuncL_pulseIntCorr_%d",iBar),"QSR");
     if (fitFuncL_pulseIntCorr[iBar] -> GetChisquare()/fitFuncL_pulseIntCorr[iBar] -> GetNDF() > 5 ){
       p_tL_vs_pulseInt[iBar] -> Fit(Form("fitFuncL_pulseIntCorr_%d",iBar),"QSRW");
     }
 
+    fLandauIntR[iBar] = new TF1(Form("fLandauIntR_BAR%d",iBar),"landau", 0, 1000);
+    h_pulseIntR[iBar]->Fit(fLandauIntR[iBar],"QR");
+    mpvIntR[iBar] = h_pulseIntR[iBar]->GetFunction(Form("fLandauIntR_BAR%d",iBar))->GetParameter(1);
     fitFuncR_pulseIntCorr[iBar] = new TF1(Form("fitFuncR_pulseIntCorr_%d", iBar), "pol4", 0, 1000);
     fitFuncR_pulseIntCorr[iBar] -> SetLineColor(kRed);
+    fitFuncR_pulseIntCorr[iBar] -> SetRange(0, mpvIntR[iBar]*4);
     p_tR_vs_pulseInt[iBar] -> Fit(Form("fitFuncR_pulseIntCorr_%d",iBar),"QSR");
     if (fitFuncR_pulseIntCorr[iBar] -> GetChisquare()/fitFuncR_pulseIntCorr[iBar] -> GetNDF() > 5 ){
       p_tR_vs_pulseInt[iBar] -> Fit(Form("fitFuncR_pulseIntCorr_%d",iBar),"QSRW");
@@ -1261,6 +1277,7 @@ int main(int argc, char** argv)
 
       fitFuncL_pulseIntCorr_binned[iBar][ibin] = new TF1(Form("fitFuncL_pulseIntCorr_%d_%d",ibin,  iBar),fitFunction.c_str(), 0, 1000);
       fitFuncL_pulseIntCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      fitFuncL_pulseIntCorr_binned[iBar][ibin] -> SetRange(0, mpvIntL[iBar]*4);
       p_tL_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncL_pulseIntCorr_%d_%d",ibin, iBar),"QSRW");
       p_tL_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncL_pulseIntCorr_%d_%d",ibin, iBar),"QSR");
       if (fitFuncL_pulseIntCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncL_pulseIntCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
@@ -1269,6 +1286,7 @@ int main(int argc, char** argv)
       
       fitFuncR_pulseIntCorr_binned[iBar][ibin] = new TF1(Form("fitFuncR_pulseIntCorr_%d_%d", ibin, iBar),fitFunction.c_str(), 0, 1000);
       fitFuncR_pulseIntCorr_binned[iBar][ibin] -> SetLineColor(kRed);
+      fitFuncR_pulseIntCorr_binned[iBar][ibin] -> SetRange(0, mpvIntR[iBar]*4);
       p_tR_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncR_pulseIntCorr_%d_%d",ibin,iBar),"QSRW");
       p_tR_vs_pulseInt_binned[iBar][ibin] -> Fit(Form("fitFuncR_pulseIntCorr_%d_%d",ibin,iBar),"QSR");
       if (fitFuncR_pulseIntCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncR_pulseIntCorr_binned[iBar][ibin] -> GetNDF() > 5 ){
@@ -1475,12 +1493,12 @@ int main(int argc, char** argv)
   float tResR[NBARS];
   TF1 *fGaus = new TF1("fGaus","gaus",-50,50);
   for (int iBar = 0; iBar< NBARS; iBar++){
-    float sigmaEff, sigmaGaus;
+    float sigmaEff, sigmaGaus, sigmaGausErr;
 
-    GetTimeResolution(h_tL_ampCorr[iBar], sigmaEff, sigmaGaus, fGaus);
+    GetTimeResolution(h_tL_ampCorr[iBar], fGaus, sigmaEff, sigmaGaus, sigmaGausErr, -1);
     tResL[iBar] = sigmaGaus;
 
-    GetTimeResolution(h_tR_ampCorr[iBar], sigmaEff, sigmaGaus, fGaus);
+    GetTimeResolution(h_tR_ampCorr[iBar], fGaus, sigmaEff, sigmaGaus, sigmaGausErr, -1);
     tResR[iBar] = sigmaGaus;
  
     cout << "BAR"<< iBar << "   sigma(tL) = " << tResL[iBar] << "    sigma(tR) = " << tResR[iBar] <<endl;
@@ -1931,7 +1949,6 @@ int main(int argc, char** argv)
   float resolGaus;
   float resolGausErr;
   float resolMCP = 0.014; 
-  int nMinEntries = 50;
 
   TF1 *fpol0_tL_ampCorr[NBARS]; 
   TF1 *fpol0_tR_ampCorr[NBARS]; 
@@ -2013,27 +2030,27 @@ int main(int argc, char** argv)
     
     // -- Left
     fitFunL_ampCorr[iBar]= new TF1(Form("fitFunL_ampCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tL_ampCorr[iBar], sigmaEff, sigmaGaus, fitFunL_ampCorr[iBar]);
+    GetTimeResolution(h_tL_ampCorr[iBar], fitFunL_ampCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaL_ampCorr[iBar]->Fill(sigmaEff);
     
     // -- right
     fitFunR_ampCorr[iBar]= new TF1(Form("fitFunR_ampCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tR_ampCorr[iBar], sigmaEff, sigmaGaus, fitFunR_ampCorr[iBar]);
+    GetTimeResolution(h_tR_ampCorr[iBar], fitFunR_ampCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaR_ampCorr[iBar]->Fill(sigmaEff);
 
     // -- simple average
     fitFunAve_ampCorr[iBar]= new TF1(Form("fitFunAve_ampCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAve_ampCorr[iBar], sigmaEff, sigmaGaus, fitFunAve_ampCorr[iBar]);
+    GetTimeResolution(h_tAve_ampCorr[iBar], fitFunAve_ampCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAve_ampCorr[iBar]->Fill(sigmaEff);
 
     // -- amp weighted average
     fitFunAveAmpW_ampCorr[iBar]= new TF1(Form("fitFunAveAmpW_ampCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAveAmpW_ampCorr[iBar], sigmaEff, sigmaGaus, fitFunAveAmpW_ampCorr[iBar]);
+    GetTimeResolution(h_tAveAmpW_ampCorr[iBar], fitFunAveAmpW_ampCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAveAmpW_ampCorr[iBar]->Fill(sigmaEff);
 
     // -- res weighted average
     fitFunAveResW_ampCorr[iBar]= new TF1(Form("fitFunAveResW_ampCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAveResW_ampCorr[iBar], sigmaEff, sigmaGaus, fitFunAveResW_ampCorr[iBar]);
+    GetTimeResolution(h_tAveResW_ampCorr[iBar], fitFunAveResW_ampCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAveResW_ampCorr[iBar]->Fill(sigmaEff);
 
 
@@ -2041,17 +2058,17 @@ int main(int argc, char** argv)
     
     // -- Left
     fitFunL_pulseIntCorr[iBar]= new TF1(Form("fitFunL_pulseIntCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tL_pulseIntCorr[iBar], sigmaEff, sigmaGaus, fitFunL_pulseIntCorr[iBar]);
+    GetTimeResolution(h_tL_pulseIntCorr[iBar], fitFunL_pulseIntCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaL_pulseIntCorr[iBar]->Fill(sigmaEff);
     
     // -- right
     fitFunR_pulseIntCorr[iBar]= new TF1(Form("fitFunR_pulseIntCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tR_pulseIntCorr[iBar], sigmaEff, sigmaGaus, fitFunR_pulseIntCorr[iBar]);
+    GetTimeResolution(h_tR_pulseIntCorr[iBar], fitFunR_pulseIntCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaR_pulseIntCorr[iBar]->Fill(sigmaEff);
 
     // -- simple average
     fitFunAve_pulseIntCorr[iBar]= new TF1(Form("fitFunAve_pulseIntCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAve_pulseIntCorr[iBar], sigmaEff, sigmaGaus, fitFunAve_pulseIntCorr[iBar]);
+    GetTimeResolution(h_tAve_pulseIntCorr[iBar], fitFunAve_pulseIntCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAve_pulseIntCorr[iBar]->Fill(sigmaEff);
 
 
@@ -2059,53 +2076,53 @@ int main(int argc, char** argv)
     // ----- tDiff corr
     // -- simple average
     fitFunAve_ampCorr_tDiffCorr[iBar]= new TF1(Form("fitFunAve_ampCorr_tDiffCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAve_ampCorr_tDiffCorr[iBar], sigmaEff, sigmaGaus, fitFunAve_ampCorr_tDiffCorr[iBar]);
+    GetTimeResolution(h_tAve_ampCorr_tDiffCorr[iBar], fitFunAve_ampCorr_tDiffCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAve_ampCorr_tDiffCorr[iBar]->Fill(sigmaEff);
 
     // -- amp weighted average
     fitFunAveAmpW_ampCorr_tDiffCorr[iBar]= new TF1(Form("fitFunAveAmpW_ampCorr_tDiffCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAveAmpW_ampCorr_tDiffCorr[iBar], sigmaEff, sigmaGaus, fitFunAveAmpW_ampCorr_tDiffCorr[iBar]);
+    GetTimeResolution(h_tAveAmpW_ampCorr_tDiffCorr[iBar], fitFunAveAmpW_ampCorr_tDiffCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAveAmpW_ampCorr_tDiffCorr[iBar]->Fill(sigmaEff);
 
     // -- tRes weighted average
     fitFunAveResW_ampCorr_tDiffCorr[iBar]= new TF1(Form("fitFunAveResW_ampCorr_tDiffCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAveResW_ampCorr_tDiffCorr[iBar], sigmaEff, sigmaGaus, fitFunAveResW_ampCorr_tDiffCorr[iBar]);
+    GetTimeResolution(h_tAveResW_ampCorr_tDiffCorr[iBar], fitFunAveResW_ampCorr_tDiffCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAveResW_ampCorr_tDiffCorr[iBar]->Fill(sigmaEff);
 
     // ----- position corr
     // -- simple average
     fitFunAve_ampCorr_posCorr[iBar]= new TF1(Form("fitFunAve_ampCorr_posCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAve_ampCorr_posCorr[iBar], sigmaEff, sigmaGaus, fitFunAve_ampCorr_posCorr[iBar]);
+    GetTimeResolution(h_tAve_ampCorr_posCorr[iBar], fitFunAve_ampCorr_posCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAve_ampCorr_posCorr[iBar]->Fill(sigmaEff);
 
     fitFunAve_pulseIntCorr_posCorr[iBar]= new TF1(Form("fitFunAve_pulseIntCorr_posCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tAve_pulseIntCorr_posCorr[iBar], sigmaEff, sigmaGaus, fitFunAve_pulseIntCorr_posCorr[iBar]);
+    GetTimeResolution(h_tAve_pulseIntCorr_posCorr[iBar], fitFunAve_pulseIntCorr_posCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaAve_pulseIntCorr_posCorr[iBar]->Fill(sigmaEff);
 
 
     // --- tDiff resolution
     fitFunDiff[iBar]= new TF1(Form("fitFunDiff_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tDiff[iBar], sigmaEff, sigmaGaus, fitFunDiff[iBar]);
+    GetTimeResolution(h_tDiff[iBar], fitFunDiff[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaDiff[iBar]->Fill(sigmaEff);
 
     fitFunDiff_posCorr[iBar]= new TF1(Form("fitFunDiff_posCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tDiff_posCorr[iBar], sigmaEff, sigmaGaus, fitFunDiff_posCorr[iBar]);
+    GetTimeResolution(h_tDiff_posCorr[iBar], fitFunDiff_posCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaDiff_posCorr[iBar]->Fill(sigmaEff);
 
     fitFunDiff_ampCorr[iBar]= new TF1(Form("fitFunDiff_ampCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tDiff_ampCorr[iBar], sigmaEff, sigmaGaus, fitFunDiff_ampCorr[iBar]);
+    GetTimeResolution(h_tDiff_ampCorr[iBar], fitFunDiff_ampCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaDiff_ampCorr[iBar]->Fill(sigmaEff);
 
     fitFunDiff_ampCorr_posCorr[iBar]= new TF1(Form("fitFunDiff_ampCorr_posCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tDiff_ampCorr_posCorr[iBar], sigmaEff, sigmaGaus, fitFunDiff_ampCorr_posCorr[iBar]);
+    GetTimeResolution(h_tDiff_ampCorr_posCorr[iBar], fitFunDiff_ampCorr_posCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaDiff_ampCorr_posCorr[iBar]->Fill(sigmaEff);
 
     fitFunDiff_pulseIntCorr[iBar]= new TF1(Form("fitFunDiff_pulseIntCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tDiff_pulseIntCorr[iBar], sigmaEff, sigmaGaus, fitFunDiff_pulseIntCorr[iBar]);
+    GetTimeResolution(h_tDiff_pulseIntCorr[iBar], fitFunDiff_pulseIntCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaDiff_pulseIntCorr[iBar]->Fill(sigmaEff);
 
     fitFunDiff_pulseIntCorr_posCorr[iBar]= new TF1(Form("fitFunDiff_pulseIntCorr_posCorr_BAR%d",iBar),"gaus", -20, 20);
-    GetTimeResolution(h_tDiff_pulseIntCorr_posCorr[iBar], sigmaEff, sigmaGaus, fitFunDiff_pulseIntCorr_posCorr[iBar]);
+    GetTimeResolution(h_tDiff_pulseIntCorr_posCorr[iBar], fitFunDiff_pulseIntCorr_posCorr[iBar], sigmaEff, sigmaGaus, sigmaGausErr, -1);
     h_effectiveSigmaDiff_pulseIntCorr_posCorr[iBar]->Fill(sigmaEff);
 
     
@@ -2151,8 +2168,6 @@ int main(int argc, char** argv)
     g_tResolGausDiff_ampCorr_posCorr[iBar] = new TGraphErrors();
     g_tResolGausDiff_ampCorr_posCorr[iBar]->SetName(Form("g_tResolGausDiff_ampCorr_posCorr_BAR%d",iBar));
 
-
-
     g_tResolGausL_pulseIntCorr[iBar] = new TGraphErrors();
     g_tResolGausL_pulseIntCorr[iBar]->SetName(Form("g_tResolGausL_pulseIntCorr_BAR%d",iBar));
 
@@ -2179,87 +2194,32 @@ int main(int argc, char** argv)
 
       // -- Left
       fitFunL_ampCorr_binX[iBar][ibin]= new TF1(Form("fitFunL_ampCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tL_ampCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunL_ampCorr_binX[iBar][ibin]);
-      
-      sigmaGaus    = fitFunL_ampCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunL_ampCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tL_ampCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-	sigmaGaus    = h_tL_ampCorr_binX[iBar][ibin]->GetRMS();
-	sigmaGausErr = h_tL_ampCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff  * sigmaEff  - resolMCP * resolMCP);
-      resolGaus = sqrt(sigmaGaus * sigmaGaus - resolMCP * resolMCP); 
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tL_ampCorr_binX[iBar][ibin], fitFunL_ampCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausL_ampCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausL_ampCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
       // -- Right
       fitFunR_ampCorr_binX[iBar][ibin]= new TF1(Form("fitFunR_ampCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tR_ampCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunR_ampCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunR_ampCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunR_ampCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tR_ampCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-	sigmaGaus    = h_tR_ampCorr_binX[iBar][ibin]->GetRMS();
-	sigmaGausErr = h_tR_ampCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tR_ampCorr_binX[iBar][ibin], fitFunR_ampCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausR_ampCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausR_ampCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
       // -- simple average
       fitFunAve_ampCorr_binX[iBar][ibin]= new TF1(Form("fitFunAve_ampCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tAve_ampCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAve_ampCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAve_ampCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAve_ampCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAve_ampCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAve_ampCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAve_ampCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAve_ampCorr_binX[iBar][ibin], fitFunAve_ampCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAve_ampCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAve_ampCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
 
       // -- amp weighted Ave
       fitFunAveAmpW_ampCorr_binX[iBar][ibin]= new TF1(Form("fitFunAveAmpW_ampCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tAveAmpW_ampCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAveAmpW_ampCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAveAmpW_ampCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAveAmpW_ampCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAveAmpW_ampCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-	sigmaGaus    = h_tAveAmpW_ampCorr_binX[iBar][ibin]->GetRMS();
-	sigmaGausErr = h_tAveAmpW_ampCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAveAmpW_ampCorr_binX[iBar][ibin], fitFunAveAmpW_ampCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAveAmpW_ampCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAveAmpW_ampCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
       // -- tRes weighted Ave
       fitFunAveResW_ampCorr_binX[iBar][ibin]= new TF1(Form("fitFunAveResW_ampCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tAveResW_ampCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAveResW_ampCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAveResW_ampCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAveResW_ampCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAveResW_ampCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAveResW_ampCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAveResW_ampCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAveResW_ampCorr_binX[iBar][ibin], fitFunAveResW_ampCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAveResW_ampCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAveResW_ampCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
@@ -2268,108 +2228,37 @@ int main(int argc, char** argv)
 
       // -- Left
       fitFunL_pulseIntCorr_binX[iBar][ibin]= new TF1(Form("fitFunL_pulseIntCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tL_pulseIntCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunL_pulseIntCorr_binX[iBar][ibin]);
-      
-      sigmaGaus    = fitFunL_pulseIntCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunL_pulseIntCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tL_pulseIntCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-	sigmaGaus    = h_tL_pulseIntCorr_binX[iBar][ibin]->GetRMS();
-	sigmaGausErr = h_tL_pulseIntCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff  * sigmaEff  - resolMCP * resolMCP);
-      resolGaus = sqrt(sigmaGaus * sigmaGaus - resolMCP * resolMCP); 
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tL_pulseIntCorr_binX[iBar][ibin], fitFunL_pulseIntCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausL_pulseIntCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausL_pulseIntCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
       // -- Right
       fitFunR_pulseIntCorr_binX[iBar][ibin]= new TF1(Form("fitFunR_pulseIntCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tR_pulseIntCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunR_pulseIntCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunR_pulseIntCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunR_pulseIntCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tR_pulseIntCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-	sigmaGaus    = h_tR_pulseIntCorr_binX[iBar][ibin]->GetRMS();
-	sigmaGausErr = h_tR_pulseIntCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tR_pulseIntCorr_binX[iBar][ibin], fitFunR_pulseIntCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausR_pulseIntCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausR_pulseIntCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
       // -- simple average
       fitFunAve_pulseIntCorr_binX[iBar][ibin]= new TF1(Form("fitFunAve_pulseIntCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20); 
-      GetTimeResolution(h_tAve_pulseIntCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAve_pulseIntCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAve_pulseIntCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAve_pulseIntCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAve_pulseIntCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAve_pulseIntCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAve_pulseIntCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAve_pulseIntCorr_binX[iBar][ibin], fitFunAve_pulseIntCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAve_pulseIntCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAve_pulseIntCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
 
-
-
       // -- tDiff
       fitFunDiff_binX[iBar][ibin]= new TF1(Form("fitFunDiff_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tDiff_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunDiff_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunDiff_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunDiff_binX[iBar][ibin]->GetParError(2);
-      if ( h_tDiff_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tDiff_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tDiff_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tDiff_binX[iBar][ibin], fitFunDiff_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, -1);
       g_tResolGausDiff[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausDiff[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
-
-
       fitFunDiff_ampCorr_binX[iBar][ibin]= new TF1(Form("fitFunDiff_ampCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tDiff_ampCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunDiff_ampCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunDiff_ampCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunDiff_ampCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tDiff_ampCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tDiff_ampCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tDiff_ampCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus);
+      GetTimeResolution(h_tDiff_ampCorr_binX[iBar][ibin], fitFunDiff_ampCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, -1);
       resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
       g_tResolGausDiff_ampCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausDiff_ampCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
-
-
       fitFunDiff_pulseIntCorr_binX[iBar][ibin]= new TF1(Form("fitFunDiff_pulseIntCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tDiff_pulseIntCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunDiff_pulseIntCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunDiff_pulseIntCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunDiff_pulseIntCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tDiff_pulseIntCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tDiff_pulseIntCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tDiff_pulseIntCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tDiff_pulseIntCorr_binX[iBar][ibin], fitFunDiff_pulseIntCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, -1);
       g_tResolGausDiff_pulseIntCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausDiff_pulseIntCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
@@ -2379,147 +2268,52 @@ int main(int argc, char** argv)
 
       // -- simple average
       fitFunAve_ampCorr_tDiffCorr_binX[iBar][ibin]= new TF1(Form("fitFunAve_ampCorr_tDiffCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tAve_ampCorr_tDiffCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAve_ampCorr_tDiffCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAve_ampCorr_tDiffCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAve_ampCorr_tDiffCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAve_ampCorr_tDiffCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAve_ampCorr_tDiffCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAve_ampCorr_tDiffCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAve_ampCorr_tDiffCorr_binX[iBar][ibin], fitFunAve_ampCorr_tDiffCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAve_ampCorr_tDiffCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAve_ampCorr_tDiffCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
-
-      // -- amp weighted Ave                                                                                                                                                                                                              
+      // -- amp weighted Ave
       fitFunAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]= new TF1(Form("fitFunAveAmpW_ampCorr_tDiffCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin], fitFunAveAmpW_ampCorr_tDiffCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAveAmpW_ampCorr_tDiffCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAveAmpW_ampCorr_tDiffCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
-
-      // -- res weighted Ave                                                                                                                                                                                                              
+      // -- res weighted Ave
       fitFunAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]= new TF1(Form("fitFunAveResW_ampCorr_tDiffCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tAveResW_ampCorr_tDiffCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAveResW_ampCorr_tDiffCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAveResW_ampCorr_tDiffCorr_binX[iBar][ibin], fitFunAveResW_ampCorr_tDiffCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAveResW_ampCorr_tDiffCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAveResW_ampCorr_tDiffCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
 
-
       //-- ampCorr + pos corr 
       fitFunAve_ampCorr_posCorr_binX[iBar][ibin]= new TF1(Form("fitFunAve_ampCorr_posCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tAve_ampCorr_posCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAve_ampCorr_posCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAve_ampCorr_posCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAve_ampCorr_posCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAve_ampCorr_posCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAve_ampCorr_posCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAve_ampCorr_posCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAve_ampCorr_posCorr_binX[iBar][ibin], fitFunAve_ampCorr_posCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAve_ampCorr_posCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAve_ampCorr_posCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
 
       // -- amp walk corr vs integral + pos corr
       fitFunAve_pulseIntCorr_posCorr_binX[iBar][ibin]= new TF1(Form("fitFunAve_pulseIntCorr_posCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tAve_pulseIntCorr_posCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunAve_pulseIntCorr_posCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunAve_pulseIntCorr_posCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunAve_pulseIntCorr_posCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tAve_pulseIntCorr_posCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tAve_pulseIntCorr_posCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tAve_pulseIntCorr_posCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff - resolMCP*resolMCP);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus - resolMCP*resolMCP);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tAve_pulseIntCorr_posCorr_binX[iBar][ibin], fitFunAve_pulseIntCorr_posCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, resolMCP);
       g_tResolGausAve_pulseIntCorr_posCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausAve_pulseIntCorr_posCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
 
-
-
       // -- tDiff resolution (ampCorr)
       fitFunDiff_posCorr_binX[iBar][ibin]= new TF1(Form("fitFunDiff_posCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tDiff_posCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunDiff_posCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunDiff_posCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunDiff_posCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tDiff_posCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tDiff_posCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tDiff_posCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tDiff_posCorr_binX[iBar][ibin], fitFunDiff_posCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, -1);
       g_tResolGausDiff_posCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausDiff_posCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
       // -- tDiff resolution (ampCorr+ posCorr)
       fitFunDiff_ampCorr_posCorr_binX[iBar][ibin]= new TF1(Form("fitFunDiff_ampCorr_posCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tDiff_ampCorr_posCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunDiff_ampCorr_posCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunDiff_ampCorr_posCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunDiff_ampCorr_posCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tDiff_ampCorr_posCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tDiff_ampCorr_posCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tDiff_ampCorr_posCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tDiff_ampCorr_posCorr_binX[iBar][ibin], fitFunDiff_ampCorr_posCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, -1);
       g_tResolGausDiff_ampCorr_posCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausDiff_ampCorr_posCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
 
-
-
       // -- tDiff resolution (pulseIntCorr+ posCorr)
       fitFunDiff_pulseIntCorr_posCorr_binX[iBar][ibin]= new TF1(Form("fitFunDiff_pulseIntCorr_posCorr_binX%d_BAR%d",ibin,iBar),"gaus", -20, 20);
-      GetTimeResolution(h_tDiff_pulseIntCorr_posCorr_binX[iBar][ibin], sigmaEff, sigmaGaus, fitFunDiff_pulseIntCorr_posCorr_binX[iBar][ibin]);
-
-      sigmaGaus    = fitFunDiff_pulseIntCorr_posCorr_binX[iBar][ibin]->GetParameter(2);
-      sigmaGausErr = fitFunDiff_pulseIntCorr_posCorr_binX[iBar][ibin]->GetParError(2);
-      if ( h_tDiff_pulseIntCorr_posCorr_binX[iBar][ibin]->GetEntries() < nMinEntries){
-        sigmaGaus    = h_tDiff_pulseIntCorr_posCorr_binX[iBar][ibin]->GetRMS();
-        sigmaGausErr = h_tDiff_pulseIntCorr_posCorr_binX[iBar][ibin]->GetRMSError();
-      }
-      resolEff  = sqrt(sigmaEff*sigmaEff);
-      resolGaus = sqrt(sigmaGaus*sigmaGaus);
-      resolGausErr = sigmaGausErr/resolGaus * sigmaGaus;
-
+      GetTimeResolution(h_tDiff_pulseIntCorr_posCorr_binX[iBar][ibin], fitFunDiff_pulseIntCorr_posCorr_binX[iBar][ibin], resolEff, resolGaus, resolGausErr, -1);
       g_tResolGausDiff_pulseIntCorr_posCorr[iBar]->SetPoint(ibin, xx, resolGaus*1000.);
       g_tResolGausDiff_pulseIntCorr_posCorr[iBar]->SetPointError(ibin, xbinWidth/2., resolGausErr*1000.);
     }
@@ -2540,7 +2334,6 @@ int main(int argc, char** argv)
     fpol0_tR_ampCorr[iBar]->SetLineColor(2);
     fpol0_tR_ampCorr[iBar]->SetParameter(0, g_tResolGausR_ampCorr[iBar]->GetMean(2));
     g_tResolGausR_ampCorr[iBar]->Fit(fpol0_tR_ampCorr[iBar],"QRS");
-
 
     fpol0_tAve_ampCorr[iBar] = new TF1(Form("fpol0_tAve_ampCorr_BAR%d",iBar),"pol0",-50,50);
     fpol0_tAve_ampCorr[iBar]->SetLineStyle(2);
@@ -3028,7 +2821,7 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
 
 
 // -- time resol 
-void GetTimeResolution( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun)
+void GetTimeResolution2( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun)
 {
   
   float tmin = 0;
@@ -3050,4 +2843,51 @@ void GetTimeResolution( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun)
   sGaus = fitFun->GetParameter(2);
   
   
+}
+
+
+
+
+
+void GetTimeResolution( TH1F *ht, TF1* fitFun, float &resolEff, float &resolGaus, float &resolGausErr, float resolRef)
+{
+  int nMinEntries = 50;
+
+  float sGaus = 0;
+  float sEff  = 0;
+  float sGausErr = 0;
+
+  float tmin = 0;
+  float tmax = 0;
+  float* vals = new float[4];
+
+  FindSmallestInterval(vals,ht,0.68,true);
+  sEff = 0.5*(vals[3]-vals[2]);
+
+  fitFun->SetLineColor(2);
+  fitFun->SetLineWidth(1);
+  fitFun->SetParameter(1,ht->GetMean());
+  fitFun->SetParameter(2,ht->GetRMS());
+  tmin = ht->GetMean()-3.0*ht->GetRMS();
+  tmax = ht->GetMean()+3.0*ht->GetRMS();
+  ht->Fit( fitFun, "QRS", "", tmin, tmax);
+  sGaus = fitFun->GetParameter(2);
+  sGausErr = fitFun->GetParError(2);
+
+  if ( ht->GetEntries() < nMinEntries){
+    sGaus    = ht->GetRMS();
+    sGausErr = ht->GetRMSError();
+  }
+
+  if (resolRef>-1){
+    resolEff  = sqrt(sEff  * sEff  - resolRef * resolRef);
+    resolGaus = sqrt(sGaus * sGaus - resolRef * resolRef);
+  }
+  else {
+    resolEff  = sEff;
+    resolGaus = sGaus;
+  }
+
+  resolGausErr = sGausErr/resolGaus * sGaus;
+
 }
