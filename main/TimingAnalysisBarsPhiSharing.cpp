@@ -104,7 +104,6 @@ int main(int argc, char** argv)
   float threshold = opts.GetOpt<float>("Input.threshold");
 
   std::string fitFunction = opts.GetOpt<std::string>("Input.fitFunction");;
-
   std::string OutputFile = opts.GetOpt<std::string>("Input.OutputFile");
 
   
@@ -1112,8 +1111,8 @@ int main(int argc, char** argv)
 	h_ampL_nocuts[iBar] -> Fill(ampL);
 	h_ampR_nocuts[iBar] -> Fill(ampR);
 
-	if ( ampL > 20 * kAdcToV ) h_timeL[iBar] -> Fill(tL);
-	if ( ampR > 20 * kAdcToV ) h_timeR[iBar] -> Fill(tR);      
+	if ( ampL > 40 * kAdcToV && ampL < 0.9 ) h_timeL[iBar] -> Fill(tL);
+	if ( ampR > 40 * kAdcToV && ampL < 0.9 ) h_timeR[iBar] -> Fill(tR);      
       }
     }
 
@@ -1154,8 +1153,9 @@ int main(int argc, char** argv)
     mipPeakL[iBar] = fLandauL[iBar]-> GetParameter(1);
     cut_ampMinL.push_back(cut_ampMinFraction * mipPeakL[iBar]);
     //cut_ampMinL.push_back(0.02875);
-    float maxamp = min(5*mipPeakL[iBar],maxAmpSaturation);
-    cut_ampMaxL.push_back(maxAmpSaturation);
+    float maxamp = min(4*mipPeakL[iBar],maxAmpSaturation);
+    maxamp = maxAmpSaturation;
+    cut_ampMaxL.push_back(maxamp);
     fLandauR[iBar] = new TF1(Form("fLandauR_BAR%d",iBar),"landau",0, 1000);
     if (runMax >= 8629 && runMax <= 8922){ // 45 deg
       fLandauR[iBar]->SetRange(0.100, maxAmpSaturation);
@@ -1169,8 +1169,9 @@ int main(int argc, char** argv)
     mipPeakR[iBar] = fLandauR[iBar]-> GetParameter(1);
     cut_ampMinR.push_back(cut_ampMinFraction * mipPeakR[iBar]);
     //cut_ampMinR.push_back(0.02875);
-    maxamp = min(5*mipPeakR[iBar],maxAmpSaturation);
-    cut_ampMaxR.push_back(maxAmpSaturation);
+    maxamp = min(4*mipPeakR[iBar],maxAmpSaturation);
+    maxamp = maxAmpSaturation;
+    cut_ampMaxR.push_back(maxamp);
   }
 
   cout << "Amplitude selections" <<endl;
@@ -1309,10 +1310,6 @@ int main(int argc, char** argv)
         if ( tL   < 0  ||  tL   > 200) continue;
         if ( tR   < 0  ||  tR   > 200) continue;
 
-        h2_timeL_vs_brms[iBar] -> Fill(brmsL, tL);
-        h2_timeR_vs_brms[iBar] -> Fill(brmsR, tR);
-
-	
 	// -- remove events with bad reco time
         if ( tRef < cut_minTimeRef || tRef > cut_maxTimeRef ) continue;
         if ( tL < cut_minTime[iBar] || tL > cut_maxTime[iBar]) continue;
@@ -1320,6 +1317,9 @@ int main(int argc, char** argv)
 	
 	if (tL < tLmin[iBar] || tL > tLmax[iBar]) continue;
         if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
+
+        h2_timeL_vs_brms[iBar] -> Fill(brmsL, tL);
+        h2_timeR_vs_brms[iBar] -> Fill(brmsR, tR);
 
 	h_brms_timeL[iBar] -> Fill(brmsL);
 	h_brms_timeR[iBar] -> Fill(brmsR);
@@ -1494,7 +1494,8 @@ int main(int argc, char** argv)
     fitFuncL_ampCorr[iBar] = new TF1(Form("fitFuncL_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncL_ampCorr[iBar] -> SetLineColor(kRed);
     mpvL[iBar] = (h_ampL_nocuts[iBar]->GetFunction(Form("fLandauL_BAR%d",iBar)))->GetParameter(1);
-    fitFuncL_ampCorr[iBar] -> SetRange(0, 10*mpvL[iBar]);
+    //fitFuncL_ampCorr[iBar] -> SetRange(0, 10*mpvL[iBar]);
+    fitFuncL_ampCorr[iBar] -> SetRange(0, 3*mpvL[iBar]);
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSRW");
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSR");
     if (fitFuncL_ampCorr[iBar] -> GetChisquare()/fitFuncL_ampCorr[iBar] -> GetNDF() > 10 ){
@@ -1504,7 +1505,8 @@ int main(int argc, char** argv)
     fitFuncR_ampCorr[iBar] = new TF1(Form("fitFuncR_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncR_ampCorr[iBar] -> SetLineColor(kRed);
     mpvR[iBar] = (h_ampR_nocuts[iBar]->GetFunction(Form("fLandauR_BAR%d",iBar)))->GetParameter(1);
-    fitFuncR_ampCorr[iBar] -> SetRange(0, 10*mpvR[iBar]);
+    //fitFuncR_ampCorr[iBar] -> SetRange(0, 10*mpvR[iBar]);
+    fitFuncR_ampCorr[iBar] -> SetRange(0, 3*mpvR[iBar]);
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRW");
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSR");
     if (fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 10 ){
@@ -1515,7 +1517,8 @@ int main(int argc, char** argv)
     for (int ibin =0; ibin < NBINSXAMPWALK[iBar]; ibin++){
       fitFuncL_ampCorr_binned[iBar][ibin] = new TF1(Form("fitFuncL_ampCorr_%d_%d",ibin,  iBar),fitFunction.c_str());
       fitFuncL_ampCorr_binned[iBar][ibin] -> SetLineColor(kRed);
-      fitFuncL_ampCorr_binned[iBar][ibin] -> SetRange(0, 10*mpvL[iBar]);
+      //fitFuncL_ampCorr_binned[iBar][ibin] -> SetRange(0, 10*mpvL[iBar]);
+      fitFuncL_ampCorr_binned[iBar][ibin] -> SetRange(0, 3*mpvL[iBar]);
       p_tL_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncL_ampCorr_%d_%d",ibin, iBar),"QSRW");
       p_tL_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncL_ampCorr_%d_%d",ibin, iBar),"QSR");
       if (fitFuncL_ampCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncL_ampCorr_binned[iBar][ibin] -> GetNDF() > 10 ){
@@ -1524,7 +1527,8 @@ int main(int argc, char** argv)
 
       fitFuncR_ampCorr_binned[iBar][ibin] = new TF1(Form("fitFuncR_ampCorr_%d_%d", ibin, iBar),fitFunction.c_str());
       fitFuncR_ampCorr_binned[iBar][ibin] -> SetLineColor(kRed);
-      fitFuncR_ampCorr_binned[iBar][ibin] -> SetRange(0, 10*mpvR[iBar]);
+      //fitFuncR_ampCorr_binned[iBar][ibin] -> SetRange(0, 10*mpvR[iBar]);
+      fitFuncR_ampCorr_binned[iBar][ibin] -> SetRange(0, 3*mpvR[iBar]);
       p_tR_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncR_ampCorr_%d_%d",ibin,iBar),"QSRW");
       p_tR_vs_amp_binned[iBar][ibin] -> Fit(Form("fitFuncR_ampCorr_%d_%d",ibin,iBar),"QSR");
       if (fitFuncR_ampCorr_binned[iBar][ibin] -> GetChisquare()/fitFuncR_ampCorr_binned[iBar][ibin] -> GetNDF() > 10){
@@ -1789,7 +1793,7 @@ int main(int argc, char** argv)
 
   TF1*  fitFuncDiff_posCorr[NBARS];
   for (int iBar = 0 ; iBar < NBARS; iBar++){
-    fitFuncDiff_posCorr[iBar] = new TF1(Form("fitFuncDiff_posCorr_%d", iBar),"pol4");
+    fitFuncDiff_posCorr[iBar] = new TF1(Form("fitFuncDiff_posCorr_%d", iBar),"pol1");
     mean = p_tDiff_ampCorr_vs_posX[iBar] -> GetMean();
     rms  = p_tDiff_ampCorr_vs_posX[iBar] -> GetRMS();
     fitFuncDiff_posCorr[iBar]->SetRange( mean - 5*rms , mean + 5*rms);
@@ -1799,7 +1803,7 @@ int main(int argc, char** argv)
 
   TF1*  fitFuncDiff_posCorr_noAmpCorr[NBARS];
   for (int iBar = 0 ; iBar < NBARS; iBar++){
-    fitFuncDiff_posCorr_noAmpCorr[iBar] = new TF1(Form("fitFuncDiff_posCorr_noAmpCorr_%d", iBar),"pol4");
+    fitFuncDiff_posCorr_noAmpCorr[iBar] = new TF1(Form("fitFuncDiff_posCorr_noAmpCorr_%d", iBar),"pol1");
     mean = p_tDiff_vs_posX[iBar] -> GetMean();
     rms  = p_tDiff_vs_posX[iBar] -> GetRMS();
     fitFuncDiff_posCorr_noAmpCorr[iBar]->SetRange( mean - 5*rms , mean + 5*rms);
@@ -1819,7 +1823,7 @@ int main(int argc, char** argv)
 
   TF1*  fitFuncDiff_pulseIntCorr_posCorr[NBARS];
   for (int iBar = 0 ; iBar < NBARS; iBar++){
-    fitFuncDiff_pulseIntCorr_posCorr[iBar] = new TF1(Form("fitFuncDiff_pulseIntCorr_posCorr_%d", iBar),"pol4");
+    fitFuncDiff_pulseIntCorr_posCorr[iBar] = new TF1(Form("fitFuncDiff_pulseIntCorr_posCorr_%d", iBar),"pol1");
     mean = p_tDiff_pulseIntCorr_vs_posX[iBar] -> GetMean();
     rms  = p_tDiff_pulseIntCorr_vs_posX[iBar] -> GetRMS();
     fitFuncDiff_pulseIntCorr_posCorr[iBar]->SetRange( mean - 5*rms , mean + 5*rms);
