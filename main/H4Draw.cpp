@@ -295,7 +295,8 @@ int main(int argc, char* argv[])
         box_signalInt -> SetFillStyle(3001);
         box_signalInt -> Draw("same");
         
-        TLine* line_maxSample = new TLine(maxSample*tUnit,0.,maxSample*tUnit,0.+fitAmpMax);
+	//        TLine* line_maxSample = new TLine(maxSample*tUnit,0.,maxSample*tUnit,0.+fitAmpMax);
+        TLine* line_maxSample = new TLine(times->at(maxSample),0.,times->at(maxSample),0.+fitAmpMax);
         line_maxSample -> SetLineColor(kBlack);
         line_maxSample -> SetLineStyle(2);
         line_maxSample -> Draw("same");
@@ -304,7 +305,8 @@ int main(int argc, char* argv[])
         {
           int nLow = opts.GetOpt<int>(channel+".signalWin", 2);
           int nHig = opts.GetOpt<int>(channel+".signalWin", 3);
-          funcAmp->SetRange(maxSample*tUnit-nLow*tUnit,maxSample*tUnit+nHig*tUnit);
+          //funcAmp->SetRange(maxSample*tUnit-nLow*tUnit,maxSample*tUnit+nHig*tUnit);
+	  funcAmp->SetRange(times->at(maxSample-nLow), times->at(maxSample+nHig));
           funcAmp->SetNpx(10000);
           funcAmp->SetLineColor(kRed);
           funcAmp->Draw("same");
