@@ -125,7 +125,15 @@ bool WFAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins, 
                                        opts.GetOpt<int>(channel+".signalWin", 1));
         WFs_[channel]->SetSignalIntegralWindow(opts.GetOpt<int>(channel+".signalInt", 0),
                                                opts.GetOpt<int>(channel+".signalInt", 1));
-        WFBaseline baselineInfo = WFs_[channel]->SubtractBaseline();
+        //WFBaseline baselineInfo = WFs_[channel]->SubtractBaseline();
+	WFBaseline baselineInfo;
+	if(opts.OptExist(channel+".baselineSubtraction") && opts.GetOpt<int>(channel+".baselineSubtraction") == 0){
+	  baselineInfo = WFs_[channel]->ComputeBaseline(); 
+	}
+	else {
+	  baselineInfo = WFs_[channel]->SubtractBaseline();
+	}
+
         //FIXME MAREMMA MAIALA
         WFFitResults interpolAmpMax;
         if(opts.OptExist(channel+".signalWin", 4))
@@ -157,6 +165,9 @@ bool WFAnalyzer::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugins, 
         digiTree_.amp_max[outCh] = interpolAmpMax.ampl;
         digiTree_.time_max[outCh] = interpolAmpMax.time;
         digiTree_.chi2_max[outCh] = interpolAmpMax.chi2;
+	if ( strcmp(((WFs_[channel]->GetAmpFunc()->GetFormula())->GetTitle()),"gaus")==0){
+	  digiTree_.gaus_sigma[outCh] = WFs_[channel]->GetAmpFunc()->GetParameter(2);
+	}
         digiTree_.charge_tot[outCh] = WFs_[channel]->GetModIntegral(opts.GetOpt<int>(channel+".baselineInt", 1), 
                                                                     WFs_[channel]->GetNSample());
         digiTree_.charge_sig[outCh] = WFs_[channel]->GetSignalIntegral(opts.GetOpt<int>(channel+".signalInt", 0), 

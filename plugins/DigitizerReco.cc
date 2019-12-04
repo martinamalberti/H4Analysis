@@ -118,8 +118,8 @@ bool DigitizerReco::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugin
                 }
                 else
                 {
-                    WFs_[channel]->AddSampleWithTime(event.digiSampleValue[iSample], event.digiSampleTime[iSample]);
-                    samples_old.push_back(event.digiSampleValue[iSample]);
+		  WFs_[channel]->AddSampleWithTime(event.digiSampleValue[iSample], event.digiSampleTime[iSample]);
+		  samples_old.push_back(event.digiSampleValue[iSample]);
                 }
 	    }
 	}
@@ -171,7 +171,7 @@ bool DigitizerReco::ProcessEvent(H4Tree& event, map<string, PluginBase*>& plugin
             float val1 = samples_old[sampleBef1] + (samples_old[sampleAft1]-samples_old[sampleBef1])/((*times)[sampleAft1]-(*times)[sampleBef1]) * (time1-(*times)[sampleBef1]);
             float val2 = samples_old[sampleBef2] + (samples_old[sampleAft2]-samples_old[sampleBef2])/((*times)[sampleAft2]-(*times)[sampleBef2]) * (time2-(*times)[sampleBef2]);
             samples_new.push_back(val1-val2);
-          }
+	  }
           
           //---reset and create new WFs_          
           WFs_[channel]->Reset();

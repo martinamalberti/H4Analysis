@@ -146,6 +146,7 @@ public:
     void                           AddSample(float sample);
     void                           AddSampleWithTime(float sample, float sampleTime);
     WFBaseline                     SubtractBaseline(int min=-1, int max=-1);
+    WFBaseline                     ComputeBaseline(int min=-1, int max=-1); // only compute baseline and rms, do not subtract
     virtual WFFitResults           TemplateFit(float offset=0., int lW=0, int hW=0);
     double                         AnalyticFit(TF1* f, int lW, int hW);
     void                           EmulatedWF(WFClass& wf, float rms, float amplitude, float time);

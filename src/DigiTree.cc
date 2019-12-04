@@ -38,6 +38,8 @@ void DigiTree::Init(vector<string>& names, vector<string>& timetypes)
     fit_period = new float[n_channels];
     calibration = new float[n_channels];
 
+    gaus_sigma = new float[n_channels];
+
     //---channels branches
     for(unsigned int iCh=0; iCh<n_channels; iCh++)
     {
@@ -78,6 +80,9 @@ void DigiTree::Init(vector<string>& names, vector<string>& timetypes)
     tree_->Branch((prefix_+"fit_chi2").c_str(), fit_chi2, (prefix_+"fit_chi2["+size_var+"]/F").c_str());
     tree_->Branch((prefix_+"fit_period").c_str(), fit_period, (prefix_+"fit_period["+size_var+"]/F").c_str());    
     tree_->Branch((prefix_+"calibration").c_str(), calibration, (prefix_+"calibration["+size_var+"]/F").c_str());
+
+    tree_->Branch((prefix_+"gaus_sigma").c_str(), gaus_sigma, (prefix_+"gaus_sigma["+size_var+"]/F").c_str());
+
 }
 
 DigiTree::~DigiTree()

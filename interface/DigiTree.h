@@ -59,6 +59,8 @@ public:
     int*          channels;
     int*          time_types;
     float*        calibration;
+    
+    float*        gaus_sigma;
 };
 
 #endif

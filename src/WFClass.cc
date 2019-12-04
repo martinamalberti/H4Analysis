@@ -13,7 +13,7 @@ WFClass::WFClass(int polarity, float tUnit, DigiChannelCalibration* calibration)
     tUnit_(tUnit), polarity_(polarity), trigRef_(0), sWinMin_(-1), sWinMax_(-1), 
     bWinMin_(-1), bWinMax_(-1),  maxSample_(-1), fitAmpMax_(-1), fitTimeMax_(-1),
     fitChi2Max_(-1), baseline_(-1), bRMS_(-1), cfSample_(-1), cfFrac_(-1), cfTime_(-1),
-    leSample_(-1), leTime_(-1), chi2cf_(-1), chi2le_(-1),
+    leSample_(-1), leTime_(-1), teSample_(-1), teTime_(-1), chi2cf_(-1), chi2le_(-1),
     fWinMin_(-1), fWinMax_(-1), tmplFitTime_(-1), tmplFitTimeErr_(-1), tmplFitAmp_(-1), tmplFitAmpShift_(0),
     f_max_(NULL), f_fit_(NULL), interpolator_(NULL)
 {
@@ -276,8 +276,8 @@ WFFitResults WFClass::GetTimeTE(float thr, int nmFitSamples, int npFitSamples, i
         }
         else
         {
-            leTime_ = -1000;
-            chi2le_ = -1;
+            teTime_ = -1000;
+            chi2te_ = -1;
             teSlope_ = 0;
         }
     }
@@ -531,6 +531,36 @@ WFBaseline WFClass::SubtractBaseline(int min, int max)
     
     return WFBaseline{baseline_, bRMS_, A, B, chi2};
 }
+
+
+//---------estimate the baseline in a given range without subtracting it from the signal----
+WFBaseline WFClass::ComputeBaseline(int min, int max)
+{
+    if(min!=-1 && max==-1)
+    {
+        bWinMin_=min;
+        bWinMax_=max;
+    }
+    //---compute baseline
+    float baseline_=0;
+    for(int iSample=bWinMin_; iSample<bWinMax_; ++iSample)
+    {
+        if(iSample < 0)
+            continue;
+        if(iSample >= samples_.size())
+            break;
+        baseline_ += samples_.at(iSample);
+    }
+    baseline_ = baseline_/((float)(bWinMax_-bWinMin_));
+
+    //---interpolate baseline
+    BaselineRMS();
+    float A=0, B=0;
+    float chi2 = LinearInterpolation(A, B, bWinMin_, bWinMax_);
+    
+    return WFBaseline{baseline_, bRMS_, A, B, chi2};
+}
+
 
 //----------template fit to the WF--------------------------------------------------------
 WFFitResults WFClass::TemplateFit(float offset, int lW, int hW)
