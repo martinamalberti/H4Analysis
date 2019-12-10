@@ -7,7 +7,7 @@ import argparse
 import subprocess
 
 Vbias = [72]
-thresholds = [20, 30, 50, 70, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]
+thresholds = [20, 30, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]
 
 for vb in Vbias:
     for threshold in thresholds:
