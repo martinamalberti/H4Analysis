@@ -55,7 +55,7 @@ struct TreeVars
   float* t_b_rms;
   int  t_CFD;
   int  t_LED;
-  //float* t_gaus_sigma;
+  float* t_gaus_sigma;
 
   std::vector<TrackPar> *t_trackFitResult;
   int t_ntracks;
@@ -67,7 +67,6 @@ struct TreeVars
 /**********************/
 
 void InitTreeVars(TTree* chain1, TreeVars& treeVars, float threshold);
-void GetTimeResolution2( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun);
 void GetTimeResolution( TH1F *ht, TF1* fitFun, float &resolEff, float &resolGaus, float &resolGausErr, float resolRef);
 int GetPointFromX(TGraphErrors *g, double x);
 float GetCorrectedMCPTime(float time, float amp, float x);
@@ -141,7 +140,6 @@ int main(int argc, char** argv)
 
 
   bool useTimeMaxMCP = true;
-  float maxChi2MCP = 99;
 
   // -- list of runs without tracking desync
   //ifstream goodRunsFile("/afs/cern.ch/user/a/abenagli/public/MTDTB_FNAL_Apr2019_good_runs.txt");
@@ -168,8 +166,8 @@ int main(int argc, char** argv)
   TChain* chain1 = new TChain("h4","h4");
   for (unsigned int iRun = runMin; iRun < runMax+1; iRun++){
     // -- check if file exists
-    //    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v8/"+ std::to_string(int(iRun))+".root";
-    std::string fileName = "/afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/ntuples/v11/"+ std::to_string(int(iRun))+".root";
+    std::string fileName = "/eos/cms/store/group/dpg_mtd/comm_mtd/TB/MTDTB_FNAL_Apr2019/ntuples/v11/"+ std::to_string(int(iRun))+".root";
+    //std::string fileName = "/afs/cern.ch/work/m/malberti/MTD/TBatFNALApril2019/H4Analysis/ntuples/v11/"+ std::to_string(int(iRun))+".root";
     if (gSystem->AccessPathName(fileName.c_str()) == 1) continue;
     // -- check if this is a good run
     if ( !goodRuns.empty() && std::count(goodRuns.begin(), goodRuns.end(), int(iRun)) == false) {
@@ -262,7 +260,6 @@ int main(int argc, char** argv)
   TH1F *h_brmsRef       = new TH1F("h_brmsRef", "h_brmsRef", 200, 0., 100.);;
   TH1F *h_chi2Ref       = new TH1F("h_chi2Ref", "h_chi2Ref", 1000, 0., 50.);;
   TH1F *h_sigmaRef      = new TH1F("h_sigmaRef", "h_sigmaRef", 1000, 0., 1.);;
-  TProfile*    p_brmsRef_vs_run    = new TProfile("p_brmsRef_vs_run", "p_brmsRef_vs_run", 500, 8500., 9000.);;
   TProfile2D*  p2_eff_vs_posXY_Ref = new TProfile2D("p2_eff_vs_posXY_Ref","p2_eff_vs_posXY_Ref", 200, xmin, xmax, 200, ymin, ymax, 0, 1);
   TProfile*    p_eff_vs_posX_Ref   = new TProfile("p_eff_vs_posX_Ref","p_eff_vs_posX_Ref", 200, xmin, xmax, 0, 1);
   TProfile*    p_eff_vs_posY_Ref   = new TProfile("p_eff_vs_posY_Ref","p_eff_vs_posY_Ref", 200, ymin, ymax, 0, 1);
@@ -701,10 +698,6 @@ int main(int argc, char** argv)
   // -- combination of the two bars ---
   float dtminAveSum   = -20;
   float dtmaxAveSum   = 20;
-  float dtminAveDiff  = -20;
-  float dtmaxAveDiff  = 20;
-  float dtminDiffDiff = -20;
-  float dtmaxDiffDiff = 20;
 
   TH2F *h2_tAve1_vs_tAve2 = new TH2F("h2_tAve1_vs_tAve2","h2_tAve1_vs_tAve2", 200, -1, 1, 200, -1, 1);
   TH2F *h2_amp1_vs_amp2 = new TH2F("h2_amp1_vs_amp2","h2_amp1_vs_amp2", 200, 0, 1, 200, 0, 1);
@@ -985,87 +978,6 @@ int main(int argc, char** argv)
 
 
 
-  // --- separate histogras for one or two hits
-  TProfile*  p_amp_vs_posY_1hit[NBARS];
-  TProfile*  p_amp_vs_posY_2hit[NBARS];
-  TProfile*  p_tDiff_ampCorr_posCorr_vs_posY_1hit[NBARS];
-  TProfile*  p_tDiff_ampCorr_posCorr_vs_posY_2hit[NBARS];
-  for (int iBar = 0; iBar < NBARS; iBar++){
-    p_amp_vs_posY_1hit[iBar]   = new TProfile(Form("p_amp_vs_posY_1hit_BAR%d",iBar),Form("p_amp_vs_posY_1hit_BAR%d",iBar), 500, ymin, ymax, 0, 1);
-    p_amp_vs_posY_2hit[iBar]   = new TProfile(Form("p_amp_vs_posY_2hit_BAR%d",iBar),Form("p_amp_vs_posY_2hit_BAR%d",iBar), 500, ymin, ymax, 0, 1);
-    p_tDiff_ampCorr_posCorr_vs_posY_1hit[iBar] = new TProfile(Form("p_tDiff_ampCorr_posCorr_vs_posY_1hit_BAR%d",iBar),Form("p_tDiff_ampCorr_posCorr_vs_posY_1hit_BAR%d",iBar), 200, ymin, ymax, -4, 4);
-    p_tDiff_ampCorr_posCorr_vs_posY_2hit[iBar] = new TProfile(Form("p_tDiff_ampCorr_posCorr_vs_posY_2hit_BAR%d",iBar),Form("p_tDiff_ampCorr_posCorr_vs_posY_2hit_BAR%d",iBar), 200, ymin, ymax, -4, 4);
-  }
-
-
-
-  // -- average of the two bars
-  TH1F*          h_tAveSum_ampCorr_posCorr_1hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveSum_ampCorr_posCorr_1hit_binY[ibin] = new TH1F(Form("h_tAveSum_ampCorr_posCorr_1hit_binY_%d",ibin),Form("h_tAveSum_ampCorr_posCorr_1hit_binY_%d",ibin), nbinsHistoY, dtminAveSum, dtmaxAveSum);
-  }
-
-  TH1F*          h_tAveSum_ampCorr_posCorr_2hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveSum_ampCorr_posCorr_2hit_binY[ibin] = new TH1F(Form("h_tAveSum_ampCorr_posCorr_2hit_binY_%d",ibin),Form("h_tAveSum_ampCorr_posCorr_2hit_binY_%d",ibin), nbinsHistoY, dtminAveSum, dtmaxAveSum);
-  }
-
-  TH1F*          h_tAveSum_pulseIntCorr_posCorr_1hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveSum_pulseIntCorr_posCorr_1hit_binY[ibin] = new TH1F(Form("h_tAveSum_pulseIntCorr_posCorr_1hit_binY_%d",ibin),Form("h_tAveSum_pulseIntCorr_posCorr_1hit_binY_%d",ibin), nbinsHistoY, dtminAveSum, dtmaxAveSum);
-  }
-
-  TH1F*          h_tAveSum_pulseIntCorr_posCorr_2hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveSum_pulseIntCorr_posCorr_2hit_binY[ibin] = new TH1F(Form("h_tAveSum_pulseIntCorr_posCorr_2hit_binY_%d",ibin),Form("h_tAveSum_pulseIntCorr_posCorr_2hit_binY_%d",ibin), nbinsHistoY, dtminAveSum, dtmaxAveSum);
-  }
-
-
-  // -- difference of the tAve of the two bars 
-  TH1F*          h_tAveDiff_ampCorr_posCorr_1hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveDiff_ampCorr_posCorr_1hit_binY[ibin] = new TH1F(Form("h_tAveDiff_ampCorr_posCorr_1hit_binY_%d",ibin),Form("h_tAveDiff_ampCorr_posCorr_1hit_binY_%d",ibin), nbinsHistoY/2, dtminAveDiff, dtmaxAveDiff);
-  }
-
-  TH1F*          h_tAveDiff_ampCorr_posCorr_2hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveDiff_ampCorr_posCorr_2hit_binY[ibin] = new TH1F(Form("h_tAveDiff_ampCorr_posCorr_2hit_binY_%d",ibin),Form("h_tAveDiff_ampCorr_posCorr_2hit_binY_%d",ibin), nbinsHistoY/2, dtminAveDiff, dtmaxAveDiff);
-  }
-
-  TH1F*          h_tAveDiff_pulseIntCorr_posCorr_1hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveDiff_pulseIntCorr_posCorr_1hit_binY[ibin] = new TH1F(Form("h_tAveDiff_pulseIntCorr_posCorr_1hit_binY_%d",ibin),Form("h_tAveDiff_pulseIntCorr_posCorr_1hit_binY_%d",ibin), nbinsHistoY/2, dtminAveDiff, dtmaxAveDiff);
-  }
-
-  TH1F*          h_tAveDiff_pulseIntCorr_posCorr_2hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tAveDiff_pulseIntCorr_posCorr_2hit_binY[ibin] = new TH1F(Form("h_tAveDiff_pulseIntCorr_posCorr_2hit_binY_%d",ibin),Form("h_tAveDiff_pulseIntCorr_posCorr_2hit_binY_%d",ibin), nbinsHistoY/2, dtminAveDiff, dtmaxAveDiff);
-  }
-
-
-  // -- difference of the tDiff of the two bars 
-  TH1F*          h_tDiffDiff_ampCorr_posCorr_1hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tDiffDiff_ampCorr_posCorr_1hit_binY[ibin] = new TH1F(Form("h_tDiffDiff_ampCorr_posCorr_1hit_binY_%d",ibin),Form("h_tDiffDiff_ampCorr_posCorr_1hit_binY_%d",ibin), nbinsHistoY/2, dtminDiffDiff, dtmaxDiffDiff);
-  }
-
-  TH1F*          h_tDiffDiff_ampCorr_posCorr_2hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tDiffDiff_ampCorr_posCorr_2hit_binY[ibin] = new TH1F(Form("h_tDiffDiff_ampCorr_posCorr_2hit_binY_%d",ibin),Form("h_tDiffDiff_ampCorr_posCorr_2hit_binY_%d",ibin), nbinsHistoY/2, dtminDiffDiff, dtmaxDiffDiff);
-  }
-
-  TH1F*          h_tDiffDiff_pulseIntCorr_posCorr_1hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tDiffDiff_pulseIntCorr_posCorr_1hit_binY[ibin] = new TH1F(Form("h_tDiffDiff_pulseIntCorr_posCorr_1hit_binY_%d",ibin),Form("h_tDiffDiff_pulseIntCorr_posCorr_1hit_binY_%d",ibin), nbinsHistoY/2, dtminDiffDiff, dtmaxDiffDiff);
-  }
-
-  TH1F*          h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY[1000] ;
-  for (int ibin = 0; ibin < NBINSY; ibin++){
-    h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY[ibin] = new TH1F(Form("h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY_%d",ibin),Form("h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY_%d",ibin), nbinsHistoY/2, dtminDiffDiff, dtmaxDiffDiff);
-  }
-
-
-
   float ampRef = 0;
   float tRef = 0;
   float chi2Ref = 0;
@@ -1078,7 +990,6 @@ int main(int argc, char** argv)
   float tL    = 0.;
   float tR    = 0.;
   float tAve  = 0.;
-
   
   float brmsL = 0;
   float brmsR = 0;
@@ -1150,7 +1061,7 @@ int main(int argc, char** argv)
 	pulseIntSum+=(pulseIntL+pulseIntR)/2;
 	
 	if ( ampL > 40 * kAdcToV && ampL < 0.9 ) h_timeL[iBar] -> Fill(tL);
-	if ( ampR > 40 * kAdcToV && ampL < 0.9 ) h_timeR[iBar] -> Fill(tR);      
+	if ( ampR > 40 * kAdcToV && ampR < 0.9 ) h_timeR[iBar] -> Fill(tR);      
       }
 
       h_ampSum_nocuts-> Fill(ampSum);
@@ -1166,7 +1077,6 @@ int main(int argc, char** argv)
   float mipPeakRef = ffitRef-> GetParameter(1);  
   float cut_ampMinRef =  mipPeakRef - 3. * ffitRef-> GetParameter(2);
   float cut_ampMaxRef =  mipPeakRef + 3. * ffitRef-> GetParameter(2);
-
 
   // --  Find mip peak for each bar
   TF1 *fLandauL[NBARS];
@@ -1318,7 +1228,7 @@ int main(int argc, char** argv)
       if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[timeChannelRef]];
       chi2Ref = treeVars.t_chi2_max[(*treeVars.t_channelId)[timeChannelRef]];
-      //sigmaRef = treeVars.t_gaus_sigma[(*treeVars.t_channelId)[timeChannelRef]];
+      sigmaRef = treeVars.t_gaus_sigma[(*treeVars.t_channelId)[timeChannelRef]];
       
       if ( ampRef > cut_ampMinRef  &&  ampRef < cut_ampMaxRef ){
 	h_ampRef->Fill(ampRef);
@@ -1347,10 +1257,9 @@ int main(int argc, char** argv)
 	p2_ampRef_vs_posXY ->Fill(posX, posY, ampRef);
 	p2_timeRef_vs_posXY->Fill(posX, posY, tRef);
 	h_brmsRef ->Fill(brmsRef);
-	p_brmsRef_vs_run ->Fill(treeVars.t_run, brmsRef);
-	if (brmsRef > cut_brmsMaxRef) {
+	if (brmsRef < cut_brmsMaxRef) {
 	  h_chi2Ref ->Fill(chi2Ref);
-	  //h_sigmaRef ->Fill(sigmaRef);
+	  h_sigmaRef ->Fill(sigmaRef);
 	}
       }
       
@@ -1451,8 +1360,6 @@ int main(int argc, char** argv)
       tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
       if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[timeChannelRef]];
-      chi2Ref = treeVars.t_chi2_max[(*treeVars.t_channelId)[timeChannelRef]];
-      if (useTimeMaxMCP && chi2Ref> maxChi2MCP) continue;
 
       float amp0 = 0.5*(treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[0] ]] + treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[0] ]] );
       float amp1 = 0.5*(treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[1] ]] + treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[1] ]] );
@@ -1515,8 +1422,7 @@ int main(int argc, char** argv)
 	p_ampL_vs_posY[iBar] ->Fill(posY,ampL);
 
 	h2_tL_vs_amp[iBar]->Fill(ampL,tL);
-	//if ( tL > h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) {
-	if ( tL > h_tL[iBar]->GetMean()-5*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+5*h_tL[iBar]->GetRMS() ) {
+	if ( tL > h_tL[iBar]->GetMean()-3*h_tL[iBar]->GetRMS() && tL < h_tL[iBar]->GetMean()+3*h_tL[iBar]->GetRMS() ) {
 	  p_tL_vs_amp[iBar]->Fill(ampL,tL);
 	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
 	  p_tL_vs_amp_binned[iBar][xcbinamp]->Fill(ampL,tL);
@@ -1544,8 +1450,7 @@ int main(int argc, char** argv)
         p_ampR_vs_posY[iBar] ->Fill(posY,ampR);
         
 	h2_tR_vs_amp[iBar]->Fill(ampR,tR);
-	//	if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) {
-	if ( tR > h_tR[iBar]->GetMean()-5*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+5*h_tR[iBar]->GetRMS() ) {
+       	if ( tR > h_tR[iBar]->GetMean()-3*h_tR[iBar]->GetRMS() && tR < h_tR[iBar]->GetMean()+3*h_tR[iBar]->GetRMS() ) {
 	  p_tR_vs_amp[iBar]->Fill(ampR,tR);
 	  int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
           p_tR_vs_amp_binned[iBar][xcbinamp] ->Fill(ampR,tR);
@@ -1597,7 +1502,6 @@ int main(int argc, char** argv)
   for (int iBar = 0 ; iBar < NBARS; iBar++){
     fitFuncL_ampCorr[iBar] = new TF1(Form("fitFuncL_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncL_ampCorr[iBar] -> SetLineColor(kRed);
-    //    mpvL[iBar] = (h_ampL_nocuts[iBar]->GetFunction(Form("fLandauL_BAR%d",iBar)))->GetParameter(1);
     mpvL[iBar] = (h_ampSum_nocuts->GetFunction("fLandauAmpSum"))->GetParameter(1);
     fitFuncL_ampCorr[iBar] -> SetRange(0, 5*mpvL[iBar]);
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSRW");
@@ -1613,7 +1517,6 @@ int main(int argc, char** argv)
     
     fitFuncR_ampCorr[iBar] = new TF1(Form("fitFuncR_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncR_ampCorr[iBar] -> SetLineColor(kRed);
-    //mpvR[iBar] = (h_ampR_nocuts[iBar]->GetFunction(Form("fLandauR_BAR%d",iBar)))->GetParameter(1);
     mpvR[iBar] = (h_ampSum_nocuts->GetFunction("fLandauAmpSum"))->GetParameter(1);
     fitFuncR_ampCorr[iBar] -> SetRange(0, 5*mpvR[iBar]);
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRW");
@@ -1658,6 +1561,7 @@ int main(int argc, char** argv)
       }
     }
 
+
   }
 
 
@@ -1675,7 +1579,6 @@ int main(int argc, char** argv)
   for (int iBar = 0 ; iBar < NBARS; iBar++){
     fLandauIntL[iBar] = new TF1(Form("fLandauIntL_BAR%d",iBar),"landau", 0, 1000);
     h_pulseIntL[iBar]->Fit(fLandauIntL[iBar],"QR");
-    //mpvIntL[iBar] = h_pulseIntL[iBar]->GetFunction(Form("fLandauIntL_BAR%d",iBar))->GetParameter(1);
     mpvIntL[iBar] = (h_pulseIntSum_nocuts->GetFunction("fLandauIntSum"))->GetParameter(1);
     fitFuncL_pulseIntCorr[iBar] = new TF1(Form("fitFuncL_pulseIntCorr_%d", iBar),fitFunction.c_str(), 0, 1000);
     fitFuncL_pulseIntCorr[iBar] -> SetLineColor(kRed);
@@ -1692,7 +1595,6 @@ int main(int argc, char** argv)
 
     fLandauIntR[iBar] = new TF1(Form("fLandauIntR_BAR%d",iBar),"landau", 0, 1000);
     h_pulseIntR[iBar]->Fit(fLandauIntR[iBar],"QR");
-    //mpvIntR[iBar] = h_pulseIntR[iBar]->GetFunction(Form("fLandauIntR_BAR%d",iBar))->GetParameter(1);
     mpvIntR[iBar] = (h_pulseIntSum_nocuts->GetFunction("fLandauIntSum"))->GetParameter(1);
     fitFuncR_pulseIntCorr[iBar] = new TF1(Form("fitFuncR_pulseIntCorr_%d", iBar), fitFunction.c_str(), 0, 1000);
     fitFuncR_pulseIntCorr[iBar] -> SetLineColor(kRed);
@@ -1756,8 +1658,6 @@ int main(int argc, char** argv)
       tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
       if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[timeChannelRef]];
-      chi2Ref = treeVars.t_chi2_max[(*treeVars.t_channelId)[timeChannelRef]];
-      if (useTimeMaxMCP && chi2Ref > maxChi2MCP) continue;
 
       // -- loop over bars
       for (int iBar = 0; iBar < NBARS; iBar++){
@@ -1993,8 +1893,6 @@ int main(int argc, char** argv)
       tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
       if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[timeChannelRef]];
-      chi2Ref = treeVars.t_chi2_max[(*treeVars.t_channelId)[timeChannelRef]];
-      if (useTimeMaxMCP && chi2Ref > maxChi2MCP) continue;
 
       // -- loop over bars
       for (int iBar = 0; iBar < NBARS; iBar++){
@@ -2687,8 +2585,6 @@ int main(int argc, char** argv)
       tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
       if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[timeChannelRef]];
-      chi2Ref = treeVars.t_chi2_max[(*treeVars.t_channelId)[timeChannelRef]];
-      if (useTimeMaxMCP && chi2Ref > maxChi2MCP) continue;
 
       float w[NBARS] = {0., 0., 0.};
       float wr[NBARS] = {0., 0., 0.};
@@ -3052,42 +2948,6 @@ int main(int argc, char** argv)
       p_tDiffDiff_pulseIntCorr_vs_posY ->Fill(posY,tDiffDiff_pulseIntCorr);
       p_tDiffDiff_pulseIntCorr_posCorr_vs_posY ->Fill(posY,tDiffDiff_pulseIntCorr_posCorr);
       
-      
-      // -- fill histograms for 1 or 2 hits separately
-      if (n2==1) {
-	h_tAveSum_ampCorr_posCorr_1hit_binY[ybin] ->Fill(tAveSum_ampCorr_posCorr);
-	h_tAveDiff_ampCorr_posCorr_1hit_binY[ybin] ->Fill(tAveDiff_ampCorr_posCorr);
-	h_tDiffDiff_ampCorr_posCorr_1hit_binY[ybin] ->Fill(tDiffDiff_ampCorr_posCorr);
-	
-	for (int iBar = 0; iBar < NBARS; iBar++){
-	  if ( w[iBar] > 0 ) p_amp_vs_posY_1hit[iBar]->Fill(posY, w[iBar]);
-	  if ( tD_ampCorr_posCorr[iBar]!=-999)  p_tDiff_ampCorr_posCorr_vs_posY_1hit[iBar] ->Fill(posY, tD_ampCorr_posCorr[iBar]);
-	}
-
-      }
-      
-      if (n2==2) {
-	h_tAveSum_ampCorr_posCorr_2hit_binY[ybin] ->Fill(tAveSum_ampCorr_posCorr);
-	h_tAveDiff_ampCorr_posCorr_2hit_binY[ybin] ->Fill(tAveDiff_ampCorr_posCorr);
-	h_tDiffDiff_ampCorr_posCorr_2hit_binY[ybin] ->Fill(tDiffDiff_ampCorr_posCorr);
-	for (int iBar = 0; iBar < NBARS; iBar++){
-	  if ( w[iBar] > 0 )  p_amp_vs_posY_2hit[iBar]->Fill(posY, w[iBar]);
-	  if ( tD_ampCorr_posCorr[iBar]!=-999)  p_tDiff_ampCorr_posCorr_vs_posY_2hit[iBar] ->Fill(posY, tD_ampCorr_posCorr[iBar]);
-	}
-      }
-
-      if (nn2==1) {
-	h_tAveSum_pulseIntCorr_posCorr_1hit_binY[ybin] ->Fill(tAveSum_pulseIntCorr_posCorr);
-	h_tAveDiff_pulseIntCorr_posCorr_1hit_binY[ybin] ->Fill(tAveDiff_pulseIntCorr_posCorr);
-	h_tDiffDiff_pulseIntCorr_posCorr_1hit_binY[ybin] ->Fill(tDiffDiff_pulseIntCorr_posCorr);
-      }
-
-      if (nn2==2) {
-	h_tAveSum_pulseIntCorr_posCorr_2hit_binY[ybin] ->Fill(tAveSum_pulseIntCorr_posCorr);
-	h_tAveDiff_pulseIntCorr_posCorr_2hit_binY[ybin] ->Fill(tAveDiff_pulseIntCorr_posCorr);
-	h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY[ybin] ->Fill(tDiffDiff_pulseIntCorr_posCorr);
-      }
-
     } //--- end fourth loop over events
 
   cout << "End fourth loop over events "  <<endl;
@@ -3153,24 +3013,6 @@ int main(int argc, char** argv)
 
   TF1*  fitFunDiffDiff_pulseIntCorr_binY[1000];
   TF1*  fitFunDiffDiff_pulseIntCorr_posCorr_binY[1000];
-
-
-  // -- 1 or 2 hits
-  TF1*  fitFunAveSum_ampCorr_posCorr_1hit_binY[1000];
-  TF1*  fitFunAveSum_ampCorr_posCorr_2hit_binY[1000];
-  TF1*  fitFunAveSum_pulseIntCorr_posCorr_1hit_binY[1000];
-  TF1*  fitFunAveSum_pulseIntCorr_posCorr_2hit_binY[1000];
-
-  TF1*  fitFunAveDiff_ampCorr_posCorr_1hit_binY[1000];
-  TF1*  fitFunAveDiff_ampCorr_posCorr_2hit_binY[1000];
-  TF1*  fitFunAveDiff_pulseIntCorr_posCorr_1hit_binY[1000];
-  TF1*  fitFunAveDiff_pulseIntCorr_posCorr_2hit_binY[1000];
-
-  TF1*  fitFunDiffDiff_ampCorr_posCorr_1hit_binY[1000];
-  TF1*  fitFunDiffDiff_ampCorr_posCorr_2hit_binY[1000];
-  TF1*  fitFunDiffDiff_pulseIntCorr_posCorr_1hit_binY[1000];
-  TF1*  fitFunDiffDiff_pulseIntCorr_posCorr_2hit_binY[1000];
-
 
   TGraphErrors *g_tResolGausAveSum_ampCorr_vs_posX = new TGraphErrors();
   g_tResolGausAveSum_ampCorr_vs_posX->SetName("g_tResolGausAveSum_ampCorr_vs_posX");
@@ -3297,46 +3139,6 @@ int main(int argc, char** argv)
 
   TGraphErrors *g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY = new TGraphErrors();
   g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY->SetName("g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY");
-
-
-  /// -- graphs for 1 or 2 hits
-  TGraphErrors *g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit = new TGraphErrors();
-  g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit->SetName("g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit");
-
-  TGraphErrors *g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit = new TGraphErrors();
-  g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit->SetName("g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit");
-
-  TGraphErrors *g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit = new TGraphErrors();
-  g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit->SetName("g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit");
-
-  TGraphErrors *g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit = new TGraphErrors();
-  g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit->SetName("g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit");
-
-
-  TGraphErrors *g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit = new TGraphErrors();
-  g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit->SetName("g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit");
-
-  TGraphErrors *g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit = new TGraphErrors();
-  g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit->SetName("g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit");
-
-  TGraphErrors *g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit = new TGraphErrors();
-  g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit->SetName("g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit");
-
-  TGraphErrors *g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit = new TGraphErrors();
-  g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit->SetName("g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit");
-
-
-  TGraphErrors *g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit = new TGraphErrors();
-  g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit->SetName("g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit");
-
-  TGraphErrors *g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit = new TGraphErrors();
-  g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit->SetName("g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit");
-
-  TGraphErrors *g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit = new TGraphErrors();
-  g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit->SetName("g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit");
-
-  TGraphErrors *g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit = new TGraphErrors();
-  g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit->SetName("g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit");
 
 
   // -- vs X
@@ -3466,7 +3268,6 @@ int main(int argc, char** argv)
   // -- vs Y
   int np = 0;
   int np1 = 0;
-  int np2 = 0;
   for (int ibin = 0; ibin < NBINSY; ibin++){
 
     float yy = cut_Ymin[NBARS-1] + ybinWidth*ibin + ybinWidth/2;
@@ -3484,18 +3285,6 @@ int main(int argc, char** argv)
     GetTimeResolution(h_tAveSum_ampCorr_posCorr_binY[ibin], fitFunAveSum_ampCorr_posCorr_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
     g_tResolGausAveSum_ampCorr_posCorr_vs_posY->SetPoint(np, yy, resolGaus*1000.);
     g_tResolGausAveSum_ampCorr_posCorr_vs_posY->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-
-    fitFunAveSum_ampCorr_posCorr_1hit_binY[ibin]= new TF1(Form("fitFunAveSum_ampCorr_posCorr_1hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveSum_ampCorr_posCorr_1hit_binY[ibin], fitFunAveSum_ampCorr_posCorr_1hit_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
-    g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit->SetPoint(np, yy, resolGaus*1000.);
-    g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-
-    fitFunAveSum_ampCorr_posCorr_2hit_binY[ibin]= new TF1(Form("fitFunAveSum_ampCorr_posCorr_2hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveSum_ampCorr_posCorr_2hit_binY[ibin], fitFunAveSum_ampCorr_posCorr_2hit_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
-    if ( h_tAveSum_ampCorr_posCorr_2hit_binY[ibin]->GetEntries() > 0){
-      g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit->SetPoint(np2, yy, resolGaus*1000.);
-      g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit->SetPointError(np2, ybinWidth/2., resolGausErr*1000.);
-    }
 
     // -- amp weighted average     
     fitFunAmpWSum_ampCorr_binY[ibin]= new TF1(Form("fitFunAmpWSum_ampCorr_binY%d",ibin),"gaus", -20, 20);
@@ -3530,17 +3319,6 @@ int main(int argc, char** argv)
     g_tResolGausAveDiff_ampCorr_posCorr_vs_posY->SetPoint(np, yy, resolGaus*1000.);
     g_tResolGausAveDiff_ampCorr_posCorr_vs_posY->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
 
-    fitFunAveDiff_ampCorr_posCorr_1hit_binY[ibin]= new TF1(Form("fitFunAveDiff_ampCorr_posCorr_1hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveDiff_ampCorr_posCorr_1hit_binY[ibin], fitFunAveDiff_ampCorr_posCorr_1hit_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
-    g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit->SetPoint(np, yy, resolGaus*1000.);
-    g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-
-    fitFunAveDiff_ampCorr_posCorr_2hit_binY[ibin]= new TF1(Form("fitFunAveDiff_ampCorr_posCorr_2hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveDiff_ampCorr_posCorr_2hit_binY[ibin], fitFunAveDiff_ampCorr_posCorr_2hit_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
-    if (h_tAveDiff_ampCorr_posCorr_2hit_binY[ibin]->GetEntries()>0){
-      g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit->SetPoint(np2, yy, resolGaus/2*1000.);
-      g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit->SetPointError(np2, ybinWidth/2., resolGausErr/2*1000.);
-    }
 
     // -- tDiff diff
     fitFunDiffDiff_ampCorr_binY[ibin]= new TF1(Form("fitFunDiffDiff_ampCorr_binY%d",ibin),"gaus", -20, 20);
@@ -3553,18 +3331,6 @@ int main(int argc, char** argv)
     g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY->SetPoint(np, yy, resolGaus*1000.);
     g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
     
-    fitFunDiffDiff_ampCorr_posCorr_1hit_binY[ibin]= new TF1(Form("fitFunDiffDiff_ampCorr_posCorr_1hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tDiffDiff_ampCorr_posCorr_1hit_binY[ibin], fitFunDiffDiff_ampCorr_posCorr_1hit_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
-    g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit->SetPoint(np, yy, (resolGaus/2)*1000. );
-    g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit->SetPointError(np, ybinWidth/2., (resolGausErr/2)*1000.);
-
-    fitFunDiffDiff_ampCorr_posCorr_2hit_binY[ibin]= new TF1(Form("fitFunDiffDiff_ampCorr_posCorr_2hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tDiffDiff_ampCorr_posCorr_2hit_binY[ibin], fitFunDiffDiff_ampCorr_posCorr_2hit_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
-    if (h_tDiffDiff_ampCorr_posCorr_2hit_binY[ibin]->GetEntries()>0){
-      g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit->SetPoint(np2, yy, (resolGaus/4)*1000.);
-      g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit->SetPointError(np2, ybinWidth/2., (resolGausErr/4)*1000.);
-    }
-
 
     // ===  corr vs pulse int
 
@@ -3578,18 +3344,6 @@ int main(int argc, char** argv)
     GetTimeResolution(h_tAveSum_pulseIntCorr_posCorr_binY[ibin], fitFunAveSum_pulseIntCorr_posCorr_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
     g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY->SetPoint(np, yy, resolGaus*1000.);
     g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-
-    fitFunAveSum_pulseIntCorr_posCorr_1hit_binY[ibin]= new TF1(Form("fitFunAveSum_pulseIntCorr_posCorr_1hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveSum_pulseIntCorr_posCorr_1hit_binY[ibin], fitFunAveSum_pulseIntCorr_posCorr_1hit_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
-    g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit->SetPoint(np, yy, resolGaus*1000.);
-    g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-
-    fitFunAveSum_pulseIntCorr_posCorr_2hit_binY[ibin]= new TF1(Form("fitFunAveSum_pulseIntCorr_posCorr_2hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveSum_pulseIntCorr_posCorr_2hit_binY[ibin], fitFunAveSum_pulseIntCorr_posCorr_2hit_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
-    if (h_tAveSum_pulseIntCorr_posCorr_2hit_binY[ibin]->GetEntries()>0){
-      g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit->SetPoint(np2, yy, resolGaus*1000.);
-      g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit->SetPointError(np2, ybinWidth/2., resolGausErr*1000.);
-    }
 
     // -- amp weighted average     
     fitFunAmpWSum_pulseIntCorr_binY[ibin]= new TF1(Form("fitFunAmpWSum_pulseIntCorr_binY%d",ibin),"gaus", -20, 20);
@@ -3624,18 +3378,6 @@ int main(int argc, char** argv)
     g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY->SetPoint(np, yy, resolGaus*1000.);
     g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
     
-    fitFunAveDiff_pulseIntCorr_posCorr_1hit_binY[ibin]= new TF1(Form("fitFunAveDiff_pulseIntCorr_posCorr_1hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveDiff_pulseIntCorr_posCorr_1hit_binY[ibin], fitFunAveDiff_pulseIntCorr_posCorr_1hit_binY[ibin], resolEff, resolGaus, resolGausErr, resolMCP);
-    g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit->SetPoint(np, yy, resolGaus*1000.);
-    g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-
-    fitFunAveDiff_pulseIntCorr_posCorr_2hit_binY[ibin]= new TF1(Form("fitFunAveDiff_pulseIntCorr_posCorr_2hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tAveDiff_pulseIntCorr_posCorr_2hit_binY[ibin], fitFunAveDiff_pulseIntCorr_posCorr_2hit_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
-    if (h_tAveDiff_pulseIntCorr_posCorr_2hit_binY[ibin]->GetEntries()>0){
-      g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit->SetPoint(np2, yy, resolGaus/2*1000.);
-      g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit->SetPointError(np2, ybinWidth/2., resolGausErr/2*1000.);
-    }
-
     // -- tDiff diff
     fitFunDiffDiff_pulseIntCorr_binY[ibin]= new TF1(Form("fitFunDiffDiff_pulseIntCorr_binY%d",ibin),"gaus", -20, 20);
     GetTimeResolution(h_tDiffDiff_pulseIntCorr_binY[ibin], fitFunDiffDiff_pulseIntCorr_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
@@ -3646,19 +3388,6 @@ int main(int argc, char** argv)
     GetTimeResolution(h_tDiffDiff_pulseIntCorr_posCorr_binY[ibin], fitFunDiffDiff_pulseIntCorr_posCorr_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
     g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY->SetPoint(np, yy, resolGaus*1000.);
     g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY->SetPointError(np, ybinWidth/2., resolGausErr*1000.);
-    
-    fitFunDiffDiff_pulseIntCorr_posCorr_1hit_binY[ibin]= new TF1(Form("fitFunDiffDiff_pulseIntCorr_posCorr_1hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tDiffDiff_pulseIntCorr_posCorr_1hit_binY[ibin], fitFunDiffDiff_pulseIntCorr_posCorr_1hit_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
-    g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit->SetPoint(np, yy, (resolGaus/2)*1000.);
-    g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit->SetPointError(np, ybinWidth/2., (resolGausErr/2)*1000.);
-
-    fitFunDiffDiff_pulseIntCorr_posCorr_2hit_binY[ibin]= new TF1(Form("fitFunDiffDiff_pulseIntCorr_posCorr_2hit_binY%d",ibin),"gaus", -20, 20);
-    GetTimeResolution(h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY[ibin], fitFunDiffDiff_pulseIntCorr_posCorr_2hit_binY[ibin], resolEff, resolGaus, resolGausErr, -1);
-    if (h_tDiffDiff_pulseIntCorr_posCorr_2hit_binY[ibin]->GetEntries()>0){
-      g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit->SetPoint(np2, yy, (resolGaus/4)*1000.);
-      g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit->SetPointError(np2, ybinWidth/2., (resolGausErr/4)*1000.);
-      np2++;
-    }
 
     np++;
     
@@ -3696,115 +3425,6 @@ int main(int argc, char** argv)
     }
     
   }
-  
-
-
-
-  // calculate average resolution taking into account both single and double hits in the signal region
-  // sigma = f * (sigma_2hits) + (1-f) * (sigma_2hits)
-
-  TGraphErrors *g_tResolGausAveSum_ampCorr_posCorr_vs_posY_overlap = new TGraphErrors();
-  g_tResolGausAveSum_ampCorr_posCorr_vs_posY_overlap->SetName("g_tResolGausAveSum_ampCorr_posCorr_vs_posY_overlap");
-
-  TGraphErrors *g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_overlap = new TGraphErrors();
-  g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_overlap->SetName("g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_overlap");
-
-  TGraphErrors *g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_overlap = new TGraphErrors();
-  g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_overlap->SetName("g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_overlap");
-
-
-  TGraphErrors *g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_overlap = new TGraphErrors();
-  g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_overlap->SetName("g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_overlap");
-
-  TGraphErrors *g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_overlap = new TGraphErrors();
-  g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_overlap->SetName("g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_overlap");
-
-  TGraphErrors *g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_overlap = new TGraphErrors();
-  g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_overlap->SetName("g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_overlap");
-
-  for (int i = 0; i < g_nEventsRatio_vs_posY -> GetN() ; i++){
-    
-    double y, f;
-    double sigma1;
-    double sigma2;
-    double esigma1;
-    double esigma2;
-    double err;
-    int j1, j2;
-
-    g_nEventsRatio_vs_posY -> GetPoint(i, y, f);
-
-    // -- average of tAve of the two bars
-    sigma1 = g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit ->Eval(y);
-    sigma2 = g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit ->Eval(y);
-    j1 = GetPointFromX(g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit , y);
-    j2 = GetPointFromX(g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit , y);
-    esigma1 = g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit ->GetEY()[j1];
-    esigma2 = g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit ->GetEY()[j2];
-    err = sqrt( pow(f*esigma2,2) + pow((1-f)*esigma1,2) );
-    g_tResolGausAveSum_ampCorr_posCorr_vs_posY_overlap ->SetPoint(i, y, f * sigma2 + (1-f)*sigma1);
-    g_tResolGausAveSum_ampCorr_posCorr_vs_posY_overlap ->SetPointError(i, ybinWidth/2., err);
-
-    // -- difference of tAve of the two bars
-    sigma1 = g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit ->Eval(y);
-    sigma2 = g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit ->Eval(y);
-    j1 = GetPointFromX(g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit , y);
-    j2 = GetPointFromX(g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit , y);
-    esigma1 = g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit ->GetEY()[j1];
-    esigma2 = g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit ->GetEY()[j2];
-    err = sqrt( pow(f*esigma2,2) + pow((1-f)*esigma1,2) );
-    g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_overlap ->SetPoint(i, y, f * sigma2 + (1-f)*sigma1);
-    g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_overlap ->SetPointError(i, ybinWidth/2., err);
-
-    // -- difference of tDiff of the two bars
-    sigma1 = g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit ->Eval(y);
-    sigma2 = g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit ->Eval(y);
-    j1 = GetPointFromX(g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit , y);
-    j2 = GetPointFromX(g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit , y);
-    esigma1 = g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit ->GetEY()[j1];
-    esigma2 = g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit ->GetEY()[j2];
-    err = sqrt( pow(f*esigma2,2) + pow((1-f)*esigma1,2) );
-    g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_overlap ->SetPoint(i, y, f * sigma2 + (1-f)*sigma1);
-    g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_overlap ->SetPointError(i, ybinWidth/2., err);
-
-
-
-    // -- average of tAve of the two bars
-    sigma1 = g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit ->Eval(y);
-    sigma2 = g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit ->Eval(y);
-    j1 = GetPointFromX(g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit , y);
-    j2 = GetPointFromX(g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit , y);
-    esigma1 = g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit ->GetEY()[j1];
-    esigma2 = g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit ->GetEY()[j2];
-    err = sqrt( pow(f*esigma2,2) + pow((1-f)*esigma1,2) );
-    g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_overlap ->SetPoint(i, y, f * sigma2 + (1-f)*sigma1);
-    g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_overlap ->SetPointError(i, ybinWidth/2., err);
-
-    // -- difference of tAve of the two bars
-    sigma1 = g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit ->Eval(y);
-    sigma2 = g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit ->Eval(y);
-    j1 = GetPointFromX(g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit , y);
-    j2 = GetPointFromX(g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit , y);
-    esigma1 = g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit ->GetEY()[j1];
-    esigma2 = g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit ->GetEY()[j2];
-    err = sqrt( pow(f*esigma2,2) + pow((1-f)*esigma1,2) );
-    g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_overlap ->SetPoint(i, y, f * sigma2 + (1-f)*sigma1);
-    g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_overlap ->SetPointError(i, ybinWidth/2., err);
-
-    // -- difference of tDiff of the two bars
-    sigma1 = g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit ->Eval(y);
-    sigma2 = g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit ->Eval(y);
-    j1 = GetPointFromX(g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit , y);
-    j2 = GetPointFromX(g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit , y);
-    esigma1 = g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit ->GetErrorY(j1);
-    esigma2 = g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit ->GetErrorY(j2);
-    err = sqrt( pow(f*esigma2,2) + pow((1-f)*esigma1,2) );
-    g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_overlap ->SetPoint(i, y, f * sigma2 + (1-f)*sigma1);
-    g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_overlap ->SetPointError(i, ybinWidth/2., err);
-
-  }
-  
-
 
 
   // -- Save histograms on file
@@ -3825,7 +3445,6 @@ int main(int argc, char** argv)
   h_chi2Ref->Write();
   h_sigmaRef->Write();
   h_brmsRef ->Write();
-  p_brmsRef_vs_run -> Write();
   p2_eff_vs_posXY_Ref -> Write();
   p_eff_vs_posX_Ref -> Write();
   p_eff_vs_posY_Ref -> Write();
@@ -4168,40 +3787,6 @@ int main(int argc, char** argv)
 
   g_nEventsRatio_vs_posY -> Write();
 
-  for (int iBar = 0; iBar < NBARS; iBar++){
-    p_amp_vs_posY_1hit[iBar]->Write();
-    p_amp_vs_posY_2hit[iBar]->Write();
-    p_tDiff_ampCorr_posCorr_vs_posY_1hit[iBar]->Write();
-    p_tDiff_ampCorr_posCorr_vs_posY_2hit[iBar]->Write();
-  }
-
-  g_tResolGausAveSum_ampCorr_posCorr_vs_posY_1hit -> Write();
-  g_tResolGausAveSum_ampCorr_posCorr_vs_posY_2hit -> Write();
-  g_tResolGausAveSum_ampCorr_posCorr_vs_posY_overlap -> Write();
-
-  g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_1hit -> Write();
-  g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_2hit -> Write();
-  g_tResolGausAveDiff_ampCorr_posCorr_vs_posY_overlap -> Write();
-
-  g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_1hit -> Write();
-  g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_2hit -> Write();
-  g_tResolGausDiffDiff_ampCorr_posCorr_vs_posY_overlap -> Write();
-
-
-  g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_1hit -> Write();
-  g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_2hit -> Write();
-  g_tResolGausAveSum_pulseIntCorr_posCorr_vs_posY_overlap -> Write();
-
-  g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_1hit -> Write();
-  g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_2hit -> Write();
-  g_tResolGausAveDiff_pulseIntCorr_posCorr_vs_posY_overlap -> Write();
-
-  g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_1hit -> Write();
-  g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_2hit -> Write();
-  g_tResolGausDiffDiff_pulseIntCorr_posCorr_vs_posY_overlap -> Write();
-
-
-
   cout << "Saving plots in subdir..."<<endl;
 
   TDirectory *dir1 = outfile->mkdir("xBins/");  
@@ -4266,7 +3851,7 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   treeVars.t_time = new float[1000];
   treeVars.t_time_max = new float[1000];
   treeVars.t_chi2_max = new float[1000];
-  //treeVars.t_gaus_sigma = new float[1000];
+  treeVars.t_gaus_sigma = new float[1000];
   treeVars.t_b_rms = new float[1000];
   treeVars.t_CFD = 0;
   treeVars.t_LED = 0;
@@ -4288,7 +3873,7 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   chain1 -> SetBranchStatus("time",          1); chain1 -> SetBranchAddress("time",        treeVars.t_time);
   chain1 -> SetBranchStatus("time_max",      1); chain1 -> SetBranchAddress("time_max",    treeVars.t_time_max);
   chain1 -> SetBranchStatus("chi2_max",      1); chain1 -> SetBranchAddress("chi2_max",    treeVars.t_chi2_max);
-  //chain1 -> SetBranchStatus("gaus_sigma",      1); chain1 -> SetBranchAddress("gaus_sigma",    treeVars.t_gaus_sigma);
+  chain1 -> SetBranchStatus("gaus_sigma",      1); chain1 -> SetBranchAddress("gaus_sigma",    treeVars.t_gaus_sigma);
   chain1 -> SetBranchStatus("b_rms",         1); chain1 -> SetBranchAddress("b_rms",       treeVars.t_b_rms);
   chain1 -> SetBranchStatus("CFD",           1); chain1 -> SetBranchAddress("CFD",         &treeVars.t_CFD);
   cout << "Using threshold " << threshold << "  --> time : " << Form("LED%.0f",threshold) <<endl;
@@ -4323,30 +3908,6 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
     }
 
 }
-
-
-// -- time resol 
-void GetTimeResolution2( TH1F *ht, float &sEff, float &sGaus, TF1* fitFun)
-{
-  float tmin = 0;
-  float tmax = 0;
-  float* vals = new float[4];
-
-  FindSmallestInterval(vals,ht,0.68,true);
-  sEff = 0.5*(vals[3]-vals[2]);
-
-  fitFun->SetLineColor(2);
-  fitFun->SetLineWidth(1);
-  fitFun->SetParameter(1,ht->GetMean());
-  fitFun->SetParameter(2,min(ht->GetRMS(), double(sEff)));
-  //tmin = ht->GetMean()-2.0*sEff;                                                                                                                                           
-  //tmax = ht->GetMean()+2.0*sEff;                                                                                                                                           
-  tmin = ht->GetMean()-3.0*ht->GetRMS();
-  tmax = ht->GetMean()+3.0*ht->GetRMS();
-  ht->Fit( fitFun, "QRS", "", tmin, tmax);
-  sGaus = fitFun->GetParameter(2);
-}
-
 
 void GetTimeResolution( TH1F *ht, TF1* fitFun, float &resolEff, float &resolGaus, float &resolGausErr, float resolRef)
 {
