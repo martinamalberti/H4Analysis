@@ -46,6 +46,7 @@ std::vector<std::string> ampChannelsR;
 /*** tree variables ***/
 struct TreeVars
 {
+  unsigned int t_run;
   float* t_amp;
   float* t_time;
   float *t_time_max;
@@ -67,7 +68,7 @@ struct TreeVars
 
 void InitTreeVars(TTree* chain1, TreeVars& treeVars, float threshold);
 void GetTimeResolution( TH1F *ht, TF1* fitFun, float &resolEff, float &resolGaus, float &resolGausErr, float resolRef);
-float GetCorrectedMCPTime(float time, float amp, float x);
+float GetCorrectedMCPTime(float time, float amp, float x, unsigned int run);
 
 // ====== *** MAIN *** ======
 int main(int argc, char** argv)
@@ -205,6 +206,7 @@ int main(int argc, char** argv)
   if ( usePositionBinnedAmplitudeWalkCorr ){
     //float xbinWidthForAmpWalk =  10.; // used in xy scans
     xbinWidthForAmpWalk =   5.; // used in material scans
+    xbinWidthForAmpWalk =   10.; // used in material scans
   }
   int NBINSXAMPWALK[NBARS];
   for (int iBar = 0; iBar < NBARS; iBar++){
@@ -225,7 +227,7 @@ int main(int argc, char** argv)
   }
 
   int   nTimeBins = 3000;
-  if (runMax < 7135 ) nTimeBins = 1000;
+  if (runMax <= 7135 ) nTimeBins = 1000;
     
   float dtminL[NBARS]   = {-12., -12., -12.};
   float dtmaxL[NBARS]   = {  3.,   3.,   3.};
@@ -455,8 +457,8 @@ int main(int argc, char** argv)
   }
 
   int nAmpBins = 100;
-  if (xyangle == 14){
-     nAmpBins = 100;
+  if (runMax <= 7135){
+     nAmpBins = 200;
   }
   cout << "n amp bins = " << nAmpBins <<endl;
 
@@ -959,7 +961,7 @@ int main(int argc, char** argv)
         if (brmsL > cut_brmsMaxTimeCh[iBar]) continue;
 
         //-- time of Left, Right
-	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX);
+	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX, treeVars.t_run);
         tL = tL - tRef;
         tR = tR - tRef;
         
@@ -1032,7 +1034,7 @@ int main(int argc, char** argv)
 	if (tR < tRmin[iBar] || tR > tRmax[iBar]) continue;
 
 	//-- time of Left, Right and average
-	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX);
+	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX, treeVars.t_run);
 	tL = tL - tRef;
 	tR = tR - tRef;
 	tAve  = (tL + tR)/2;
@@ -1291,7 +1293,7 @@ int main(int argc, char** argv)
         if (brmsR > cut_brmsMaxTimeCh[iBar]) continue;
         if (brmsL > cut_brmsMaxTimeCh[iBar]) continue;
 
-	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX);
+	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX, treeVars.t_run);
 	tL = tL - tRef;
         tR = tR - tRef;
 
@@ -1533,7 +1535,7 @@ int main(int argc, char** argv)
         if (brmsR > cut_brmsMaxTimeCh[iBar]) continue;
         if (brmsL > cut_brmsMaxTimeCh[iBar]) continue;
 
-	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX);
+	if (applyMCPTimeCorrection) tRef = GetCorrectedMCPTime(tRef, ampRef*1000., posX, treeVars.t_run);
         tL = tL - tRef;
         tR = tR - tRef;
 
@@ -2376,6 +2378,7 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   treeVars.t_gaus_sigma = new float[1000];
   treeVars.t_CFD = 0;
   treeVars.t_LED = 0;
+  treeVars.t_run = 0;
 
   treeVars.t_channelId = new std::map<std::string,int>;
 
@@ -2392,9 +2395,10 @@ void InitTreeVars(TTree* chain1,TreeVars& treeVars, float threshold){
   chain1 -> SetBranchStatus("time",          1); chain1 -> SetBranchAddress("time",         treeVars.t_time);
   chain1 -> SetBranchStatus("time_max",      1); chain1 -> SetBranchAddress("time_max",     treeVars.t_time_max);
   chain1 -> SetBranchStatus("chi2_max",      1); chain1 -> SetBranchAddress("chi2_max",     treeVars.t_chi2_max);
-  chain1 -> SetBranchStatus("gaus_sigma",      1); chain1 -> SetBranchAddress("gaus_sigma",    treeVars.t_gaus_sigma);
+  chain1 -> SetBranchStatus("gaus_sigma",    1); chain1 -> SetBranchAddress("gaus_sigma",   treeVars.t_gaus_sigma);
   chain1 -> SetBranchStatus("b_rms",         1); chain1 -> SetBranchAddress("b_rms",        treeVars.t_b_rms);
   chain1 -> SetBranchStatus("CFD",           1); chain1 -> SetBranchAddress("CFD",          &treeVars.t_CFD);
+  chain1 -> SetBranchStatus("run",           1); chain1 -> SetBranchAddress("run",          &treeVars.t_run);
 
   cout << "Using threshold " << threshold << "  --> time : " << Form("LED%.0f",threshold) <<endl;
   chain1 -> SetBranchStatus(Form("LED%.0f",threshold),        1); chain1 -> SetBranchAddress(Form("LED%.0f",threshold),       &treeVars.t_LED);
@@ -2481,7 +2485,7 @@ void GetTimeResolution( TH1F *ht, TF1* fitFun, float &resolEff, float &resolGaus
 
 
 //==================
-float GetCorrectedMCPTime(float time, float amp, float x){
+float GetCorrectedMCPTime(float time, float amp, float x, unsigned int run){
 
 
   //-- from Sasha
@@ -2491,7 +2495,8 @@ float GetCorrectedMCPTime(float time, float amp, float x){
   dt_A*=0.001; // ns
 
   // - corr vs position x
-  float p0 = 1.58298E+01;
+  float p0 = 1.58298E+01; // for later runs
+  if (run >=6872 && run <=7135) p0 = -4.0; // for  runs between 6872 and 7135
   float p1 = -5.90089;
   float p2 = -4.05435E-05;
   float p3 = -4.31364E-08;
@@ -2499,7 +2504,7 @@ float GetCorrectedMCPTime(float time, float amp, float x){
 
   float time_corr = time + dt_A + dt_posX ;
 
-  //  cout << time << "  " << time + dt_A << "  " << time_corr <<endl;
+   cout << time << "  " << time + dt_A << "  " << time_corr <<endl;
 
   return time_corr;
 }
