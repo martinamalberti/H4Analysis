@@ -25,6 +25,7 @@ ROOT.gStyle.SetTitleOffset(1.2,'Y')
 ROOT.gErrorIgnoreLevel = ROOT.kWarning;
 
 
+inDir = '../v11/materialLeveling/barCenter/'
 outdir = sys.argv[1]
 
 #ampCorrType = 'ampCorr'
@@ -38,7 +39,7 @@ shutil.copy('index.php', '%s'%outdir)
 
 thickness = [2, 3, 4]
 channels = ['BAR%s'%i for i in range(0,1)]
-thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000]
+thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500]
 vb = 43
 
 f = {}
@@ -55,7 +56,7 @@ h2_ampL_vs_posXc = {}
 
 sigmatAve = {} #[angle][th][channel]
 sigmatAve_err = {} #[angle][th][channel]
-sigmaPTK = 0.014
+sigmaPTK = 0.0123 # after corrections
 
 sigmatDiff = {} #[angle][th][channel]
 sigmatDiff_err = {} #[angle][th][channel]
@@ -71,16 +72,16 @@ for t in thickness:
         sigmatAve_err[t][th] = {}
         sigmatDiff[t][th] = {}
         sigmatDiff_err[t][th] = {}
-        fname = '../v7/output_1bar_Vbias%s_thr%sADC_%smm.root'%(vb, th, t)
+        fname = '%s/output_1bar_Vbias%s_thr%sADC_%smm.root'%(inDir,vb, th, t)
         if (os.path.isfile(fname) ==  False):
             print 'File %s', fname, 'not found!'
             continue
         ff = ROOT.TFile.Open(fname)
         for channel in channels:
             # tAve
-            sigmaEff = ff.Get('h_effectiveSigmaAve_%s_posCorr_%s'%(ampCorrType, channel)).GetMean()
-            h = ff.Get('h_tAve_%s_posCorr_%s'%(ampCorrType, channel))
-            fitfun = h.GetFunction('fitFunAve_%s_posCorr_%s'%(ampCorrType, channel))
+            sigmaEff = ff.Get('h_effectiveSigmaAve_%s_%s'%(ampCorrType, channel)).GetMean()
+            h = ff.Get('h_tAve_%s_%s'%(ampCorrType, channel))
+            fitfun = h.GetFunction('fitFunAve_%s_%s'%(ampCorrType, channel))
             if (fitfun == None):
                 continue
             sigmaGaus  = fitfun.GetParameter(2)
@@ -130,10 +131,10 @@ for t in thickness:
     h2_ampL_vs_posXc[t] = {}
     h2_ampR_vs_posXc[t] = {}
     for ch in channels:
-        fname = '../v7/output_1bar_Vbias43_thr%dADC_%smm.root'%(bestThresholdDiff[t][ch], t)
+        fname = '%s/output_1bar_Vbias43_thr%dADC_%smm.root'%(inDir,bestThresholdDiff[t][ch], t)
         f[t][ch] = ROOT.TFile.Open(fname)
-        gR[t][ch] = f[t][ch].Get('g_tResolGausR_ampCorr_%s'%ch)
-        gL[t][ch] = f[t][ch].Get('g_tResolGausL_ampCorr_%s'%ch)
+        gR[t][ch] = f[t][ch].Get('g_tResolGausR_%s_%s'%(ampCorrType, ch))
+        gL[t][ch] = f[t][ch].Get('g_tResolGausL_%s_%s'%(ampCorrType, ch))
         pR[t][ch] = f[t][ch].Get('p_tR_%s_vs_posXc_%s'%(ampCorrType, ch))
         pL[t][ch] = f[t][ch].Get('p_tL_%s_vs_posXc_%s'%(ampCorrType, ch))
         h_ampR[t][ch] = f[t][ch].Get('h_ampR_%s'%ch)
@@ -176,9 +177,9 @@ slopeR = {}
 eslopeL = {}
 eslopeR = {}
 
-err = 2
-errAve = 2.
-errDiff = 2.
+err = 0.
+errAve = 0.
+errDiff = 0.
 
 for ch in channels:
 
@@ -209,7 +210,6 @@ for ch in channels:
         tResL[ch][t] = gL[t][ch].GetFunction(gL[t][ch].GetName().replace('g_tResolGaus','fpol0_t') ).GetParameter(0)
         tResR[ch][t] = gR[t][ch].GetFunction(gR[t][ch].GetName().replace('g_tResolGaus','fpol0_t') ).GetParameter(0)
 
-
         thr = bestThresholdDiff[t][ch]
         tResDiff[ch][t] = sigmatDiff[t][thr][ch]
         errDiff = math.sqrt(sigmatDiff_err[t][thr][ch]*sigmatDiff_err[t][thr][ch] + err * err)
@@ -225,10 +225,10 @@ for ch in channels:
         gL_vs_thickness[ch].SetPoint(i, t, tResL[ch][t])
         gR_vs_thickness[ch].SetPoint(i, t, tResR[ch][t])
 
-        gAve_vs_thickness[ch].SetPointError(i, 0.5, errAve )
-        gDiff_vs_thickness[ch].SetPointError(i, 0.5, errDiff )
-        gL_vs_thickness[ch].SetPointError(i, 0.5, err)
-        gR_vs_thickness[ch].SetPointError(i, 0.5, err)
+        gAve_vs_thickness[ch].SetPointError(i, 0., errAve )
+        gDiff_vs_thickness[ch].SetPointError(i, 0., errDiff )
+        gL_vs_thickness[ch].SetPointError(i, 0., err)
+        gR_vs_thickness[ch].SetPointError(i, 0., err)
                 
 
         ####################
@@ -263,7 +263,7 @@ for ch in channels:
 
  
         cc = ROOT.TCanvas('time_vs_posXc_%smm_%s'%(t,ch))
-        cc.SetGridy()
+        #cc.SetGridy()
         pL[t][ch].SetMarkerColor(ROOT.kBlue)
         pR[t][ch].SetMarkerColor(ROOT.kRed)
         pL[t][ch].SetLineColor(ROOT.kBlue)
@@ -287,16 +287,22 @@ for ch in channels:
         #############################
         # amplitude vs slant tickness
         fLandau = ROOT.TF1('fLandau','landau', 0, 1)
-        fLandau.SetRange(0,0.90)
+        fLandau.SetRange(0,0.1)
+        h_ampR[t][ch].Fit(fLandau,'QR')
+        fLandau.SetRange(fLandau.GetParameter(1)*0.9,fLandau.GetParameter(1)*2)
         h_ampR[t][ch].Fit(fLandau,'QR')
         mpvR = fLandau.GetParameter(1)
         g_ampR_vs_thickness[ch].SetPoint( i, t, fLandau.GetParameter(1))
         g_ampR_vs_thickness[ch].SetPointError( i, 0, fLandau.GetParError(1) )
         h_ampL[t][ch].Fit(fLandau,'QR')
+        fLandau.SetRange(fLandau.GetParameter(1)*0.9,fLandau.GetParameter(1)*2)
+        h_ampL[t][ch].Fit(fLandau,'QR')
         mpvL = fLandau.GetParameter(1)
         g_ampL_vs_thickness[ch].SetPoint( i, t, fLandau.GetParameter(1))
         g_ampL_vs_thickness[ch].SetPointError( i, 0, fLandau.GetParError(1) )
 
+        raw_input('ok?')
+        
         ##########################
         # amplitude slope vs angle
         fLandau.SetParameter(1, h2_ampR_vs_posXc[t][ch].GetMean(2))
@@ -325,7 +331,7 @@ for ch in channels:
 
         
         ccc = ROOT.TCanvas('amplitude_vs_posXc_%smm_%s'%(t,ch))
-        ccc.SetGridy()
+        #ccc.SetGridy()
         hsliceL[1].SetMarkerColor(ROOT.kBlue)
         hsliceR[1].SetMarkerColor(ROOT.kRed)
         hsliceL[1].SetLineColor(ROOT.kBlue)
@@ -340,7 +346,7 @@ for ch in channels:
         tChType.Draw()
         ccc.SaveAs(outdir+'/'+ccc.GetName()+'.png')
         ccc.SaveAs(outdir+'/'+ccc.GetName()+'.pdf')
-        
+             
         
 for ch in channels:
     for g in [gDiff_vs_thickness[ch]]:
@@ -350,32 +356,35 @@ for ch in channels:
         
     for g in [gAve_vs_thickness[ch]]:
         g.SetMarkerStyle(20)
+        g.SetMarkerSize(0.8)
         g.SetMarkerColor(ROOT.kBlack)
         g.SetLineColor(ROOT.kBlack)
         
     for g in gL_vs_thickness[ch], gL_vs_thickness[ch], gDelayL_vs_thickness[ch], g_ampL_vs_thickness[ch],  gAmpSlopeL_vs_thickness[ch]:
         g.SetMarkerStyle(20)
+        g.SetMarkerSize(0.8)
         g.SetMarkerColor(ROOT.kBlue)
         g.SetLineColor(ROOT.kBlue)
 
     for g in gR_vs_thickness[ch], gR_vs_thickness[ch], gDelayR_vs_thickness[ch], g_ampR_vs_thickness[ch], gAmpSlopeR_vs_thickness[ch]:
         g.SetMarkerStyle(20)
+        g.SetMarkerSize(0.8)
         g.SetMarkerColor(ROOT.kRed)
         g.SetLineColor(ROOT.kRed)
 
 
 leg1 = ROOT.TLegend(0.7,0.7,0.89,0.89)
-leg1.AddEntry(gL_vs_thickness['BAR0'],'t_{left}','PL')
-leg1.AddEntry(gR_vs_thickness['BAR0'],'t_{right}','PL')
-leg1.AddEntry(gAve_vs_thickness['BAR0'],'t_{average}','PL')
+leg1.AddEntry(gL_vs_thickness['BAR0'],'t_{left} - t_{MCP}','PL')
+leg1.AddEntry(gR_vs_thickness['BAR0'],'t_{right} - t_{MCP}','PL')
+leg1.AddEntry(gAve_vs_thickness['BAR0'],'t_{average} - t_{MCP}','PL')
 leg1.AddEntry(gDiff_vs_thickness['BAR0'],'t_{diff}/2','PL')
 
-leg2 = ROOT.TLegend(0.7,0.7,0.89,0.89)
-leg2.AddEntry(gL_vs_thickness['BAR0'],'t_{left}','PL')
-leg2.AddEntry(gR_vs_thickness['BAR0'],'t_{right}','PL')
+leg2 = ROOT.TLegend(0.7,0.8,0.89,0.89)
+leg2.AddEntry(gL_vs_thickness['BAR0'],'left','PL')
+leg2.AddEntry(gR_vs_thickness['BAR0'],'right','PL')
 
 leg3 = ROOT.TLegend(0.7,0.7,0.89,0.89)
-leg3.AddEntry(gAve_vs_thickness['BAR0'],'t_{average}','PL')
+leg3.AddEntry(gAve_vs_thickness['BAR0'],'t_{average} - t_{MCP}','PL')
 leg3.AddEntry(gDiff_vs_thickness['BAR0'],'t_{diff}/2','PL')
 
 canvas4 = {}
@@ -399,23 +408,37 @@ fitDiff = {}
 tPowAve = {}
 tPowDiff = {}
 
+
+
 for ch in channels:
 
     #amp vs thickness
+    # normalize to 3 mm thickness
+    normAmp = 0.5*(g_ampR_vs_thickness[ch].Eval(3)+g_ampL_vs_thickness[ch].Eval(3))
+    print 'normAmp', normAmp
+    for j in range(0, g_ampR_vs_thickness[ch].GetN()):
+        g_ampR_vs_thickness[ch].SetPoint(j, g_ampR_vs_thickness[ch].GetX()[j], g_ampR_vs_thickness[ch].GetY()[j]/normAmp);
+        g_ampR_vs_thickness[ch].SetPointError(j, 0, g_ampR_vs_thickness[ch].GetEY()[j]/normAmp);
+        g_ampL_vs_thickness[ch].GetY()[j] = g_ampL_vs_thickness[ch].GetY()[j]/normAmp;
+        g_ampL_vs_thickness[ch].SetPointError(j, 0, g_ampL_vs_thickness[ch].GetEY()[j]/normAmp);
+        
+        
     canvas3[ch] = ROOT.TCanvas('amplitude_vs_thickness_%s'%ch,'amplitude_vs_thickness_%s'%ch)
-    canvas3[ch].SetGridy()
-    hdummy3[ch] = ROOT.TH2F('hdummy3_%s'%ch,'',100,0,6,10,0,0.15)
+    #canvas3[ch].SetGridy()
+    hdummy3[ch] = ROOT.TH2F('hdummy3_%s'%ch,'',10,1,5,10,0,2)
     hdummy3[ch].Draw()
     hdummy3[ch].GetXaxis().SetTitle('thickness (mm)')
-    hdummy3[ch].GetYaxis().SetTitle('amplitude MPV (V)')
-    ffR = ROOT.TF1('ffR','pol1')
+    hdummy3[ch].GetYaxis().SetTitle('normalized amplitude MPV')
+    ffR = ROOT.TF1('ffR','[0]*(x/3)+[1]',0,10)
+    #ffR = ROOT.TF1('ffR','[0]*(x/3)',0,10)
     ffR.SetLineColor(ROOT.kRed)
     ffR.SetLineStyle(3)
-    ffL = ROOT.TF1('ffL','pol1')
+    ffL = ROOT.TF1('ffL','[0]*(x/3)+[1]',0,10)
+    #ffL = ROOT.TF1('ffL','[0]*(x/3)',0,10)
     ffL.SetLineColor(ROOT.kBlue)
     ffL.SetLineStyle(3)
-    g_ampR_vs_thickness[ch].Fit(ffR)
-    g_ampL_vs_thickness[ch].Fit(ffL)
+    g_ampR_vs_thickness[ch].Fit(ffR,'Q','',1.5,4.5)
+    g_ampL_vs_thickness[ch].Fit(ffL,'Q','',1.5,4.5)
     g_ampR_vs_thickness[ch].Draw('psame')
     g_ampL_vs_thickness[ch].Draw('psame')
     leg2.Draw('same')
@@ -424,7 +447,7 @@ for ch in channels:
 
     # amp slope vs thickness
     canvas4[ch] = ROOT.TCanvas('amplitudeSlope_vs_thickness_%s'%ch,'amplitudeSlope_vs_thickness_%s'%ch)
-    canvas4[ch].SetGridy()
+    #canvas4[ch].SetGridy()
     hdummy4[ch] = ROOT.TH2F('hdummy4_%s'%ch,'',100,0,6,10,-2,2)
     hdummy4[ch].Draw()
     hdummy4[ch].GetXaxis().SetTitle('thickness (mm)')
@@ -436,7 +459,7 @@ for ch in channels:
 
     #delay vs thickness
     canvas0[ch] = ROOT.TCanvas('timeDelay_vs_thickness_%s'%ch,'timeDelay_vs_thickness_%s'%ch)
-    canvas0[ch].SetGridy()
+    #canvas0[ch].SetGridy()
     hdummy0[ch] = ROOT.TH2F('hdummy0_%s'%ch,'',100,0,6,10,-15,15)
     hdummy0[ch].Draw()
     hdummy0[ch].GetXaxis().SetTitle('thickness (mm)')
@@ -448,8 +471,8 @@ for ch in channels:
 
     # time resolution vs slant tickness
     canvas2[ch] = ROOT.TCanvas('timeResolution_vs_thickness_%s'%ch,'timeResolution_vs_thickness_%s'%ch)
-    canvas2[ch].SetGridy()
-    hdummy2[ch] = ROOT.TH2F('hdummy2_%s'%ch,'',26,0,6,80,0,80)
+    #canvas2[ch].SetGridy()
+    hdummy2[ch] = ROOT.TH2F('hdummy2_%s'%ch,'',26,1,5,80,10,70)
     hdummy2[ch].Draw()
     hdummy2[ch].GetXaxis().SetTitle('thickness (mm)')
     hdummy2[ch].GetYaxis().SetTitle('time resolution (ps)')
@@ -463,30 +486,33 @@ for ch in channels:
     fitL[ch] = ROOT.TF1('fitL','[1]*1./pow(x,[0])',0,100)
     fitL[ch].SetLineColor(ROOT.kBlue)
     fitL[ch].SetParameter(0, 0.5)
+    fitL[ch].SetParameter(1, 70)
     gL_vs_thickness[ch].Fit(fitL[ch],'Q')
     print fitL[ch].GetParameter(0), fitL[ch].GetParError(0)
     
     fitR[ch] = ROOT.TF1('fitR','[1]*1./pow(x,[0])',0,100)
     fitR[ch].SetLineColor(ROOT.kRed)
     fitR[ch].SetParameter(0, 0.5)
+    fitR[ch].SetParameter(1, 70)
     gR_vs_thickness[ch].Fit(fitR[ch],'Q')
     print fitR[ch].GetParameter(0), fitR[ch].GetParError(0)
     
     fitAve[ch] = ROOT.TF1('fitAve','[1]*1./pow(x,[0])',0,100)
     fitAve[ch].SetLineColor(ROOT.kBlack)
     fitAve[ch].SetLineStyle(1)
-    fitAve[ch].SetParameter(1, 70)
-    fitAve[ch].SetParameter(0, 0.3)
+    fitAve[ch].SetParameter(0, 0.5)
+    fitAve[ch].SetParameter(1, 50)
     gAve_vs_thickness[ch].Fit(fitAve[ch],'Q')
 
-       
+        
     fitDiff[ch] = ROOT.TF1('fitDiff','[1]*1./pow(x,[0])',0,100)
     fitDiff[ch].SetLineColor(ROOT.kBlack)
     fitDiff[ch].SetLineStyle(2)
     fitDiff[ch].SetParameter(0, 0.5)
+    fitDiff[ch].SetParameter(1, 50)
     gDiff_vs_thickness[ch].Fit(fitDiff[ch],'Q')
 
-
+   
     tPowAve[ch] = ROOT.TLatex( 0.15, 0.23, '#sigma_{tAve} ~  x^{- (%.2f +/- %.2f)}'%(fitAve[ch].GetParameter(0), fitAve[ch].GetParError(0)))
     tPowAve[ch].SetNDC()
     tPowAve[ch].SetTextSize(0.035)
@@ -516,5 +542,6 @@ for ch in channels:
     for c in canvas0[ch],  canvas2[ch], canvas3[ch], canvas4[ch]:
         c.SaveAs(outdir+'/'+c.GetName()+'.png')
         c.SaveAs(outdir+'/'+c.GetName()+'.pdf')
+        c.SaveAs(outdir+'/'+c.GetName()+'.C')
 
     #raw_input('ok?')
