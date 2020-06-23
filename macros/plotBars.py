@@ -23,11 +23,12 @@ thr   = sys.argv[2]
 angle = sys.argv[3]
 subfolder = sys.argv[4]
 
-filename = '../v11/biasScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
+#filename = '../v11/biasScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
 #filename = '../v11/biasScan/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
-#filename = '../v11/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs6872-6913.root'%(Vbias, thr, angle)
+filename = '../v11/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs6872-6913.root'%(Vbias, thr, angle)
 #filename = '../v11/xyAngleScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
 #filename = '../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
+#filename = '../v11/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
 
 sigmaPTK = 0.0123 # after corrections
             
@@ -137,6 +138,7 @@ histograms1 = {'h_tL'            : ['t_{left} - t_{MCP} (ns)', 'events'],
 
 c = {}
 h = {}
+hnew = {}
 t0 = {}
 t1 = {}
 t2 = {}
@@ -282,7 +284,7 @@ for hname, attr in  histograms.items():
             
         if ('p_tL' in hnameCh or 'p_tR' in hnameCh or 'p_tAve' in hnameCh):
             h[hnameCh].SetMarkerStyle(20)
-            h[hnameCh].SetMarkerSize(0.5)
+            h[hnameCh].SetMarkerSize(0.7)
             if ('vs_amp' in hnameCh):
                 h[hnameCh].GetXaxis().SetRangeUser( h[hnameCh].GetMean()-3*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+6*h[hnameCh].GetRMS() )
                 h[hnameCh].GetYaxis().SetRangeUser( h[hnameCh].GetMean(2)-5.0*h[hnameCh].GetRMS(2), h[hnameCh].GetMean(2)+3.*h[hnameCh].GetRMS(2))
@@ -489,9 +491,9 @@ for ich,channel in enumerate(channels):
         h[hnameChL].SetMarkerStyle(20)
         h[hnameChR].SetMarkerStyle(20)
 
-        h[hnameCh].SetMarkerSize(0.5)
-        h[hnameChL].SetMarkerSize(0.5)
-        h[hnameChR].SetMarkerSize(0.5)
+        h[hnameCh].SetMarkerSize(0.7)
+        h[hnameChL].SetMarkerSize(0.7)
+        h[hnameChR].SetMarkerSize(0.7)
 
 
         if ( hnameCh.startswith('h_tAve') ):
@@ -545,11 +547,49 @@ for ich,channel in enumerate(channels):
 
             
         if ( hnameCh.startswith('p_tAve') ):
+            offset = h[hnameCh].GetMean(2)           
+            n = h[hnameChL].GetNbinsX()
+            hnew[hnameChL] = ROOT.TH1F(h[hnameChL].GetName()+'_shifted', h[hnameChL].GetName()+'_shifted', n, h[hnameChL].GetBinCenter(1), h[hnameChL].GetBinCenter(n))
+            hnew[hnameChR] = ROOT.TH1F(h[hnameChR].GetName()+'_shifted', h[hnameChR].GetName()+'_shifted', n, h[hnameChR].GetBinCenter(1), h[hnameChR].GetBinCenter(n))
+            hnew[hnameCh]  = ROOT.TH1F(h[hnameCh ].GetName()+'_shifted', h[hnameCh ].GetName()+'_shifted', n, h[hnameCh ].GetBinCenter(1), h[hnameCh ].GetBinCenter(n))
+
+            hnew[hnameCh].SetLineColor(ROOT.kBlack)
+            hnew[hnameChL].SetLineColor(ROOT.kBlue)
+            hnew[hnameChR].SetLineColor(ROOT.kRed)
+            
+            hnew[hnameCh].SetMarkerColor(ROOT.kBlack)
+            hnew[hnameChL].SetMarkerColor(ROOT.kBlue)
+            hnew[hnameChR].SetMarkerColor(ROOT.kRed)
+            
+            hnew[hnameCh].SetMarkerStyle(20)
+            hnew[hnameChL].SetMarkerStyle(20)
+            hnew[hnameChR].SetMarkerStyle(20)
+
+            hnew[hnameCh].SetMarkerSize(0.7)
+            hnew[hnameChL].SetMarkerSize(0.7)
+            hnew[hnameChR].SetMarkerSize(0.7)
+
+            for thishname in [hnameChL, hnameChR, hnameCh]:
+                hist = h[thishname]
+                for ibin in range(1,hist.GetNbinsX()+1):
+                    err = hist.GetBinError(ibin)
+                    cont =  hist.GetBinContent(ibin)
+                    if (cont!=0):
+                        hnew[thishname].SetBinContent(ibin, cont-offset)
+                        hnew[thishname].SetBinError(ibin, err)
+                        print err, hist.GetBinError(ibin)
+    
             if ('vs_posX' in hnameCh):
                 h[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean()-2.5*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+2.5*h[hnameCh].GetRMS())
-                h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
+                #h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
+                h[hnameCh].GetYaxis().SetRangeUser(  -0.500, 0.500)
                 h[hnameCh].GetXaxis().SetTitle('x (mm)')
                 h[hnameCh].GetYaxis().SetTitle('t_{i} - t_{MCP} (ns)')
+                hnew[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean()-2.5*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+2.5*h[hnameCh].GetRMS())
+                #h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
+                hnew[hnameCh].GetYaxis().SetRangeUser(  -0.500, 0.500)
+                hnew[hnameCh].GetXaxis().SetTitle('x (mm)')
+                hnew[hnameCh].GetYaxis().SetTitle('t_{i} - t_{MCP} (ns)')
             if ('vs_tDiff' in hnameCh):
                 h[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean() - 0.7, h[hnameCh].GetMean()+ 0.7)
                 h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.7, h[hnameChR].GetMean(2)+ 0.7)
@@ -564,6 +604,10 @@ for ich,channel in enumerate(channels):
             h[hnameCh].Draw('e')
             h[hnameChL].Draw('esame')
             h[hnameChR].Draw('esame')
+            if ( hnameCh.startswith('p_tAve') ):
+                 hnew[hnameCh].Draw('e')
+                 hnew[hnameChL].Draw('esame')
+                 hnew[hnameChR].Draw('esame')
         else:
             #c[hnameCh].SetGridy()
             xmin = h[hnameCh].GetMean()- 2.5* h[hnameCh].GetRMS()
@@ -655,7 +699,7 @@ for ich,channel in enumerate(channels):
         h[hnameCh].SetLineColor(ROOT.kBlack)
         h[hnameCh].SetMarkerColor(ROOT.kBlack)
         h[hnameCh].SetMarkerStyle(20)
-        h[hnameCh].SetMarkerSize(0.5)
+        h[hnameCh].SetMarkerSize(0.7)
         
         if ( hnameCh.startswith('h_') ):
             h[hnameCh].GetYaxis().SetRangeUser(0,h[hnameCh].GetMaximum()*1.5  )

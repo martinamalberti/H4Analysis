@@ -82,6 +82,9 @@ int main(int argc, char** argv)
       std::cerr << ">>>>> TimingAnalysis.cpp::usage:   " << argv[0] << " configFileName" << std::endl;
       return 1;
     }
+
+
+  float timeScaleFactor = 200./204.8; // to take into account time window in H4Reco (204.8) and Caltech (200.) --> use the same as Caltech
   
   //----------------------
   // parse the config file
@@ -205,7 +208,7 @@ int main(int argc, char** argv)
   float xbinWidthForAmpWalk =  999.; // mm
   if ( usePositionBinnedAmplitudeWalkCorr ){
     //float xbinWidthForAmpWalk =  10.; // used in xy scans
-    xbinWidthForAmpWalk =   5.; // used in material scans
+    //xbinWidthForAmpWalk =   5.; // used in material scans
     xbinWidthForAmpWalk =   10.; // used in material scans
   }
   int NBINSXAMPWALK[NBARS];
@@ -721,8 +724,8 @@ int main(int argc, char** argv)
 
       // -- Photek as ref
       ampRef = treeVars.t_amp[(*treeVars.t_channelId)[ampChannelRef]] * kAdcToV ;
-      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
-      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
+      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD] * timeScaleFactor;
+      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]] * timeScaleFactor;
 
       h_ampRef_nocuts->Fill(ampRef);
       if ( ampRef > 0.020 ) h_timeRef -> Fill(tRef);
@@ -733,8 +736,8 @@ int main(int argc, char** argv)
         ampL = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV ;
         ampR = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV ;
 
-	tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED];
-        tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED];
+	tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED] * timeScaleFactor;
+        tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED] * timeScaleFactor;
 
 	// -- select events
         if ( posX < cut_XminRef || posX > cut_XmaxRef ) continue;
@@ -864,8 +867,8 @@ int main(int argc, char** argv)
 
       // -- Photek as ref
       ampRef = treeVars.t_amp[(*treeVars.t_channelId)[ampChannelRef]] * kAdcToV ;
-      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
-      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
+      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD] * timeScaleFactor;
+      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]] * timeScaleFactor;
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[ampChannelRef]];
       chi2Ref = treeVars.t_chi2_max[(*treeVars.t_channelId)[timeChannelRef]];
       sigmaRef = treeVars.t_gaus_sigma[(*treeVars.t_channelId)[timeChannelRef]];
@@ -910,8 +913,8 @@ int main(int argc, char** argv)
         ampL = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV ;
         ampR = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV ;
 	
-        tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED];
-        tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED];
+        tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED] * timeScaleFactor;
+        tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED] * timeScaleFactor;
 	
         brmsL = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsL[iBar] ] ];
         brmsR = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsR[iBar] ] ];
@@ -989,8 +992,8 @@ int main(int argc, char** argv)
 
       // -- Photek as ref
       ampRef = treeVars.t_amp[(*treeVars.t_channelId)[ampChannelRef]] * kAdcToV ;
-      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
-      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
+      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD] * timeScaleFactor;
+      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]] * timeScaleFactor;
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[ampChannelRef]];
 
 
@@ -1000,8 +1003,8 @@ int main(int argc, char** argv)
 	ampL = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV ;
 	ampR = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV ;
 	
-	tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED];  
-	tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED];  
+	tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED] * timeScaleFactor;  
+	tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED] * timeScaleFactor;  
 	
 	brmsL = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsL[iBar] ] ];
 	brmsR = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsR[iBar] ] ];
@@ -1247,8 +1250,8 @@ int main(int argc, char** argv)
 
       // -- Photek as ref
       ampRef = treeVars.t_amp[(*treeVars.t_channelId)[ampChannelRef]] * kAdcToV ;
-      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
-      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
+      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD] * timeScaleFactor;
+      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]] * timeScaleFactor;
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[ampChannelRef]];
 
       // -- loop over bars
@@ -1257,8 +1260,8 @@ int main(int argc, char** argv)
 	ampL = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV ;
 	ampR = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV ;
 
-	tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED];  
-	tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED];  
+	tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED] * timeScaleFactor;  
+	tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED] * timeScaleFactor;  
 
 	brmsL = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsL[iBar] ] ];
 	brmsR = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsR[iBar] ] ];
@@ -1493,8 +1496,8 @@ int main(int argc, char** argv)
 
       // -- Photek as ref
       ampRef = treeVars.t_amp[(*treeVars.t_channelId)[ampChannelRef]] * kAdcToV ;
-      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD];
-      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]];
+      tRef   = treeVars.t_time[(*treeVars.t_channelId)[timeChannelRef]+treeVars.t_CFD] * timeScaleFactor;
+      if (useTimeMaxMCP) tRef   = treeVars.t_time_max[(*treeVars.t_channelId)[timeChannelRef]] * timeScaleFactor;
       brmsRef = treeVars.t_b_rms[(*treeVars.t_channelId)[ampChannelRef]];
 
       // -- loop over bars
@@ -1503,8 +1506,8 @@ int main(int argc, char** argv)
         ampL = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsL[iBar] ]] * kAdcToV ;
         ampR = treeVars.t_amp[(*treeVars.t_channelId)[ ampChannelsR[iBar] ]] * kAdcToV ;
 	
-        tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED];
-        tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED];
+        tL   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsL[iBar] ]+treeVars.t_LED] * timeScaleFactor;
+        tR   = treeVars.t_time[(*treeVars.t_channelId)[ timeChannelsR[iBar] ]+treeVars.t_LED] * timeScaleFactor;
 
 	brmsL = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsL[iBar] ] ];
 	brmsR = treeVars.t_b_rms[(*treeVars.t_channelId)[ timeChannelsR[iBar] ] ];
@@ -1697,7 +1700,7 @@ int main(int argc, char** argv)
   float resolEff;
   float resolGaus;
   float resolGausErr;
-  float resolMCP = 0.014; 
+  float resolMCP = 0.0123; // after amp/position walk corrections
 
   TF1 *fpol0_tL_ampCorr[NBARS]; 
   TF1 *fpol0_tR_ampCorr[NBARS]; 
@@ -2504,7 +2507,7 @@ float GetCorrectedMCPTime(float time, float amp, float x, unsigned int run){
 
   float time_corr = time + dt_A + dt_posX ;
 
-   cout << time << "  " << time + dt_A << "  " << time_corr <<endl;
+  //cout << time << "  " << time + dt_A << "  " << time_corr <<endl;
 
   return time_corr;
 }
