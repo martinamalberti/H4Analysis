@@ -44,7 +44,10 @@ outdir = sys.argv[3] # outdir
 
 Vbias = [72]
 Vbias = [72, 71, 70, 69, 68]
-Vbreak = 66.6 # HPK
+# for the Vbreak assume nominal values (measured tipycally by Yuri at 18-20 ded) + extrapolation with temperature: 59mV/deg for HPK, 41 mV/deg FBK.
+# HPK : 66 V --> 66.35 V
+# FBK : 36.7 --> 37 V
+Vbreak = 66.35 # HPK
 if (sipm == 'FBK'):
     Vbreak = 37
     Vbias  = [43, 42, 41, 40, 39]
