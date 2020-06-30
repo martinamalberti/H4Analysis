@@ -508,7 +508,7 @@ int main(int argc, char** argv)
     p2_tL_vs_posXY[iBar]        = new TProfile2D(Form("p2_tL_vs_posXY_BAR%d",iBar),Form("p2_tL_vs_posXY_BAR%d",iBar), 400, xmin, xmax, 200, ymin, ymax, dtminL[iBar], dtmaxL[iBar]);
 
     h_tL[iBar]                  = new TH1F(Form("h_tL_BAR%d",iBar),Form("h_tL_BAR%d",iBar), nTimeBins, dtminL[iBar], dtmaxL[iBar]);
-    h2_tL_vs_amp[iBar]          = new TH2F(Form("h2_tL_vs_amp_BAR%d",iBar),Form("h2_tL_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., 200, dtminL[iBar], dtmaxL[iBar]);
+    h2_tL_vs_amp[iBar]          = new TH2F(Form("h2_tL_vs_amp_BAR%d",iBar),Form("h2_tL_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., 2000, dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_amp[iBar]           = new TProfile(Form("p_tL_vs_amp_BAR%d",iBar),Form("p_tL_vs_amp_BAR%d",iBar), nAmpBins, 0., 1.,dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_posX[iBar]          = new TProfile(Form("p_tL_vs_posX_BAR%d",iBar),Form("p_tL_vs_posX_BAR%d",iBar), 100, xmin, xmax,dtminL[iBar], dtmaxL[iBar]);
     p_tL_vs_posY[iBar]          = new TProfile(Form("p_tL_vs_posY_BAR%d",iBar),Form("p_tL_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminL[iBar], dtmaxL[iBar]);
@@ -535,7 +535,7 @@ int main(int argc, char** argv)
     p2_tR_vs_posXY[iBar]        = new TProfile2D(Form("p2_tR_vs_posXY_BAR%d",iBar),Form("p2_tR_vs_posXY_BAR%d",iBar), 400, xmin, xmax, 200, ymin, ymax,dtminR[iBar], dtmaxR[iBar]);
 
     h_tR[iBar]                  = new TH1F(Form("h_tR_BAR%d",iBar),Form("h_tR_BAR%d",iBar), nTimeBins, dtminR[iBar], dtmaxR[iBar]);
-    h2_tR_vs_amp[iBar]          = new TH2F(Form("h2_tR_vs_amp_BAR%d",iBar),Form("h2_tR_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., 200, dtminR[iBar], dtmaxR[iBar]);
+    h2_tR_vs_amp[iBar]          = new TH2F(Form("h2_tR_vs_amp_BAR%d",iBar),Form("h2_tR_vs_amp_BAR%d",iBar), nAmpBins, 0., 1., 2000, dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_amp[iBar]           = new TProfile(Form("p_tR_vs_amp_BAR%d",iBar),Form("p_tR_vs_amp_BAR%d",iBar), nAmpBins, 0., 1.,dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_posX[iBar]          = new TProfile(Form("p_tR_vs_posX_BAR%d",iBar),Form("p_tR_vs_posX_BAR%d",iBar), 100, xmin, xmax,dtminR[iBar], dtmaxR[iBar]);
     p_tR_vs_posY[iBar]          = new TProfile(Form("p_tR_vs_posY_BAR%d",iBar),Form("p_tR_vs_posY_BAR%d",iBar), 100, ymin, ymax,dtminR[iBar], dtmaxR[iBar]);
@@ -2110,8 +2110,7 @@ int main(int argc, char** argv)
   float resolGaus;
   float resolGausErr;
   float resolMCP = 0.;
-  //float resolMCP = 0.014; 
-  //float resolMCP = 0.026; // estimated comparing tAve and tDiff in this run range 
+  //float resolMCP = 0.0123; // after amp/position walk corrections 
 
   TF1 *fpol0_tL_ampCorr[NBARS]; 
   TF1 *fpol0_tR_ampCorr[NBARS]; 

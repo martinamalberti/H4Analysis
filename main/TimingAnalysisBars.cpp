@@ -1135,7 +1135,7 @@ int main(int argc, char** argv)
     fitFuncL_ampCorr[iBar] = new TF1(Form("fitFuncL_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncL_ampCorr[iBar] -> SetLineColor(kRed);
     mpvL[iBar] = (h_ampL_nocuts[iBar]->GetFunction(Form("fLandauL_BAR%d",iBar)))->GetParameter(1);
-    fitFuncL_ampCorr[iBar] -> SetRange(0, 5*mpvL[iBar]);
+    fitFuncL_ampCorr[iBar] -> SetRange(0., 5*mpvL[iBar]);
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSRW");
     p_tL_vs_amp[iBar] -> Fit(Form("fitFuncL_ampCorr_%d",iBar),"QSR");
     if (fitFuncL_ampCorr[iBar] -> GetChisquare()/fitFuncL_ampCorr[iBar] -> GetNDF() > 10 ){
@@ -1145,7 +1145,7 @@ int main(int argc, char** argv)
     fitFuncR_ampCorr[iBar] = new TF1(Form("fitFuncR_ampCorr_%d", iBar),fitFunction.c_str());
     fitFuncR_ampCorr[iBar] -> SetLineColor(kRed);
     mpvR[iBar] = (h_ampR_nocuts[iBar]->GetFunction(Form("fLandauR_BAR%d",iBar)))->GetParameter(1);
-    fitFuncR_ampCorr[iBar] -> SetRange(0, 5*mpvR[iBar]);
+    fitFuncR_ampCorr[iBar] -> SetRange(0., 5*mpvR[iBar]);
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSRW");
     p_tR_vs_amp[iBar] -> Fit(Form("fitFuncR_ampCorr_%d",iBar),"QSR");
     if (fitFuncR_ampCorr[iBar] -> GetChisquare()/fitFuncR_ampCorr[iBar] -> GetNDF() > 10 ){
@@ -1546,12 +1546,10 @@ int main(int argc, char** argv)
 	int xcbinamp = int ((posX - max(cut_Xmin[iBar], cut_XminRef))/cos(theta[iBar])/xbinWidthForAmpWalk );
 	float tL_corr = tL - fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(ampL) + fitFuncL_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampL[iBar]->GetMean()); 
 	float tR_corr = tR - fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(ampR) + fitFuncR_ampCorr_binned[iBar][xcbinamp]->Eval(h_ampR[iBar]->GetMean());
-        float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
+	float tAve_ampCorr = ( tL_corr + tR_corr)/2 ;
         float tDiff_ampCorr = tR_corr - tL_corr;
 
 	// -- amp walk correction vs pulse integral
-	//float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr[iBar]->Eval(pulseIntL) + fitFuncL_pulseIntCorr[iBar]->Eval(h_pulseIntL[iBar]->GetMean());
-        //float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr[iBar]->Eval(pulseIntR) + fitFuncR_pulseIntCorr[iBar]->Eval(h_pulseIntR[iBar]->GetMean());
 	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntL) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntL[iBar]->GetMean());
         float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntR) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntR[iBar]->GetMean());
 	float tAve_pulseIntCorr = ( tL_pulseIntCorr + tR_pulseIntCorr )/2 ;
@@ -2355,6 +2353,10 @@ int main(int argc, char** argv)
       h_tR_pulseIntCorr_binX[iBar][ibin] -> Write();
       h_tAve_pulseIntCorr_binX[iBar][ibin] -> Write();
       h_tDiff_pulseIntCorr_posCorr_binX[iBar][ibin]-> Write();
+      h_tL_ampCorr_binX[iBar][ibin] -> Write();
+      h_tR_ampCorr_binX[iBar][ibin] -> Write();
+      h_tAve_ampCorr_binX[iBar][ibin] -> Write();
+      h_tDiff_ampCorr_posCorr_binX[iBar][ibin]-> Write();
     }
   }
   
