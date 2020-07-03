@@ -26,9 +26,8 @@ subfolder = sys.argv[4]
 #filename = '../v11/biasScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
 #filename = '../v11/biasScan/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
 #filename = '../v11/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs6872-6913.root'%(Vbias, thr, angle)
-filename = './plotsForPaper/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs6872-6913.root'%(Vbias, thr, angle)
 #filename = '../v11/xyAngleScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
-#filename = '../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
+filename = '../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
 #filename = '../v11/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
 
 sigmaPTK = 0.0123 # after corrections
@@ -55,7 +54,7 @@ if ('yzangle60' in filename or 'yzangle30' in filename or 'yzangle90' in filenam
                    'BAR2':'LYSO:Ce 2x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}'}
 if ('1bar' in filename):
     thickness = sys.argv[3]
-    channelType = {'BAR0':'LYSO:Ce %sx3x57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'%thickness}
+    channelType = {'BAR0':'LYSO:Ce 3x%sx57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'%thickness}
     if (thickness == 3):
         channelType = {'BAR0':'LYSO:Ce %sx3x50 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'%thickness}
 
@@ -445,7 +444,7 @@ flinL = {}
 flinR = {}
 flinAve = {}
 
-legend = ROOT.TLegend(0.7,0.7,0.89,0.89)
+legend = ROOT.TLegend(0.7,0.73,0.89,0.89)
 legend.SetBorderSize(0)
 
 fitfunAve = None
@@ -582,12 +581,12 @@ for ich,channel in enumerate(channels):
             if ('vs_posX' in hnameCh):
                 h[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean()-2.5*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+2.5*h[hnameCh].GetRMS())
                 #h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
-                h[hnameCh].GetYaxis().SetRangeUser(  -0.350, 0.350)
+                h[hnameCh].GetYaxis().SetRangeUser(  -0.300, 0.300)
                 h[hnameCh].GetXaxis().SetTitle('x (mm)')
                 h[hnameCh].GetYaxis().SetTitle('< t_{i} - t_{MCP} > (ns)')
                 hnew[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean()-2.5*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+2.5*h[hnameCh].GetRMS())
                 #h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
-                hnew[hnameCh].GetYaxis().SetRangeUser(  -0.350, 0.350)
+                hnew[hnameCh].GetYaxis().SetRangeUser(  -0.300, 0.300)
                 hnew[hnameCh].GetXaxis().SetTitle('x (mm)')
                 hnew[hnameCh].GetYaxis().SetTitle('< t_{i} - t_{MCP} > (ns)')
             if ('vs_tDiff' in hnameCh):

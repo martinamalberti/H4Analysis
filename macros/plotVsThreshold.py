@@ -82,9 +82,9 @@ kAdcToV = 1000./4096
 
 channels = ['BAR%s'%i for i in range(0,3)]
 
-channelType = {'BAR0':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015',
-               'BAR1':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015',
-               'BAR2':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015'}
+channelType = {'BAR0':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}',
+               'BAR1':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}',
+               'BAR2':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}'}
 
 if (angle == '4' or angle == '3' or angle == '2'):
     channels = ['BAR%s'%i for i in range(0,1)]

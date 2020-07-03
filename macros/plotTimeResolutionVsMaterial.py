@@ -142,7 +142,7 @@ for t in thickness:
         h2_ampR_vs_posXc[t][ch] = f[t][ch].Get('h2_ampR_vs_posXc_%s'%ch)
         h2_ampL_vs_posXc[t][ch] = f[t][ch].Get('h2_ampL_vs_posXc_%s'%ch)
     
-tChType = ROOT.TLatex( 0.13, 0.92, 'LYSO:Ce dx3x57 mm^{3} - 5x5 mm^{2} FBK think-epi ')
+tChType = ROOT.TLatex( 0.13, 0.92, 'LYSO:Ce 3xtx57 mm^{3} - FBK thin-epi 5x5 mm^{2}')
 tChType.SetNDC()
 tChType.SetTextSize(0.035)
 
@@ -356,24 +356,24 @@ for ch in channels:
         
     for g in [gAve_vs_thickness[ch]]:
         g.SetMarkerStyle(20)
-        g.SetMarkerSize(0.8)
+        g.SetMarkerSize(0.9)
         g.SetMarkerColor(ROOT.kBlack)
         g.SetLineColor(ROOT.kBlack)
         
     for g in gL_vs_thickness[ch], gL_vs_thickness[ch], gDelayL_vs_thickness[ch], g_ampL_vs_thickness[ch],  gAmpSlopeL_vs_thickness[ch]:
         g.SetMarkerStyle(20)
-        g.SetMarkerSize(0.8)
+        g.SetMarkerSize(0.9)
         g.SetMarkerColor(ROOT.kBlue)
         g.SetLineColor(ROOT.kBlue)
 
     for g in gR_vs_thickness[ch], gR_vs_thickness[ch], gDelayR_vs_thickness[ch], g_ampR_vs_thickness[ch], gAmpSlopeR_vs_thickness[ch]:
         g.SetMarkerStyle(20)
-        g.SetMarkerSize(0.8)
+        g.SetMarkerSize(0.9)
         g.SetMarkerColor(ROOT.kRed)
         g.SetLineColor(ROOT.kRed)
 
 
-leg1 = ROOT.TLegend(0.7,0.7,0.89,0.89)
+leg1 = ROOT.TLegend(0.65,0.65,0.89,0.89)
 leg1.AddEntry(gL_vs_thickness['BAR0'],'t_{left} - t_{MCP}','PL')
 leg1.AddEntry(gR_vs_thickness['BAR0'],'t_{right} - t_{MCP}','PL')
 leg1.AddEntry(gAve_vs_thickness['BAR0'],'t_{average} - t_{MCP}','PL')
@@ -515,12 +515,12 @@ for ch in channels:
    
     tPowAve[ch] = ROOT.TLatex( 0.15, 0.23, '#sigma_{tAve} ~  x^{- (%.2f +/- %.2f)}'%(fitAve[ch].GetParameter(0), fitAve[ch].GetParError(0)))
     tPowAve[ch].SetNDC()
-    tPowAve[ch].SetTextSize(0.035)
+    tPowAve[ch].SetTextSize(0.040)
     tPowAve[ch].Draw()
 
     tPowDiff[ch] = ROOT.TLatex( 0.15, 0.15, '#sigma_{tDiff/2} ~ x^{- (%.2f +/- %.2f)}'%(fitDiff[ch].GetParameter(0), fitDiff[ch].GetParError(0)))
     tPowDiff[ch].SetNDC()
-    tPowDiff[ch].SetTextSize(0.035)
+    tPowDiff[ch].SetTextSize(0.040)
     tPowDiff[ch].Draw()
     
     print 'Channel %s'%ch
