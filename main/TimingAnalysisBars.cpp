@@ -454,6 +454,12 @@ int main(int argc, char** argv)
   TH1F* h_tDiff_pulseIntCorr_binX[NBARS][1000];
   TH1F* h_tDiff_pulseIntCorr_posCorr_binX[NBARS][1000];
 
+
+  TH1F *h_posX_residuals[NBARS];
+  TH1F *h_posX_residuals_ampCorr[NBARS];
+  TH1F *h_posX_residuals_pulseIntCorr[NBARS];
+
+
   int nbinsHistoX = 1000;
   if (chain1->GetEntries() < 100000){
     nbinsHistoX = 500;
@@ -673,6 +679,13 @@ int main(int argc, char** argv)
       p_tL_vs_pulseInt_binned[iBar][ibin] = new TProfile(Form("p_tL_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar),Form("p_tL_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar), nAmpBins*5, 0., 250., dtminL[iBar], dtmaxL[iBar]);
       p_tR_vs_pulseInt_binned[iBar][ibin] = new TProfile(Form("p_tR_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar),Form("p_tR_vs_pulseInt_binXc_%d_BAR%d",ibin,iBar), nAmpBins*5, 0., 250., dtminR[iBar], dtmaxR[iBar]);
     }
+
+
+
+    // position residuals
+    h_posX_residuals[iBar] = new TH1F(Form("h_posX_residuals_BAR%d",iBar), Form("h_posX_residuals_BAR%d",iBar), 400, -200, 200);
+    h_posX_residuals_ampCorr[iBar] = new TH1F(Form("h_posX_residuals_ampCorr_BAR%d",iBar), Form("h_posX_residuals_ampCorr_BAR%d",iBar), 400, -200, 200);
+    h_posX_residuals_pulseIntCorr[iBar] = new TH1F(Form("h_posX_residuals_pulseIntCorr_BAR%d",iBar), Form("h_posX_residuals_pulseIntCorr_BAR%d",iBar), 400, -200, 200);
 
   }
 
@@ -1608,8 +1621,26 @@ int main(int argc, char** argv)
         p_tDiff_pulseIntCorr_posCorr_vs_posX[iBar]->Fill(posX,tDiff_pulseIntCorr_posCorr);
         p_tDiff_pulseIntCorr_posCorr_vs_posXc[iBar]->Fill(posX/cos(theta[iBar]),tDiff_pulseIntCorr_posCorr);
 	h_tDiff_pulseIntCorr_posCorr_binX[iBar][xbin] ->Fill(tDiff_pulseIntCorr_posCorr);
+
+	// position residuals
+
+	// without amp walk corrections
+	float x_calc =  ( (tR-tL) - fitFuncDiff_posCorr_noAmpCorr[iBar]->GetParameter(0))/fitFuncDiff_posCorr_noAmpCorr[iBar]->GetParameter(1);
+	h_posX_residuals[iBar]->Fill(x_calc - posX);
+	
+	//with amp walk corrections
+	x_calc =  ( tDiff_ampCorr - fitFuncDiff_posCorr[iBar]->GetParameter(0))/fitFuncDiff_posCorr[iBar]->GetParameter(1);
+	h_posX_residuals_ampCorr[iBar]->Fill(x_calc - posX);
+
+	x_calc =  ( tDiff_pulseIntCorr - fitFuncDiff_pulseIntCorr_posCorr[iBar]->GetParameter(0))/fitFuncDiff_pulseIntCorr_posCorr[iBar]->GetParameter(1);
+	h_posX_residuals_pulseIntCorr[iBar]->Fill(x_calc - posX);
+
+
       }
     
+
+
+
     } //--- end fourth loop over events
 
 
@@ -2340,6 +2371,13 @@ int main(int argc, char** argv)
     g_tResolGausAve_pulseIntCorr_posCorr[iBar]->Write();
     g_tResolGausDiff_pulseIntCorr[iBar]->Write();
     g_tResolGausDiff_pulseIntCorr_posCorr[iBar]->Write();
+  
+
+
+    h_posX_residuals[iBar]->Write();
+    h_posX_residuals_ampCorr[iBar]->Write();
+    h_posX_residuals_pulseIntCorr[iBar]->Write();
+ 
   }
 
   
