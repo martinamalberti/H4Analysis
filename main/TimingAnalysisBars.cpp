@@ -1332,8 +1332,8 @@ int main(int argc, char** argv)
 	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntL) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntL[iBar]->GetMean());
 	float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntR) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntR[iBar]->GetMean());
 	if (useAverageAmplitudeForTimeWalkCorr){
-          tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntAve);
-          tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntAve);
+          tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntAve) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(p_tL_vs_pulseInt[iBar]->GetMean());
+          tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntAve) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(p_tR_vs_pulseInt[iBar]->GetMean());
 	}
 	float tAve_pulseIntCorr = ( tL_pulseIntCorr + tR_pulseIntCorr)/2 ;
         float tDiff_pulseIntCorr = tR_pulseIntCorr - tL_pulseIntCorr;
@@ -1573,6 +1573,10 @@ int main(int argc, char** argv)
 	// -- amp walk correction vs pulse integral
 	float tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntL) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntL[iBar]->GetMean());
         float tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntR) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(h_pulseIntR[iBar]->GetMean());
+	if (useAverageAmplitudeForTimeWalkCorr){
+          tL_pulseIntCorr = tL - fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntAve) + fitFuncL_pulseIntCorr_binned[iBar][xcbinamp]->Eval(p_tL_vs_pulseInt[iBar]->GetMean());
+          tR_pulseIntCorr = tR - fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(pulseIntAve) + fitFuncR_pulseIntCorr_binned[iBar][xcbinamp]->Eval(p_tR_vs_pulseInt[iBar]->GetMean());
+        }
 	float tAve_pulseIntCorr = ( tL_pulseIntCorr + tR_pulseIntCorr )/2 ;
         float tDiff_pulseIntCorr = tR_pulseIntCorr - tL_pulseIntCorr;
 
