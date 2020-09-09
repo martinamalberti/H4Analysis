@@ -22,7 +22,8 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning;
 
 
 filename1 = '../../v11/output_3bars_Vbias72_thr100ADC_xyangle90_runs6872-6913.root'
-filename2 = '../../v11/materialLeveling/output_1bar_Vbias43_thr400ADC_4mm.root'
+#filename2 = '../../v11/materialLeveling/output_1bar_Vbias43_thr400ADC_4mm.root'
+filename2 = '../../v11/materialLeveling/output_1bar_Vbias43_thr400ADC_4mm_averageAmpWalkCorr.root'
 
 #tChType = ROOT.TLatex( 0.13, 0.92,channelType)
 #tChType.SetNDC()
@@ -46,8 +47,8 @@ h2_pfx = {}
 
 for i in sipms:
     h[i]  = f[i].Get('h_posX_residuals_pulseIntCorr_%s'%(channel[i]))
-    #h2[i] = f.Get('h2_posX_residuals_pulseIntCorr_vs_posX_%s'%(channel[i]))
-    h2[i] = f[i].Get('h2_posX_residuals_ampCorr_vs_posX_%s'%(channel[i]))
+    h2[i] = f[i].Get('h2_posX_residuals_pulseIntCorr_vs_posX_%s'%(channel[i]))
+    #h2[i] = f[i].Get('h2_posX_residuals_ampCorr_vs_posX_%s'%(channel[i]))
     h2_pfx[i] = h2[i].ProfileX('h2_pfx_%s'%i)
     h[i].Scale(1./h[i].Integral())
 
@@ -64,7 +65,7 @@ for ii, i in enumerate(sipms):
 #plot
 canvas = ROOT.TCanvas('position_residuals','position_residuals')
 h['FBK'].GetXaxis().SetRangeUser(-20,20)
-h['FBK'].GetYaxis().SetRangeUser(0,0.15)
+h['FBK'].GetYaxis().SetRangeUser(0,0.20)
 h['FBK'].GetXaxis().SetTitle('x_{reco} - x_{track} (mm)')
 h['FBK'].GetYaxis().SetTitle('normalized entries')
 h['FBK'].Draw('e')
@@ -90,12 +91,12 @@ for ii,i in enumerate(sipms):
     xmin = h2_pfx[i].GetBinCenter(binmin)
     xmax = h2_pfx[i].GetBinCenter(binmax)
     print binmin, binmax, xmin, xmax
-    h2[i].GetXaxis().SetTitleSize(0.07)
-    h2[i].GetXaxis().SetLabelSize(0.07)
-    h2[i].GetYaxis().SetTitleSize(0.07)
-    h2[i].GetYaxis().SetLabelSize(0.07)
-    h2[i].GetZaxis().SetTitleSize(0.07)
-    h2[i].GetZaxis().SetLabelSize(0.07)
+    h2[i].GetXaxis().SetTitleSize(0.062)
+    h2[i].GetXaxis().SetLabelSize(0.062)
+    h2[i].GetYaxis().SetTitleSize(0.062)
+    h2[i].GetYaxis().SetLabelSize(0.062)
+    h2[i].GetZaxis().SetTitleSize(0.062)
+    h2[i].GetZaxis().SetLabelSize(0.062)
     
     h2[i].GetXaxis().SetRangeUser(xmin,xmax)
     h2[i].GetYaxis().SetRangeUser(-20,20)

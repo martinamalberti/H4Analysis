@@ -28,7 +28,8 @@ channelType = 'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}'
 channel = 'BAR1'
 
 if (angle == '4'):
-    filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
+    #filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
+    filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm_averageAmpWalkCorr.root'%(Vbias, thr, angle)
     channelType = 'LYSO:Ce 3x4x57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'
     channel = 'BAR0'
 
