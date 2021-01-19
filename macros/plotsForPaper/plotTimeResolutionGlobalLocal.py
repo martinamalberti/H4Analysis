@@ -84,7 +84,8 @@ for label in labels:
     h[label].SetMarkerStyle(20)
     if (label == 'local'):  h[label].SetMarkerStyle(21)
  
-legend = ROOT.TLegend(0.5,0.76,0.89,0.89)
+#legend = ROOT.TLegend(0.5,0.76,0.89,0.89)
+legend = ROOT.TLegend(0.5,0.71,0.89,0.84)
 legend.SetBorderSize(0)
 legend.AddEntry(h['global'],'w/o beam spot selection','PL')
 legend.AddEntry(h['local'],'#Deltax < 2 mm','PL')
@@ -123,16 +124,24 @@ for i,label in enumerate(labels):
 
     text = '#sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
 
-    tRes[label] = ROOT.TLatex( 0.15, 0.785+i*0.06, text )
+    #tRes[label] = ROOT.TLatex( 0.15, 0.785+i*0.06, text )
+    tRes[label] = ROOT.TLatex( 0.16, 0.735+i*0.06, text )
     tRes[label].SetNDC()
     tRes[label].SetTextSize(0.035)
     tRes[label].SetTextColor(colors[label])
     tRes[label].Draw()
 
 
-tChType = ROOT.TLatex( 0.13, 0.92,channelType)
+
+#tChType = ROOT.TLatex( 0.13, 0.92,channelType)
+#tChType.SetNDC()
+#tChType.SetTextSize(0.030)
+#tChType.Draw()
+
+tChType = ROOT.TLatex( 0.16, 0.86,channelType)
 tChType.SetNDC()
-tChType.SetTextSize(0.030)
+tChType.SetTextSize(0.020)
+#tChType.SetTextFont(42)
 tChType.Draw()
 
 if (useTdiff==False):

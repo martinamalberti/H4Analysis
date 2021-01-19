@@ -27,8 +27,9 @@ subfolder = sys.argv[4]
 #filename = '../v11/biasScan/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
 #filename = '../v11/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs6872-6913.root'%(Vbias, thr, angle)
 #filename = '../v11/xyAngleScan/output_3bars_Vbias%s_thr%sADC_xyangle%s.root'%(Vbias, thr, angle)
-filename = '../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
-#filename = '../v11/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s.root'%(Vbias, thr, angle)
+#filename = '../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
+filename = '../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm_averageAmpWalkCorr.root'%(Vbias, thr, angle)
+#filename = '../v11/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s_test.root'%(Vbias, thr, angle)
 
 sigmaPTK = 0.0123 # after corrections
             
@@ -451,12 +452,13 @@ fitfunAve = None
 fitfunL = None
 fitfunR = None
 
+print channels
 
 for ich,channel in enumerate(channels):
 
     for ih, hname in enumerate(['h_tAve_ampCorr', 'p_tAve_ampCorr_vs_posX', 'p_tAve_ampCorr_vs_posXc', 'g_tResolGausAve_ampCorr',
                                 #'h_tAve_ampCorr_tDiffCorr', 'p_tAve_ampCorr_tDiffCorr_vs_posX', 'p_tAve_ampCorr_tDiffCorr_vs_tDiff', 'p_tAve_ampCorr_tDiffCorr_vs_posXc', 'g_tResolGausAve_ampCorr_tDiffCorr',
-                                'h_tAve_ampCorr_posCorr', 'p_tAve_ampCorr_posCorr_vs_posX', 'p_tAve_ampCorr_posCorr_vs_posXc', 'g_tResolGausAve_ampCorr_posCorr',
+                                #'h_tAve_ampCorr_posCorr', 'p_tAve_ampCorr_posCorr_vs_posX', 'p_tAve_ampCorr_posCorr_vs_posXc', 'g_tResolGausAve_ampCorr_posCorr',
                                 'h_tAve_pulseIntCorr', 'p_tAve_pulseIntCorr_vs_posX', 'p_tAve_pulseIntCorr_vs_posXc', 'g_tResolGausAve_pulseIntCorr',
                                 #'h_tAve_pulseIntCorr_posCorr', 'p_tAve_pulseIntCorr_posCorr_vs_posX', 'p_tAve_pulseIntCorr_posCorr_vs_posXc', 'g_tResolGausAve_pulseIntCorr_posCorr'
     ]):
@@ -467,6 +469,8 @@ for ich,channel in enumerate(channels):
         hnameChR= hnameCh.replace('AveResW','Ave').replace('AveAmpW','Ave').replace('Ave','R').replace('_tDiffCorr','').replace('_posCorr','')
         
         cname = hnameCh.replace('h_','').replace('h2_','').replace('p_t','t').replace('p2_','')
+
+        print 'aaaaa: ',ich, channel,cname
         
         c[hnameCh] = ROOT.TCanvas(cname,cname)
         c[hnameCh].SetTickx()
@@ -475,6 +479,7 @@ for ich,channel in enumerate(channels):
             #c[hnameCh].SetGridy()
 
         # get histograms
+        print hnameCh, hnameChL, hnameChR
         h[hnameCh]  = f.Get(hnameCh)
         h[hnameChL] = f.Get(hnameChL)
         h[hnameChR] = f.Get(hnameChR)
@@ -580,12 +585,10 @@ for ich,channel in enumerate(channels):
                            
             if ('vs_posX' in hnameCh):
                 h[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean()-2.5*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+2.5*h[hnameCh].GetRMS())
-                #h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
-                h[hnameCh].GetYaxis().SetRangeUser(  -0.300, 0.300)
+                h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
                 h[hnameCh].GetXaxis().SetTitle('x (mm)')
                 h[hnameCh].GetYaxis().SetTitle('< t_{i} - t_{MCP} > (ns)')
                 hnew[hnameCh].GetXaxis().SetRangeUser(  h[hnameCh].GetMean()-2.5*h[hnameCh].GetRMS(), h[hnameCh].GetMean()+2.5*h[hnameCh].GetRMS())
-                #h[hnameCh].GetYaxis().SetRangeUser(  h[hnameChL].GetMean(2)-0.35, h[hnameChR].GetMean(2)+0.45)
                 hnew[hnameCh].GetYaxis().SetRangeUser(  -0.300, 0.300)
                 hnew[hnameCh].GetXaxis().SetTitle('x (mm)')
                 hnew[hnameCh].GetYaxis().SetTitle('< t_{i} - t_{MCP} > (ns)')

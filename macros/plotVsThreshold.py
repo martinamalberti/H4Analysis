@@ -88,7 +88,8 @@ channelType = {'BAR0':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}',
 
 if (angle == '4' or angle == '3' or angle == '2'):
     channels = ['BAR%s'%i for i in range(0,1)]
-    channelType = {'BAR0':'LYSO:Ce 3x%sx57 mm^{3} - FBK thin-epi 5x5 mm^{2}'%angle}
+    #channelType = {'BAR0':'LYSO:Ce 3x%sx57 mm^{3} - FBK thin-epi 5x5 mm^{2}'%angle}
+    channelType = {'BAR0':'LYSO:Ce 3x%sx57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'%angle}
     
 print channels
 
@@ -255,7 +256,7 @@ for channel in channels:
     tChType[channel] = ROOT.TLatex( 0.13, 0.92, channelType[channel] )
     tChType[channel].SetNDC()
     tChType[channel].SetTextSize(0.035)
-
+        
     if (angle == '4' or angle == '3' or angle == '2'):
         canvasVb[channel] = ROOT.TCanvas('scan_Vbias_%s_%smm'%(channel, angle),'scan_Vbias_%s_%smm'%(channel, angle))
     else:
@@ -348,7 +349,8 @@ for channel in channels:
 
 
 #vs thr - all channels, only Vbias max
-legThrAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+#legThrAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+legThrAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.84)
 legThrAll.SetBorderSize(0)
 
 if (angle == '4' or angle == '3' or angle == '2'):
@@ -376,7 +378,7 @@ for ich,channel in enumerate(channels):
         g_thrScan[vb][channel].Draw('plsame')
         legThrAll.AddEntry(g_thrScan[vb][channel], '%s'%channel, 'PL')
         tChType[channel].Draw()
-legThrAll.Draw('same')
+if (sipm == 'HPK'): legThrAll.Draw('same')
 tChType[channel].Draw()
 if (useTdiff):
     canvasThAll.SaveAs(outdir+'/'+canvasThAll.GetName()+'_tDiff.png')
@@ -394,7 +396,8 @@ else:
     
 
 # vs bias - all channels , for optimal threshold
-legVbAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+#legVbAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+legVbAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.84)
 legVbAll.SetBorderSize(0)
 
 if (angle == '4' or angle == '3' or angle == '2'):
@@ -415,13 +418,14 @@ for ich, channel in enumerate(channels):
         g_VbiasScan_opt[channel].Draw('plsame')
         legVbAll.AddEntry(g_VbiasScan_opt[channel], '%s'%channel, 'PL')
         tChType[channel].Draw()
-legVbAll.Draw('same')
+if (sipm == 'HPK'): legVbAll.Draw('same')
 canvasVbAll.SaveAs(outdir+'/'+canvasVbAll.GetName()+'.png')
 canvasVbAll.SaveAs(outdir+'/'+canvasVbAll.GetName()+'.pdf')
 canvasVbAll.SaveAs(outdir+'/'+canvasVbAll.GetName()+'.C')
 
 # vs pde - all channels , for optimal threshold
-legPdeAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+#legPdeAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.89)
+legPdeAll = ROOT.TLegend(0.65, 0.65, 0.89, 0.84)
 legPdeAll.SetBorderSize(0)
 tPde = {}
 if (angle == '4' or angle == '3' or angle == '2'):
@@ -481,7 +485,7 @@ for ich, channel in enumerate(channels):
         
         g_pde_opt[channel].Draw('psame')
         legPdeAll.AddEntry(g_pde_opt[channel], '%s'%channel, 'PL')
-        legPdeAll.Draw('same')
+        if (sipm == 'HPK'): legPdeAll.Draw('same')
         
         tPde[channel].SetNDC()
         tPde[channel].SetTextSize(0.035)

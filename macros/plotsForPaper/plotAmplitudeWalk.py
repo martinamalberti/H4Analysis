@@ -17,6 +17,7 @@ ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptFit(0)
 ROOT.gStyle.SetTitleOffset(1.05,'Y')
 ROOT.gStyle.SetPadRightMargin(1.2)
+#ROOT.gStyle.SetPalette(ROOT.kRainBow)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning;
 
 Vbias = 72
@@ -83,7 +84,7 @@ hnew.Draw('same')
 tChType = ROOT.TLatex( 0.13, 0.92, channelType)
 tChType.SetNDC()
 tChType.SetTextSize(0.030)
-tChType.Draw()
+#tChType.Draw()
 
 ROOT.gPad.Update()
 

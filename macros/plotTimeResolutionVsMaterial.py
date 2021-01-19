@@ -142,7 +142,7 @@ for t in thickness:
         h2_ampR_vs_posXc[t][ch] = f[t][ch].Get('h2_ampR_vs_posXc_%s'%ch)
         h2_ampL_vs_posXc[t][ch] = f[t][ch].Get('h2_ampL_vs_posXc_%s'%ch)
     
-tChType = ROOT.TLatex( 0.13, 0.92, 'LYSO:Ce 3xtx57 mm^{3} - FBK thin-epi 5x5 mm^{2}')
+tChType = ROOT.TLatex( 0.13, 0.92, 'LYSO:Ce 3xtx57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}')
 tChType.SetNDC()
 tChType.SetTextSize(0.035)
 
