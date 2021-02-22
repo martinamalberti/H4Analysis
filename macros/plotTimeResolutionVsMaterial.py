@@ -51,6 +51,8 @@ pL = {}
 gR = {}
 h_ampR = {}
 h_ampL = {}
+h_pulseIntR = {}
+h_pulseIntL = {}
 h2_ampR_vs_posXc = {}
 h2_ampL_vs_posXc = {}
 
@@ -128,6 +130,8 @@ for t in thickness:
     pR[t] = {}
     h_ampL[t] = {}
     h_ampR[t] = {}
+    h_pulseIntL[t] = {}
+    h_pulseIntR[t] = {}
     h2_ampL_vs_posXc[t] = {}
     h2_ampR_vs_posXc[t] = {}
     for ch in channels:
@@ -139,6 +143,8 @@ for t in thickness:
         pL[t][ch] = f[t][ch].Get('p_tL_%s_vs_posXc_%s'%(ampCorrType, ch))
         h_ampR[t][ch] = f[t][ch].Get('h_ampR_%s'%ch)
         h_ampL[t][ch] = f[t][ch].Get('h_ampL_%s'%ch)
+        h_pulseIntR[t][ch] = f[t][ch].Get('h_pulseIntR_%s'%ch)
+        h_pulseIntL[t][ch] = f[t][ch].Get('h_pulseIntL_%s'%ch)
         h2_ampR_vs_posXc[t][ch] = f[t][ch].Get('h2_ampR_vs_posXc_%s'%ch)
         h2_ampL_vs_posXc[t][ch] = f[t][ch].Get('h2_ampL_vs_posXc_%s'%ch)
     
@@ -149,6 +155,9 @@ tChType.SetTextSize(0.035)
 
 g_ampL_vs_thickness = {}
 g_ampR_vs_thickness = {}
+
+g_pulseIntL_vs_thickness = {}
+g_pulseIntR_vs_thickness = {}
 
 gAve_vs_thickness = {}
 gDiff_vs_thickness = {}
@@ -165,6 +174,9 @@ gAmpSlopeR_vs_thickness = {}
 
 ampR = {}
 ampL = {}
+
+pulseIntR = {}
+pulseIntL = {}
 
 tResL = {}
 tResR = {}
@@ -193,6 +205,8 @@ for ch in channels:
     gAmpSlopeL_vs_thickness[ch] = ROOT.TGraphErrors()
     g_ampR_vs_thickness[ch] = ROOT.TGraphErrors()
     g_ampL_vs_thickness[ch] = ROOT.TGraphErrors()
+    g_pulseIntR_vs_thickness[ch] = ROOT.TGraphErrors()
+    g_pulseIntL_vs_thickness[ch] = ROOT.TGraphErrors()
     
     tResL[ch] = {}
     tResR[ch] = {}
@@ -301,6 +315,26 @@ for ch in channels:
         g_ampL_vs_thickness[ch].SetPoint( i, t, fLandau.GetParameter(1))
         g_ampL_vs_thickness[ch].SetPointError( i, 0, fLandau.GetParError(1) )
 
+        #raw_input('ok?')
+
+
+        #############################
+        # pulseIntegral vs slant tickness
+        fLandauInt = ROOT.TF1('fLandauInt','landau', 0, 100)
+        fLandauInt.SetRange(0,50)
+        h_pulseIntR[t][ch].Fit(fLandauInt,'QR')
+        fLandauInt.SetRange(fLandauInt.GetParameter(1)*0.9,fLandauInt.GetParameter(1)*2)
+        h_pulseIntR[t][ch].Fit(fLandauInt,'QR')
+        mpvR = fLandauInt.GetParameter(1)
+        g_pulseIntR_vs_thickness[ch].SetPoint( i, t, fLandauInt.GetParameter(1))
+        g_pulseIntR_vs_thickness[ch].SetPointError( i, 0, fLandauInt.GetParError(1) )
+        h_pulseIntL[t][ch].Fit(fLandauInt,'QR')
+        fLandauInt.SetRange(fLandauInt.GetParameter(1)*0.9,fLandauInt.GetParameter(1)*2)
+        h_pulseIntL[t][ch].Fit(fLandauInt,'QR')
+        mpvL = fLandauInt.GetParameter(1)
+        g_pulseIntL_vs_thickness[ch].SetPoint( i, t, fLandauInt.GetParameter(1))
+        g_pulseIntL_vs_thickness[ch].SetPointError( i, 0, fLandauInt.GetParError(1) )
+
         raw_input('ok?')
         
         ##########################
@@ -360,13 +394,13 @@ for ch in channels:
         g.SetMarkerColor(ROOT.kBlack)
         g.SetLineColor(ROOT.kBlack)
         
-    for g in gL_vs_thickness[ch], gL_vs_thickness[ch], gDelayL_vs_thickness[ch], g_ampL_vs_thickness[ch],  gAmpSlopeL_vs_thickness[ch]:
+    for g in gL_vs_thickness[ch], gL_vs_thickness[ch], gDelayL_vs_thickness[ch], g_ampL_vs_thickness[ch],  g_pulseIntL_vs_thickness[ch], gAmpSlopeL_vs_thickness[ch]:
         g.SetMarkerStyle(20)
         g.SetMarkerSize(0.9)
         g.SetMarkerColor(ROOT.kBlue)
         g.SetLineColor(ROOT.kBlue)
 
-    for g in gR_vs_thickness[ch], gR_vs_thickness[ch], gDelayR_vs_thickness[ch], g_ampR_vs_thickness[ch], gAmpSlopeR_vs_thickness[ch]:
+    for g in gR_vs_thickness[ch], gR_vs_thickness[ch], gDelayR_vs_thickness[ch], g_ampR_vs_thickness[ch], g_pulseIntR_vs_thickness[ch], gAmpSlopeR_vs_thickness[ch]:
         g.SetMarkerStyle(20)
         g.SetMarkerSize(0.9)
         g.SetMarkerColor(ROOT.kRed)
@@ -392,12 +426,14 @@ canvas0 = {}
 canvas1 = {}
 canvas2 = {}
 canvas3 = {}
+canvas33 = {}
 
 hdummy4 = {}
 hdummy0 = {}
 hdummy1 = {}
 hdummy2 = {}
 hdummy3 = {}
+hdummy33 = {}
 
 
 fitL = {}
@@ -411,6 +447,38 @@ tPowDiff = {}
 
 
 for ch in channels:
+
+    #amp vs thickness
+    # normalize to 3 mm thickness
+    normPulseInt = 0.5*(g_pulseIntR_vs_thickness[ch].Eval(3)+g_pulseIntL_vs_thickness[ch].Eval(3))
+    print 'normPulseInt', normPulseInt
+    for j in range(0, g_pulseIntR_vs_thickness[ch].GetN()):
+        g_pulseIntR_vs_thickness[ch].SetPoint(j, g_pulseIntR_vs_thickness[ch].GetX()[j], g_pulseIntR_vs_thickness[ch].GetY()[j]/normPulseInt);
+        g_pulseIntR_vs_thickness[ch].SetPointError(j, 0, g_pulseIntR_vs_thickness[ch].GetEY()[j]/normPulseInt);
+        g_pulseIntL_vs_thickness[ch].GetY()[j] = g_pulseIntL_vs_thickness[ch].GetY()[j]/normPulseInt;
+        g_pulseIntL_vs_thickness[ch].SetPointError(j, 0, g_pulseIntL_vs_thickness[ch].GetEY()[j]/normPulseInt);
+        
+        
+    canvas33[ch] = ROOT.TCanvas('pulseInt_vs_thickness_%s'%ch,'pulseInt_vs_thickness_%s'%ch)
+    #canvas3[ch].SetGridy()
+    hdummy33[ch] = ROOT.TH2F('hdummy33_%s'%ch,'',10,1,5,10,0,2)
+    hdummy33[ch].Draw()
+    hdummy33[ch].GetXaxis().SetTitle('thickness (mm)')
+    hdummy33[ch].GetYaxis().SetTitle('normalized MPV')
+    fffR = ROOT.TF1('fffR','[0]*(x/3)+[1]',0,10)
+    #fffR = ROOT.TF1('fffR','[0]*(x/3)',0,10)
+    fffR.SetLineColor(ROOT.kRed)
+    fffR.SetLineStyle(3)
+    fffL = ROOT.TF1('fffL','[0]*(x/3)+[1]',0,10)
+    #fffL = ROOT.TF1('fffL','[0]*(x/3)',0,10)
+    fffL.SetLineColor(ROOT.kBlue)
+    fffL.SetLineStyle(3)
+    g_pulseIntR_vs_thickness[ch].Fit(fffR,'Q','',1.5,4.5)
+    g_pulseIntL_vs_thickness[ch].Fit(fffL,'Q','',1.5,4.5)
+    g_pulseIntR_vs_thickness[ch].Draw('psame')
+    g_pulseIntL_vs_thickness[ch].Draw('psame')
+    leg2.Draw('same')
+    tChType.Draw()
 
     #amp vs thickness
     # normalize to 3 mm thickness
@@ -539,7 +607,7 @@ for ch in channels:
     print '         [1] = %.2f +/- %.2f'%(fitDiff[ch].GetParameter(1), fitDiff[ch].GetParError(1))
     
     
-    for c in canvas0[ch],  canvas2[ch], canvas3[ch], canvas4[ch]:
+    for c in canvas0[ch],  canvas2[ch], canvas3[ch], canvas4[ch], canvas33[ch]:
         c.SaveAs(outdir+'/'+c.GetName()+'.png')
         c.SaveAs(outdir+'/'+c.GetName()+'.pdf')
         c.SaveAs(outdir+'/'+c.GetName()+'.C')

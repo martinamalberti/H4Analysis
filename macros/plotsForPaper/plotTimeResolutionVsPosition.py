@@ -68,7 +68,7 @@ for label in labels:
 legend = ROOT.TLegend(0.7,0.7,0.89,0.89)
 legend.SetBorderSize(0)
 legend.AddEntry(g['Ave'],'t_{average}','PL')
-legend.AddEntry(g['Diff'],'t_{diff/2}','PL')
+legend.AddEntry(g['Diff'],'t_{diff}/2','PL')
 legend.AddEntry(g['L'],'t_{left}','PL')
 legend.AddEntry(g['R'],'t_{right}','PL')
 
@@ -94,7 +94,7 @@ for i,label in enumerate(labels):
     if (label == 'L'):    text = 't_{left}   : #sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
     if (label == 'R'):    text = 't_{right}  : #sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
     if (label == 'Ave'):  text = 't_{average}: #sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
-    if (label == 'Diff'): text = 't_{diff/2} : #sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
+    if (label == 'Diff'): text = 't_{diff}/2 : #sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
 
     tRes[label] = ROOT.TLatex( 0.15, 0.85-i*0.05, text )
     tRes[label].SetNDC()

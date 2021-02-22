@@ -86,12 +86,19 @@ channelType = {'BAR0':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}',
                'BAR1':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}',
                'BAR2':'LYSO:Ce 3x3x57 mm^{3} - HPK S12572-015 3x3 mm^{2}'}
 
+colors = {'BAR0' : ROOT.kOrange+1,
+          'BAR1' : ROOT.kGreen+1,
+          'BAR2' : ROOT.kBlue+1}
+
 if (angle == '4' or angle == '3' or angle == '2'):
     channels = ['BAR%s'%i for i in range(0,1)]
-    #channelType = {'BAR0':'LYSO:Ce 3x%sx57 mm^{3} - FBK thin-epi 5x5 mm^{2}'%angle}
     channelType = {'BAR0':'LYSO:Ce 3x%sx57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'%angle}
+    colors = {'BAR0' : ROOT.kBlue+1}
     
 print channels
+
+
+
 
 #prepare output dir
 if (outdir != './'):
@@ -153,6 +160,7 @@ for vb in Vbias:
             if (useTdiff):
                 resolGaus = sigmaGaus*1000./2
                 resolEff  = sigmaEff*1000./2
+                #esigmaGaus = esigmaGaus/2
             else:
                 resolGaus  = ROOT.TMath.Sqrt(sigmaGaus*sigmaGaus - sigmaPTK*sigmaPTK)*1000. # ps
                 resolEff   = ROOT.TMath.Sqrt(sigmaEff*sigmaEff - sigmaPTK*sigmaPTK)*1000. # ps
@@ -367,8 +375,8 @@ for ich,channel in enumerate(channels):
     if (g_thrScan[vb][channel]):
         g_thrScan[vb][channel].SetMarkerStyle(20+ich)
         g_thrScan[vb][channel].SetMarkerSize(1.0)
-        g_thrScan[vb][channel].SetMarkerColor(ROOT.kBlue+ich)
-        g_thrScan[vb][channel].SetLineColor(ROOT.kBlue+ich)
+        g_thrScan[vb][channel].SetMarkerColor(colors[channel])
+        g_thrScan[vb][channel].SetLineColor(colors[channel])
         g_thrScan[vb][channel].SetLineStyle(1)
         g_thrScan[vb][channel].SetLineWidth(1)
         #g_thrScan[vb][channel].SetLineColor(i+1)
@@ -411,8 +419,8 @@ for ich, channel in enumerate(channels):
     if ( g_VbiasScan_opt[channel] ):
         g_VbiasScan_opt[channel].SetMarkerStyle(20+ich)
         g_VbiasScan_opt[channel].SetMarkerSize(1.0)
-        g_VbiasScan_opt[channel].SetMarkerColor(ROOT.kBlue+ich)
-        g_VbiasScan_opt[channel].SetLineColor(ROOT.kBlue+ich)
+        g_VbiasScan_opt[channel].SetMarkerColor(colors[channel])
+        g_VbiasScan_opt[channel].SetLineColor(colors[channel])
         g_VbiasScan_opt[channel].SetLineStyle(1)
         g_VbiasScan_opt[channel].SetLineWidth(1)
         g_VbiasScan_opt[channel].Draw('plsame')
@@ -439,15 +447,15 @@ for ich, channel in enumerate(channels):
     if ( g_pde_opt[channel] ):
         g_pde_opt[channel].SetMarkerStyle(20+ich)
         g_pde_opt[channel].SetMarkerSize(1.0)
-        g_pde_opt[channel].SetMarkerColor(ROOT.kBlue+ich)
-        g_pde_opt[channel].SetLineColor(ROOT.kBlue+ich)
+        g_pde_opt[channel].SetMarkerColor(colors[channel])
+        g_pde_opt[channel].SetLineColor(colors[channel])
         g_pde_opt[channel].SetLineStyle(1)
         g_pde_opt[channel].SetLineWidth(1)
 
         fitfun[channel] = ROOT.TF1('fitfun_%s'%(channel), '[0]*1./pow(x,[1])', 0, 100)
         fitfun[channel].SetParameter(0,40)
         fitfun[channel].SetParameter(1,0.5)
-        fitfun[channel].SetLineColor(ROOT.kBlue+ich)
+        fitfun[channel].SetLineColor(colors[channel])
         fitfun[channel].SetLineStyle(2)
         g_pde_opt[channel].Fit(fitfun[channel],'QR')
         print 'chi2/ndf = ', fitfun[channel].GetChisquare()/fitfun[channel].GetNDF()
@@ -458,7 +466,7 @@ for ich, channel in enumerate(channels):
         #fitfun[channel].SetParameter(0,40.)
         #fitfun[channel].SetParameter(1,0.5)
         #fitfun[channel].SetParameter(2,10.)
-        #fitfun[channel].SetLineColor(ROOT.kBlue+ich)
+        #fitfun[channel].SetLineColor(colors[channel])
         #fitfun[channel].SetLineStyle(2)
         #g_pde_opt[channel].Fit(fitfun[channel],'QR')
         #print 'chi2/ndf = ', fitfun[channel].GetChisquare()/fitfun[channel].GetNDF()
@@ -472,7 +480,7 @@ for ich, channel in enumerate(channels):
         #fitfun[channel].SetParameter(0,30)
         #fitfun[channel].SetParameter(1,100)
         #fitfun[channel].SetParameter(2,1)
-        #fitfun[channel].SetLineColor(ROOT.kBlue+ich)
+        #fitfun[channel].SetLineColor(colors[channel])
         #fitfun[channel].SetLineStyle(2)
         #g_pde_opt[channel].Fit(fitfun[channel],'QR')
         #print 'chi2/ndf = ', fitfun[channel].GetChisquare()/fitfun[channel].GetNDF()
@@ -489,7 +497,7 @@ for ich, channel in enumerate(channels):
         
         tPde[channel].SetNDC()
         tPde[channel].SetTextSize(0.035)
-        tPde[channel].SetTextColor(ROOT.kBlue+ich)
+        tPde[channel].SetTextColor(colors[channel])
         tPde[channel].Draw()
         tChType[channel].Draw()
 canvasPdeAll.SaveAs(outdir+'/'+canvasPdeAll.GetName()+'.png')
