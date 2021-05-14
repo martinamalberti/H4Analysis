@@ -22,9 +22,7 @@ Vbias = sys.argv[1]
 thr = sys.argv[2]
 angle = sys.argv[3]
 ampCorrType = 'pulseInt'
-#ampCorrType = 'amp'
 useTdiff = True
-
 
 filename = '../../v11/output_3bars_Vbias%s_thr%sADC_xyangle%s_runs6872-6913.root'%(Vbias, thr, angle)
 #filename = '../../v11/yzAngleScan/output_3bars_Vbias%s_thr%sADC_yzangle%s_test.root'%(Vbias, thr, angle)
@@ -34,11 +32,10 @@ xbin = 4
 
 if (angle == '4'):
     #filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm.root'%(Vbias, thr, angle)
-    #filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm_averageAmpWalkCorr.root'%(Vbias, thr, angle)
-    filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm_averageAmpWalkCorr_TESTJul2020.root'%(Vbias, thr, angle)# for the paper used the old version of the file from jul2020
+    filename = '../../v11/materialLeveling/output_1bar_Vbias%s_thr%sADC_%smm_averageAmpWalkCorr.root'%(Vbias, thr, angle)
     channelType = 'LYSO:Ce 3x4x57 mm^{3} - FBK NUV-HD-TE 5x5 mm^{2}'
     channel = 'BAR0'
-    xbin = 11# used for paper
+    xbin = 11
     
 f = ROOT.TFile.Open(filename)
 
@@ -59,8 +56,8 @@ h = {}
 nbins = h0['global'].GetNbinsX()
 xmin = h0['global'].GetXaxis().GetXmin() - h0['global'].GetMean()
 xmax = h0['global'].GetXaxis().GetXmax()- h0['global'].GetMean()
-xmin=xmin*1000# convert to ps
-xmax=xmax*1000# convert to ps
+xmin=xmin*1000
+xmax=xmax*1000
 if (useTdiff):
     xmin = xmin/2
     xmax = xmax/2
@@ -76,7 +73,7 @@ fGaus =  {}
 for i, label in enumerate(labels):
     h[label].Scale(1./h[label].Integral())
     #fGaus[label] = ROOT.TF1('fGaus_%s'%label,'gaus', -20, 20)
-    fGaus[label] = ROOT.TF1('fGaus_%s'%label,'gaus', -2000, 2000)
+    fGaus[label] = ROOT.TF1('fGaus_%s'%label,'gaus', -200, 200)
     fGaus[label].SetLineColor(colors[label])
     fGaus[label].SetLineStyle(i+1)
     h[label].Fit(fGaus[label])
@@ -90,7 +87,8 @@ for label in labels:
     h[label].SetMarkerStyle(20)
     if (label == 'local'):  h[label].SetMarkerStyle(21)
  
-legend = ROOT.TLegend(0.5,0.76,0.89,0.89)
+#legend = ROOT.TLegend(0.5,0.76,0.89,0.89)
+legend = ROOT.TLegend(0.5,0.71,0.89,0.84)
 legend.SetBorderSize(0)
 legend.AddEntry(h['global'],'w/o beam spot selection','PL')
 legend.AddEntry(h['local'],'#Deltax < 2 mm','PL')
@@ -104,14 +102,14 @@ if (useTdiff):
     ymax = 0.3
     if (angle == '4'): ymax = 0.20
 
-xmin = xmin*1000# convert to ps
-xmax = xmax*1000# convert to ps
+xmin = xmin*1000
+xmax = xmax*1000
 
 hdummy = ROOT.TH2F('hdummy','', 100, xmin, xmax, 100, 0, ymax)
 hdummy.GetYaxis().SetTitle('a.u.')
 hdummy.GetXaxis().SetTitle('t_{average} - t_{MPC} (ns)')
 if (useTdiff):
-    hdummy.GetXaxis().SetTitle('t_{diff}/2 (ps)')
+    hdummy.GetXaxis().SetTitle('t_{diff}/2 (ns)')
 hdummy.GetXaxis().SetNdivisions(505)
 hdummy.GetYaxis().SetTitleOffset(1.15)
 hdummy.Draw()
@@ -125,16 +123,15 @@ text = ''
 resolMCP = 12.3
 if (useTdiff): resolMCP = 0
 for i,label in enumerate(labels):
-    #resolGaus = h[label].GetFunction('fGaus_%s'%label).GetParameter(2)*1000.
-    #resolGausErr = h[label].GetFunction('fGaus_%s'%label).GetParError(2)*1000.
-    resolGaus = h[label].GetFunction('fGaus_%s'%label).GetParameter(2)
-    resolGausErr = h[label].GetFunction('fGaus_%s'%label).GetParError(2)
+    resolGaus = h[label].GetFunction('fGaus_%s'%label).GetParameter(2)*1000.
+    resolGausErr = h[label].GetFunction('fGaus_%s'%label).GetParError(2)*1000.
 
     resolGaus = math.sqrt(resolGaus*resolGaus-resolMCP*resolMCP)
 
     text = '#sigma = %.1f #pm %.1f ps'%(resolGaus, resolGausErr)
 
-    tRes[label] = ROOT.TLatex( 0.15, 0.785+i*0.06, text )
+    #tRes[label] = ROOT.TLatex( 0.15, 0.785+i*0.06, text )
+    tRes[label] = ROOT.TLatex( 0.16, 0.735+i*0.06, text )
     tRes[label].SetNDC()
     tRes[label].SetTextSize(0.035)
     tRes[label].SetTextColor(colors[label])
@@ -142,9 +139,15 @@ for i,label in enumerate(labels):
 
 
 
-tChType = ROOT.TLatex( 0.13, 0.92,channelType)
+#tChType = ROOT.TLatex( 0.13, 0.92,channelType)
+#tChType.SetNDC()
+#tChType.SetTextSize(0.030)
+#tChType.Draw()
+
+tChType = ROOT.TLatex( 0.16, 0.86,channelType)
 tChType.SetNDC()
-tChType.SetTextSize(0.030)
+tChType.SetTextSize(0.020)
+#tChType.SetTextFont(42)
 tChType.Draw()
 
 if (useTdiff==False):
